@@ -35,6 +35,7 @@ dependencies {
 	annotationProcessor("org.projectlombok:lombok:$lombokVersion")
 	testCompileOnly("org.projectlombok:lombok:$lombokVersion")
 	testAnnotationProcessor("org.projectlombok:lombok:$lombokVersion")
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
