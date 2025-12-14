@@ -48,15 +48,20 @@ public class Recipe {
     @JoinColumn(name = "profession_id")
     private Profession profession;
 
-    // Store as JSONB in Postgres; in Java keep as raw JSON String for now
-    @Column(name = "ingredients_json", columnDefinition = "jsonb")
+    // Store ingredients as raw JSON string; Postgres can map to jsonb via migrations if needed
+    @Column(name = "ingredients_json")
     private String ingredientsJson;
+
+    @Builder.Default
+    @Column(name = "output_quantity", nullable = false)
+    private Float outputQuantity = 1.0f;
 
 
     public Recipe(String name, Item outputItem, String ingredientsJson) {
         this.name = name;
         this.outputItem = outputItem;
         this.ingredientsJson = ingredientsJson;
+        this.outputQuantity = 1.0f;
     }
 
 }

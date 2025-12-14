@@ -49,6 +49,12 @@ public class Item {
     @Column(nullable = true)
     private Short quality;
 
+    @Column(name = "current_price")
+    private Long currentPrice; // price in copper, current known price
+
+    @Column(name = "current_price_recorded_at")
+    private OffsetDateTime currentPriceRecordedAt;
+
     public Item(Long id, String name) {
         this.id = id;
         this.name = name;
