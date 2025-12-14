@@ -15,6 +15,8 @@ public class ItemRepositoryImpl implements com.crafting.repository.ItemRepositor
     @PersistenceContext
     private EntityManager entityManager;
 
+    //avoids lazy loading issues and N+1 query problems
+    //creates ItemDTOs directly from the query
     @Override
     public List<ItemDTO> findAllDtos() {
         return entityManager
