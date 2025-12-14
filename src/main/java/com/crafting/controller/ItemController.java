@@ -1,7 +1,8 @@
 package com.crafting.controller;
 
-import com.crafting.model.Item;
+import com.crafting.model.dto.ItemDTO;
 import com.crafting.repository.ItemRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,14 +20,7 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemResponse> getAllItems() {
-        return itemRepository.findAll().stream().map(ItemController::toResponse).toList();
-    }
-
-    private static ItemResponse toResponse(Item item) {
-        return new ItemResponse(item.getId(), item.getName());
-    }
-
-    public record ItemResponse(Long id, String name) {
+    public ResponseEntity<List<ItemDTO>> getAllItems() {
+        return ResponseEntity.ok(itemRepository.findAllDtos());
     }
 }
