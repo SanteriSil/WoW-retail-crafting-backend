@@ -26,6 +26,9 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("com.h2database:h2")
 
+	// DB migrations
+	implementation("org.flywaydb:flyway-core")
+
 	// Lombok compile-only and annotation processor (recent version compatible with JDK 21)
 	val lombokVersion = "1.18.32"
 	compileOnly("org.projectlombok:lombok:$lombokVersion")
