@@ -44,6 +44,7 @@ public class Recipe {
     @JoinColumn(name = "output_item_id", nullable = false)
     private Item outputItem;
 
+    //represents the profession required to craft this recipe, if any
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profession_id")
     private Profession profession;
