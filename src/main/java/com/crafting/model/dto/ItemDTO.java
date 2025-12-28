@@ -11,6 +11,7 @@ public class ItemDTO {
     Integer professionId;
     String professionName;
     Short quality;
+    boolean finishingIngredient;
     Long currentPrice;
     OffsetDateTime currentPriceRecordedAt;
 }

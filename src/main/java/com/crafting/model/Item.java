@@ -49,6 +49,9 @@ public class Item {
     @Column(nullable = true)
     private Short quality;
 
+    @Column(name = "finishing_ingredient", nullable = false)
+    private boolean finishingIngredient;
+
     @Column(name = "current_price")
     private Long currentPrice; // price in copper, current known price
 

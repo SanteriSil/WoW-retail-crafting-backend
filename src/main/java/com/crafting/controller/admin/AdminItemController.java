@@ -32,14 +32,16 @@ public class AdminItemController {
         Long id,
         String name,
         Integer professionId,
-        Short quality
+        Short quality,
+        Boolean finishingIngredient
     ) {
     }
 
     public record UpdateItemRequest(
         String name,
         Integer professionId,
-        Short quality
+        Short quality,
+        Boolean finishingIngredient
     ) {
     }
 
@@ -64,6 +66,7 @@ public class AdminItemController {
             .name(request.name())
             .profession(profession)
             .quality(request.quality())
+            .finishingIngredient(request.finishingIngredient() != null && request.finishingIngredient())
             .build();
 
         itemRepository.save(item);
@@ -89,6 +92,9 @@ public class AdminItemController {
         item.setName(request.name());
         item.setProfession(profession);
         item.setQuality(request.quality());
+        if (request.finishingIngredient() != null) {
+            item.setFinishingIngredient(request.finishingIngredient());
+        }
 
         itemRepository.save(item);
         return ResponseEntity.noContent().build();

@@ -25,6 +25,7 @@ public final class ItemMapper {
             professionId,
             professionName,
             item.getQuality(),
+            item.isFinishingIngredient(),
             item.getCurrentPrice(),
             item.getCurrentPriceRecordedAt()
         );

@@ -27,6 +27,7 @@ public class ItemRepositoryImpl implements com.crafting.repository.ItemRepositor
                     " p.id," +
                     " p.name," +
                     " i.quality," +
+                    " i.finishingIngredient," +
                     " i.currentPrice," +
                     " i.currentPriceRecordedAt" +
                 ") " +

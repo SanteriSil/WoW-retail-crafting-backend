@@ -29,6 +29,7 @@ class ItemRepositoryImplTest {
         Item item = new Item(123L, "Dust");
         item.setProfession(savedProfession);
         item.setQuality((short) 2);
+        item.setFinishingIngredient(false);
         item.setCurrentPrice(null);
         item.setCurrentPriceRecordedAt(null);
         itemRepository.save(item);
@@ -46,6 +47,7 @@ class ItemRepositoryImplTest {
         assertThat(first.getProfessionId()).isEqualTo(savedProfession.getId());
         assertThat(first.getProfessionName()).isEqualTo("Enchanting");
         assertThat(first.getQuality()).isEqualTo((short) 2);
+        assertThat(first.isFinishingIngredient()).isFalse();
         assertThat(first.getCurrentPrice()).isNull();
         assertThat(first.getCurrentPriceRecordedAt()).isNull();
 
@@ -54,5 +56,6 @@ class ItemRepositoryImplTest {
         assertThat(second.getName()).isEqualTo("Ore");
         assertThat(second.getProfessionId()).isNull();
         assertThat(second.getProfessionName()).isNull();
+        assertThat(second.isFinishingIngredient()).isFalse();
     }
 }
