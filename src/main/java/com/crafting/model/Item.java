@@ -57,10 +57,5 @@ public class Item {
 
     @Column(name = "current_price_recorded_at")
     private OffsetDateTime currentPriceRecordedAt;
-
-    public Item(Long id, String name) {
-        this.id = id;
-        this.name = name;
-    }
-
 }
+
