@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Set;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.crafting.repository.ItemRepository;
+import com.crafting.model.Item;
 
 
 @Service
@@ -29,23 +31,28 @@ public class AHDataFetcher {
     private static final String TOKEN_URL = "https://oauth.battle.net/token";
     private String clientId;
     private String clientSecret;
+    private final ItemRepository itemRepository;
 
 
     public AHDataFetcher(BlizzConfig blizzConfig, TokenService tokenService,
-                        BlizzApiClient blizzApiClient, AuctionProcesser auctionProcesser) {
+                        BlizzApiClient blizzApiClient, AuctionProcesser auctionProcesser, ItemRepository itemRepository) {
         this.blizzConfig = blizzConfig;
         this.tokenService = tokenService;
         this.blizzApiClient = blizzApiClient;
         this.auctionProcesser = auctionProcesser;
+        this.itemRepository = itemRepository;
     }
 
-    /* Placeholder function */
+    //gets item IDs from repo
+    //set unnecesary since IDs should be unique
+    //change later
     private HashSet<Integer> fetchDbItemIds() {
-        // In a real implementation, fetch item IDs from a database or another source
-        HashSet<Integer> ids = new HashSet<>();
-        ids.add(219946); // Example item ID
-        ids.add(219949); // Example item ID
-        return ids;
+        List<Item> items = itemRepository.findAll();
+        HashSet<Integer> itemIds = new HashSet<>();
+        for (Item item : items) {
+            itemIds.add(item.getId().intValue());
+        }
+        return itemIds;
     }
 
     public void callApi() {
