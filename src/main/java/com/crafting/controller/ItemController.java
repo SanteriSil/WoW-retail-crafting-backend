@@ -76,9 +76,15 @@ public class ItemController {
      * Creates a new item in the database. The ID should be one used by Blizzard
      */
     @PostMapping
-    public ResponseEntity<Item> createItem(@RequestBody Item item) {
+    public ResponseEntity<Item> createItem(@Valid @RequestBody Item item) {
+        if item.getId() == null {
+            return ResponseEntity.badRequest().build();
+        }
+        if (itemRepository.existsById(item.getId())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
         Item savedItem = itemRepository.save(item);
-        return ResponseEntity.ok(savedItem);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedItem);
     }
 
 }
