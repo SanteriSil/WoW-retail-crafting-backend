@@ -39,4 +39,4 @@ out/
 ### Environment files ###
 *.env
 
-*.http
+test.http
