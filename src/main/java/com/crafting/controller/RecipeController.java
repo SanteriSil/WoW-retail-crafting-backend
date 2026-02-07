@@ -1,6 +1,6 @@
 package com.crafting.controller;
 
-import com.crafting.model.dto.RecipeDTO;
+import com.crafting.model.Recipe;
 import com.crafting.repository.RecipeRepository;
 
 import org.springframework.http.ResponseEntity;
@@ -20,8 +20,10 @@ public class RecipeController {
         this.recipeRepository = recipeRepository;
     }
 
+    /*
     @GetMapping
     public ResponseEntity<List<RecipeDTO>> getAllRecipes() {
         return ResponseEntity.ok(recipeRepository.findAllDtos());
     }
+    */
 }
