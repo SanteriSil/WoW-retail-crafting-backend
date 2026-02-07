@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,6 +23,16 @@ public class ItemController {
 
     public ItemController(ItemRepository itemRepository) {
         this.itemRepository = itemRepository;
+    }
+
+    /**
+     * Returns all items in the database.
+     * @return List of all items
+     */
+    @GetMapping
+    public ResponseEntity<List<Item>> getAllItems() {
+        List<Item> items = itemRepository.findAll();
+        return ResponseEntity.ok(items);
     }
 
     /**
@@ -59,4 +71,14 @@ public class ItemController {
             .toList();
         return ResponseEntity.ok(orderedItems);
     }
+
+    /**
+     * Creates a new item in the database. The ID should be one used by Blizzard
+     */
+    @PostMapping
+    public ResponseEntity<Item> createItem(@RequestBody Item item) {
+        Item savedItem = itemRepository.save(item);
+        return ResponseEntity.ok(savedItem);
+    }
+
 }
