@@ -1,0 +1,43 @@
+### Create a new item
+POST http://localhost:8080/items
+Content-Type: application/json
+
+{
+  "id": 1001,
+  "name": "Test Sword",
+  "quality": 2,
+  "finishingIngredient": false,
+  "currentPrice": 123456
+}
+
+### Get all items
+GET http://localhost:8080/items
+
+### Get all item IDs
+GET http://localhost:8080/items/ids
+
+### GET FROM DROPLET
+GET 142.93.228.129/items
+
+### Get items by ordered IDs
+GET http://localhost:8080/items/ordered?ids=1001&ids=1002
+
+### Update an item
+PUT http://localhost:8080/items/1001
+Content-Type: application/json
+
+{
+  "id": 1001,
+  "name": "Test Sword Updated",
+  "quality": 3,
+  "finishingIngredient": true,
+  "currentPrice": 654321
+}
+
+### Delete an item
+DELETE http://localhost:8080/items/1001
+### Archive logs
+POST http://localhost:8080/logs/archive
+
+### Clear archived logs
+POST http://localhost:8080/logs/clear
