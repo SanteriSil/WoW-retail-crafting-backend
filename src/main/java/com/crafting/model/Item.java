@@ -37,9 +37,11 @@ public class Item {
     @Id
     @EqualsAndHashCode.Include
     @Column(name = "id")
+    @NotNull
     private Long id; // Blizzard item id (assigned externally)
 
     @Column(nullable = false)
+    @NotBlank
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -50,7 +52,7 @@ public class Item {
     private Short quality;
 
     @Column(name = "finishing_ingredient", nullable = false)
-    private boolean finishingIngredient;
+    private boolean finishingIngredient = false;
 
     @Column(name = "current_price")
     private Long currentPrice; // price in copper, current known price
