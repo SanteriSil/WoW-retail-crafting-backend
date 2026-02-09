@@ -13,6 +13,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -53,6 +56,7 @@ public class Item {
     private Short quality;
 
     @Column(name = "finishing_ingredient", nullable = false)
+    @Builder.Default
     private boolean finishingIngredient = false;
 
     @Column(name = "current_price")
