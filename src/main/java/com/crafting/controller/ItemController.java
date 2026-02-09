@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -74,7 +80,7 @@ public class ItemController {
      */
     @PostMapping
     public ResponseEntity<Item> createItem(@Valid @RequestBody Item item) {
-        if item.getId() == null {
+        if (item.getId() == null) {
             return ResponseEntity.badRequest().build();
         }
         if (itemRepository.existsById(item.getId())) {
