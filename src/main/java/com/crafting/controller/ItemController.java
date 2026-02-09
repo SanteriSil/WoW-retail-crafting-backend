@@ -41,10 +41,7 @@ public class ItemController {
      */
     @GetMapping("/ids")
     public ResponseEntity<List<Long>> getAllItemIds() {
-        List<Long> itemIds = itemRepository.findAll()
-            .stream()
-            .map(Item::getId)
-            .toList();
+        List<Long> itemIds = itemRepository.findAllIds();
         return ResponseEntity.ok(itemIds);
     }
 

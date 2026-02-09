@@ -9,4 +9,6 @@ import java.util.List;
 public interface ItemRepository extends JpaRepository<Item, Long>{
     List<Item> findAll();
     List<Item> findAllById(Iterable<Long> id);
+    @Query("SELECT i.id FROM Item i")
+    List<Long> findAllIds();
 }
