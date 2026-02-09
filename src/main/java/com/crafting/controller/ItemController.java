@@ -87,4 +87,35 @@ public class ItemController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedItem);
     }
 
+    /**
+     * Deletes an item from the database by ID.
+     * @param id ID of the item to delete
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+        if (!itemRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        itemRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Updates an existing item in the database. The ID must already exist.
+     * @param id ID of the item to update
+     * @param item Updated item data
+     * @return Updated item
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<Item> updateItem(
+        @PathVariable Long id,
+        @Valid @RequestBody Item item
+    ) {
+        if (!itemRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        item.setId(id);
+        Item updatedItem = itemRepository.save(item);
+        return ResponseEntity.ok(updatedItem);
+    }
 }

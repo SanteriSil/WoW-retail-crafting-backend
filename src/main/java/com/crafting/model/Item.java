@@ -38,6 +38,7 @@ public class Item {
     @EqualsAndHashCode.Include
     @Column(name = "id")
     @NotNull
+    @Positive
     private Long id; // Blizzard item id (assigned externally)
 
     @Column(nullable = false)
