@@ -44,6 +44,9 @@ public class ItemController {
     public ResponseEntity<List<Item>> getAllItems() {
         logger.info("GET /items called");
         List<Item> items = itemRepository.findAll();
+        logger.info(items.isEmpty()
+            ? "No items found in the database"
+            : "Returning {} items", items.size());
         return ResponseEntity.ok(items);
     }
 
@@ -55,6 +58,9 @@ public class ItemController {
     public ResponseEntity<List<Long>> getAllItemIds() {
         logger.info("GET /items/ids called");
         List<Long> itemIds = itemRepository.findAllIds();
+        logger.info(itemIds.isEmpty()
+            ? "No item IDs found in the database"
+            : "Returning {} item IDs", itemIds.size());
         return ResponseEntity.ok(itemIds);
     }
 
