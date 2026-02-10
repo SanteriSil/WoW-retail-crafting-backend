@@ -66,7 +66,9 @@ public class AHDataFetcher {
                     fetchDbItemIds()
                 );
                 System.out.println("Matching auctions: " + matches);
-
+                // Calculate average prices
+                Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+                System.out.println("Average prices: " + avgPrices);
 
             }
         } catch (Exception e) {
