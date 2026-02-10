@@ -81,6 +81,7 @@ public class ItemController {
         List<Item> orderedItems = ids.stream()
             .map(id -> itemsMap.get(id))
             .toList();
+        logger.info("Returning {} items in requested order", orderedItems.size());
         return ResponseEntity.ok(orderedItems);
     }
 
@@ -89,7 +90,7 @@ public class ItemController {
      */
     @PostMapping
     public ResponseEntity<Item> createItem(@Valid @RequestBody Item item) {
-        logger.info("POST /items called with item: {}", item);
+        logger.info("POST /items called with: {}", item);
         if (item.getId() == null) {
             logger.warn("Attempted to create item without ID");
             return ResponseEntity.badRequest().build();
@@ -130,7 +131,7 @@ public class ItemController {
         @PathVariable Long id,
         @Valid @RequestBody Item item
     ) {
-        logger.info("PUT /items/{} called with item: {}", id, item);
+        logger.info("PUT /items/{} called with: {}", id, item);
         if (!itemRepository.existsById(id)) {
             logger.warn("Attempted to update non-existing item with ID: {}", id);
             return ResponseEntity.notFound().build();
