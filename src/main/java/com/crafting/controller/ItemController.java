@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.http.HttpStatus;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,6 +29,7 @@ import java.util.List;
 @RequestMapping("/items")
 public class ItemController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ItemController.class);
     private final ItemRepository itemRepository;
 
     public ItemController(ItemRepository itemRepository) {
@@ -39,6 +42,7 @@ public class ItemController {
      */
     @GetMapping
     public ResponseEntity<List<Item>> getAllItems() {
+        logger.info("GET /items called");
         List<Item> items = itemRepository.findAll();
         return ResponseEntity.ok(items);
     }
@@ -49,6 +53,7 @@ public class ItemController {
      */
     @GetMapping("/ids")
     public ResponseEntity<List<Long>> getAllItemIds() {
+        logger.info("GET /items/ids called");
         List<Long> itemIds = itemRepository.findAllIds();
         return ResponseEntity.ok(itemIds);
     }
@@ -62,7 +67,9 @@ public class ItemController {
     public ResponseEntity<List<Item>> getItems(
         @RequestParam(required = false) List<Long> ids
     ) {
+        logger.info("GET /items/ordered called with ids: {}", ids);
         if (ids == null || ids.isEmpty()) {
+            logger.warn("GET /items/ordered called without ids parameter");
             throw new IllegalArgumentException(
                 "ids parameter is required and cannot be empty");
         }
@@ -82,13 +89,17 @@ public class ItemController {
      */
     @PostMapping
     public ResponseEntity<Item> createItem(@Valid @RequestBody Item item) {
+        logger.info("POST /items called with item: {}", item);
         if (item.getId() == null) {
+            logger.warn("Attempted to create item without ID");
             return ResponseEntity.badRequest().build();
         }
         if (itemRepository.existsById(item.getId())) {
+            logger.warn("Attempted to create item with existing ID: {}", item.getId());
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         Item savedItem = itemRepository.save(item);
+        logger.info("Item created with ID: {}", savedItem.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(savedItem);
     }
 
@@ -98,10 +109,13 @@ public class ItemController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+        logger.info("DELETE /items/{} called", id);
         if (!itemRepository.existsById(id)) {
+            logger.warn("Attempted to delete non-existing item with ID: {}", id);
             return ResponseEntity.notFound().build();
         }
         itemRepository.deleteById(id);
+        logger.info("Item with ID: {} deleted", id);
         return ResponseEntity.noContent().build();
     }
 
@@ -116,11 +130,14 @@ public class ItemController {
         @PathVariable Long id,
         @Valid @RequestBody Item item
     ) {
+        logger.info("PUT /items/{} called with item: {}", id, item);
         if (!itemRepository.existsById(id)) {
+            logger.warn("Attempted to update non-existing item with ID: {}", id);
             return ResponseEntity.notFound().build();
         }
         item.setId(id);
         Item updatedItem = itemRepository.save(item);
+        logger.info("Item with ID: {} updated", id);
         return ResponseEntity.ok(updatedItem);
     }
 }
