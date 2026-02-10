@@ -3,6 +3,8 @@ package com.crafting.blizz;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
+
 import org.springframework.http.*;
 
 import java.util.HashSet;
@@ -62,14 +64,30 @@ public class AHDataFetcher {
                     body,
                     fetchDbItemIds()
                 );
-                System.out.println("Matching auctions: " + matches);
                 // Calculate average prices
                 Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
-                System.out.println("Average prices: " + avgPrices);
+                // Save to DB
+                saveItemsToDb(avgPrices);
 
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Transactional
+    private void saveItemsToDb(Map<Integer, Long> avgPrices) {
+        for (Map.Entry<Integer, Long> entry : avgPrices.entrySet()) {
+            Integer itemId = entry.getKey();
+            Long avgPrice = entry.getValue();
+            Item item = itemRepository.findById(itemId.longValue()).orElse(null);
+            if (item != null) {
+                item.setCurrentPrice(avgPrice);
+                itemRepository.save(item);
+            } else {
+                // Optionally handle missing item (e.g., log or create new)
+                System.out.println("Item with ID " + itemId + " not found in DB.");
+            }
         }
     }
 
