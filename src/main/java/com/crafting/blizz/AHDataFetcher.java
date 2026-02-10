@@ -4,18 +4,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.http.*;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.crafting.repository.ItemRepository;
 import com.crafting.model.Item;
 
@@ -27,8 +19,6 @@ public class AHDataFetcher {
     private final TokenService tokenService;
     private final BlizzApiClient blizzApiClient;
     private final AuctionProcesser auctionProcesser;
-    private static final String BASE_URL = "https://eu.api.blizzard.com/data/wow/auctions/commodities";
-    private static final String TOKEN_URL = "https://oauth.battle.net/token";
     private String clientId;
     private String clientSecret;
     private final ItemRepository itemRepository;
@@ -73,7 +63,9 @@ public class AHDataFetcher {
                     fetchDbItemIds()
                 );
                 System.out.println("Matching auctions: " + matches);
-
+                // Calculate average prices
+                Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+                System.out.println("Average prices: " + avgPrices);
 
             }
         } catch (Exception e) {
