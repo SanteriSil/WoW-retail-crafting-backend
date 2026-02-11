@@ -11,6 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
+
 import com.crafting.repository.ItemRepository;
 import com.crafting.model.Item;
 
@@ -25,6 +27,7 @@ public class AHDataFetcher {
     private String clientId;
     private String clientSecret;
     private final ItemRepository itemRepository;
+    private final ReentrantLock fetchLock = new ReentrantLock();
 
 
     public AHDataFetcher(BlizzConfig blizzConfig, TokenService tokenService,
@@ -51,28 +54,8 @@ public class AHDataFetcher {
     // runs every 20 minutes
     @Scheduled(cron = "0 */20 * * * *")
     public void callApi() {
-        if (clientId == null || clientSecret == null) {
-            System.out.println("Missing clientId/secret - check env vars and application.properties");
-            return;
-        }
-
         try {
-            String accessToken = tokenService.getAccessToken(clientId, clientSecret);
-            ResponseEntity<String> resp = blizzApiClient.fetchCommodities(accessToken);
-            System.out.println("API response status: " + resp.getStatusCode());
-            String body = resp.getBody();
-            if (body != null) {
-                // Collect matching auctions
-                Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
-                    body,
-                    fetchDbItemIds()
-                );
-                // Calculate average prices
-                Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
-                // Save to DB
-                saveItemsToDb(avgPrices);
-
-            }
+            triggerFetch();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -94,12 +77,48 @@ public class AHDataFetcher {
         }
     }
 
+    /**
+     * Method for manually triggering the fetch process, can be called from controller
+     * @return true if fetch started, false if already in progress or missing credentials
+     */
+    public boolean triggerFetch() {
+        if (!fetchLock.tryLock()) {
+            System.out.println("Fetch already in progress.");
+            return false;
+        }
+        try {
+            if (clientId == null || clientSecret == null) {
+            System.out.println("Missing clientId/secret - check env vars and application.properties");
+            return false;
+            }
+            String accessToken = tokenService.getAccessToken(clientId, clientSecret);
+            ResponseEntity<String> resp = blizzApiClient.fetchCommodities(accessToken);
+            System.out.println("API response status: " + resp.getStatusCode());
+            String body = resp.getBody();
+            if (body != null) {
+                // Collect matching auctions
+                Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
+                    body,
+                    fetchDbItemIds()
+                );
+                // Calculate average prices
+                Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+                // Save to DB
+                saveItemsToDb(avgPrices);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            fetchLock.unlock();
+        }
+    }
+
 
     @PostConstruct
     public void init() {
         clientId = blizzConfig.getClientId();
         clientSecret = blizzConfig.getClientSecret();
-        // for quick testing; remove or schedule in production
-        callApi();
     }
 }
