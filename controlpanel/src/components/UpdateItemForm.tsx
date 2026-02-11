@@ -37,7 +37,7 @@ export default function UpdateItemForm({
 
         setSaving(true);
         try {
-            await onUpdate({ id: selectedItem.id, name: name.trim() });
+            await onUpdate({ id: selectedItem.id, name: name.trim(), finishingIngredient: false });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to update item.");
         } finally {

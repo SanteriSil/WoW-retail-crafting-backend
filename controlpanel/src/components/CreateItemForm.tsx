@@ -22,7 +22,7 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
 
         setSaving(true);
         try {
-            await onCreate({ id, name: name.trim() });
+            await onCreate({ id, name: name.trim(), finishingIngredient: false });
             setId(0);
             setName("");
         } catch (err) {
