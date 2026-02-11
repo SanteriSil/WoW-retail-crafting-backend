@@ -13,6 +13,7 @@ export default function App() {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [activePane, setActivePane] = useState<"create" | "update" | "delete">("create");
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -92,25 +93,52 @@ export default function App() {
                 </div>
 
                 <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
-                    <CreateItemForm onCreate={handleCreate} />
-                    <UpdateItemForm
-                        items={items}
-                        selectedItem={selectedItem}
-                        onSelect={setSelectedItem}
-                        onUpdate={handleUpdate}
-                    />
-                    <DeleteItemForm
-                        items={items}
-                        selectedItem={selectedItem}
-                        onSelect={setSelectedItem}
-                        onDelete={handleDelete}
-                    />
+                    <div className="card">
+                        <div className="tabs">
+                            <button
+                                type="button"
+                                className={`tab ${activePane === "create" ? "active" : ""}`}
+                                onClick={() => setActivePane("create")}
+                            >
+                                Create
+                            </button>
+                            <button
+                                type="button"
+                                className={`tab ${activePane === "update" ? "active" : ""}`}
+                                onClick={() => setActivePane("update")}
+                            >
+                                Update
+                            </button>
+                            <button
+                                type="button"
+                                className={`tab ${activePane === "delete" ? "active" : ""}`}
+                                onClick={() => setActivePane("delete")}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                        <div className="tab-body">
+                            {activePane === "create" ? <CreateItemForm onCreate={handleCreate} /> : null}
+                            {activePane === "update" ? (
+                                <UpdateItemForm
+                                    items={items}
+                                    selectedItem={selectedItem}
+                                    onSelect={setSelectedItem}
+                                    onUpdate={handleUpdate}
+                                />
+                            ) : null}
+                            {activePane === "delete" ? (
+                                <DeleteItemForm
+                                    items={items}
+                                    selectedItem={selectedItem}
+                                    onSelect={setSelectedItem}
+                                    onDelete={handleDelete}
+                                />
+                            ) : null}
+                        </div>
+                    </div>
                     <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} />
                 </div>
-            </div>
-
-            <div className="footer">
-                Set VITE_API_BASE_URL to your droplet base URL when needed.
             </div>
         </div>
     );
