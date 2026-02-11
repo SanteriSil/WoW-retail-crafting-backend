@@ -22,11 +22,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         return undefined as unknown as T;
     }
 
-    try {
-        return JSON.parse(text) as T;
-    } catch (err) {
-        throw new Error("Failed to parse response JSON: " + (err instanceof Error ? err.message : String(err)));
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("application/json")) {
+        try {
+            return JSON.parse(text) as T;
+        } catch (err) {
+            throw new Error("Failed to parse response JSON: " + (err instanceof Error ? err.message : String(err)));
+        }
     }
+
+    // Not JSON — return raw text
+    return text as unknown as T;
 }
 
 export async function getItems(): Promise<Item[]> {
