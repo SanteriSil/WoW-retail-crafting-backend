@@ -24,9 +24,18 @@ function resolveBaseUrl(): string {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+    const method = (options?.method ?? "GET").toString().toUpperCase();
+
+    // Only set Content-Type for requests that have a body or commonly include one
+    const defaultHeaders: Record<string, string> = {};
+    if (options?.body || ["POST", "PUT", "PATCH"].includes(method)) {
+        defaultHeaders["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(`${resolveBaseUrl()}${path}`, {
         headers: {
-            "Content-Type": "application/json"
+            ...defaultHeaders,
+            ...(options?.headers as Record<string, string> | undefined)
         },
         ...options
     });
@@ -88,4 +97,9 @@ export async function archiveLogs(): Promise<void> {
 
 export async function clearLogs(): Promise<void> {
     await request<void>("/logs/clear", { method: "POST" });
+}
+
+export async function fetchCraftingAH(): Promise<string | void> {
+    // Controller exposes GET /craftingAH/fetch — use GET to avoid unnecessary preflight
+    return request<string>("/craftingAH/fetch", { method: "GET" });
 }

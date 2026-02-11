@@ -97,6 +97,37 @@ body {
     color: #1d4ed8;
     box-shadow: 0 12px 32px rgba(37,99,235,0.22);
 }
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.separator {
+    width: 1px;
+    height: 24px;
+    background: #e2e8f0;
+    display: inline-block;
+}
+
+.status-inline {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.status-success {
+    color: #065f46;
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+}
+
+.status-error {
+    color: #b91c1c;
+    background: #fff1f2;
+    border-color: #fecaca;
 }
 
 .endpoint-card {

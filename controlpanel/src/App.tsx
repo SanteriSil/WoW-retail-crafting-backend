@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { archiveLogs, clearLogs, createItem, deleteItem, getItems, updateItem } from "./api";
+import { archiveLogs, clearLogs, createItem, deleteItem, fetchCraftingAH, getItems, updateItem } from "./api";
 import type { Item } from "./types";
 import CreateItemForm from "./components/CreateItemForm";
 import UpdateItemForm from "./components/UpdateItemForm";
@@ -17,6 +17,9 @@ export default function App() {
     const [logsMessage, setLogsMessage] = useState<string | null>(null);
     const [logsBusy, setLogsBusy] = useState(false);
     const [activePane, setActivePane] = useState<"create" | "update" | "delete">("create");
+    const [ahMessage, setAhMessage] = useState<string | null>(null);
+    const [ahError, setAhError] = useState<string | null>(null);
+    const [ahBusy, setAhBusy] = useState(false);
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -88,6 +91,24 @@ export default function App() {
         }
     };
 
+    const handleAhRefresh = async () => {
+        setAhBusy(true);
+        setAhMessage(null);
+        setAhError(null);
+        try {
+            const response = await fetchCraftingAH();
+            const message = typeof response === "string" && response.trim().length > 0
+                ? response
+                : "Refresh accepted by server.";
+            setAhMessage(message);
+            setTimeout(() => setAhMessage(null), 3000);
+        } catch (err) {
+            setAhError(err instanceof Error ? err.message : "Failed to start refresh.");
+        } finally {
+            setAhBusy(false);
+        }
+    };
+
     return (
         <div className="app">
             <EndpointSettings />
@@ -96,9 +117,20 @@ export default function App() {
                     <h1>Crafting Control Panel</h1>
                     <div className="muted">Using /items and /logs endpoints</div>
                 </div>
-                <button className="button secondary" type="button" onClick={refreshItems}>
-                    Refresh
-                </button>
+                <div className="header-actions">
+                    <button className="button secondary" type="button" onClick={refreshItems}>
+                        Refresh
+                    </button>
+                    <span className="separator" />
+                    <button className="button" type="button" onClick={handleAhRefresh} disabled={ahBusy}>
+                        {ahBusy ? "Refreshing..." : "AH Refresh"}
+                    </button>
+                    {(ahMessage || ahError) && (
+                        <span className={`status-inline ${ahError ? "status-error" : "status-success"}`}>
+                            {ahError ?? ahMessage}
+                        </span>
+                    )}
+                </div>
             </div>
 
             {error && <div className="card">{error}</div>}
