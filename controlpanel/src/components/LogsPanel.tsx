@@ -15,7 +15,6 @@ export default function LogsPanel({ onArchive, onClear }: LogsPanelProps) {
           Clear archives
         </button>
       </div>
-      <div className="muted">Actions map to /logs/archive and /logs/clear.</div>
     </div>
   );
 }

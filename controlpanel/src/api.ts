@@ -15,7 +15,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         throw new Error(text || `Request failed: ${response.status}`);
     }
 
-    return response.json() as Promise<T>;
+    // Read raw text first — handles empty bodies (204 No Content) safely
+    const text = await response.text();
+    if (!text) {
+        // no content to parse
+        return undefined as unknown as T;
+    }
+
+    try {
+        return JSON.parse(text) as T;
+    } catch (err) {
+        throw new Error("Failed to parse response JSON: " + (err instanceof Error ? err.message : String(err)));
+    }
 }
 
 export async function getItems(): Promise<Item[]> {
@@ -23,16 +34,18 @@ export async function getItems(): Promise<Item[]> {
 }
 
 export async function createItem(item: Item): Promise<Item> {
+    const payload = { ...item, finishingIngredient: item.finishingIngredient ?? false };
     return request<Item>("/items", {
         method: "POST",
-        body: JSON.stringify(item)
+        body: JSON.stringify(payload)
     });
 }
 
 export async function updateItem(id: number, item: Item): Promise<Item> {
+    const payload = { ...item, finishingIngredient: item.finishingIngredient ?? false };
     return request<Item>(`/items/${id}`, {
         method: "PUT",
-        body: JSON.stringify(item)
+        body: JSON.stringify(payload)
     });
 }
 

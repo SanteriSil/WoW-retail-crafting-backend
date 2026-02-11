@@ -27,6 +27,8 @@ export default function DeleteItemForm({
         setSaving(true);
         try {
             await onDelete(selectedItem.id);
+            // clear any lingering errors after successful delete
+            setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to delete item.");
         } finally {
