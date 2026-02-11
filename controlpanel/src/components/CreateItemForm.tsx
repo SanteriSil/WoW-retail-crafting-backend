@@ -6,7 +6,7 @@ type CreateItemFormProps = {
 };
 
 export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
-    const [id, setId] = useState(0);
+    const [id, setId] = useState<string>("");
     const [name, setName] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -15,15 +15,16 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
         event.preventDefault();
         setError(null);
 
-        if (!id || !name.trim()) {
-            setError("Id and name are required.");
+        const numericId = Number(id);
+        if (!id.trim() || !name.trim() || !Number.isInteger(numericId) || numericId <= 0) {
+            setError("Id (positive integer) and name are required.");
             return;
         }
 
         setSaving(true);
         try {
-            await onCreate({ id, name: name.trim(), finishingIngredient: false });
-            setId(0);
+            await onCreate({ id: numericId, name: name.trim(), finishingIngredient: false });
+            setId("");
             setName("");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to create item.");
@@ -39,9 +40,10 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
                 Id
                 <input
                     className="input"
-                    type="number"
+                    type="text"
+                    placeholder="0"
                     value={id}
-                    onChange={(e) => setId(Number(e.target.value))}
+                    onChange={(e) => setId(e.target.value.replace(/\D/g, ""))}
                 />
             </label>
             <label>
