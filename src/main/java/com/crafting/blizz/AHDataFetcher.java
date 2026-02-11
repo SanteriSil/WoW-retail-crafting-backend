@@ -29,6 +29,8 @@ public class AHDataFetcher {
     private final ItemRepository itemRepository;
     private final ReentrantLock fetchLock = new ReentrantLock();
 
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AHDataFetcher.class);
+
 
     public AHDataFetcher(BlizzConfig blizzConfig, TokenService tokenService,
                         BlizzApiClient blizzApiClient, AuctionProcesser auctionProcesser, ItemRepository itemRepository) {
@@ -43,21 +45,24 @@ public class AHDataFetcher {
     //set unnecesary since IDs should be unique
     //change later
     private HashSet<Integer> fetchDbItemIds() {
+        logger.info("Fetching item IDs from database");
         List<Item> items = itemRepository.findAll();
         HashSet<Integer> itemIds = new HashSet<>();
         for (Item item : items) {
             itemIds.add(item.getId().intValue());
         }
+        logger.info("Fetched {} item IDs from database", itemIds.size());
         return itemIds;
     }
 
     // runs every 20 minutes
     @Scheduled(cron = "0 */20 * * * *")
     public void callApi() {
+        logger.info("Scheduled task triggered: Fetching AH data");
         try {
             triggerFetch();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error during scheduled fetch", e);
         }
     }
 
@@ -68,11 +73,12 @@ public class AHDataFetcher {
             Long avgPrice = entry.getValue();
             Item item = itemRepository.findById(itemId.longValue()).orElse(null);
             if (item != null) {
+                logger.info("Updating item ID {} with new average price {}", itemId, avgPrice);
                 item.setCurrentPrice(avgPrice);
                 itemRepository.save(item);
             } else {
                 // Optionally handle missing item (e.g., log or create new)
-                System.out.println("Item with ID " + itemId + " not found in DB.");
+                logger.warn("Item with ID {} not found in DB.", itemId);
             }
         }
     }
@@ -82,28 +88,32 @@ public class AHDataFetcher {
      * @return true if fetch started, false if already in progress or missing credentials
      */
     public boolean triggerFetch() {
+        logger.info("Manual fetch trigger called");
         if (!fetchLock.tryLock()) {
-            System.out.println("Fetch already in progress.");
+            logger.warn("Fetch already in progress, skipping new trigger");
             return false;
         }
         try {
             if (clientId == null || clientSecret == null) {
-            System.out.println("Missing clientId/secret - check env vars and application.properties");
+            logger.warn("Missing clientId/secret - check env vars and application.properties");
             return false;
             }
             String accessToken = tokenService.getAccessToken(clientId, clientSecret);
             ResponseEntity<String> resp = blizzApiClient.fetchCommodities(accessToken);
-            System.out.println("API response status: " + resp.getStatusCode());
+            logger.info("API response status: " + resp.getStatusCode());
             String body = resp.getBody();
             if (body != null) {
                 // Collect matching auctions
+                logger.info("Processing auction data");
                 Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
                     body,
                     fetchDbItemIds()
                 );
                 // Calculate average prices
+                logger.info("Calculating average prices for matched items");
                 Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
                 // Save to DB
+                logger.info("Saving average prices to database");
                 saveItemsToDb(avgPrices);
             }
             return true;
