@@ -69,6 +69,30 @@ body {
     gap: 12px;
 }
 
+/* minimized logs panel */
+.minimized {
+    display: inline-block;
+    width: 110px;
+    padding: 6px 10px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.minimized .button {
+    padding: 4px 6px;
+    font-size: 12px;
+}
+
+/* small button variant for compact controls */
+.button.small {
+    padding: 4px 6px;
+    font-size: 12px;
+    line-height: 1;
+    min-width: 28px;
+}
+
+
+
 .list {
     max-height: 420px;
     overflow: auto;
