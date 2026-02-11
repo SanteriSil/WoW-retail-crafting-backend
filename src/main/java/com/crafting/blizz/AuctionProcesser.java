@@ -42,7 +42,6 @@ public class AuctionProcesser {
             if (auctionEntries.isEmpty()) continue; // Avoid division by zero
 
             auctionEntries.sort((a, b) -> Long.compare(a.getUnitPrice(), b.getUnitPrice()));
-            System.out.println("Sorted auctions for item " + entry.getKey() + ": " + auctionEntries);
 
             int totalEntries = auctionEntries.size();
             /* The top 20% of the entries (rounded up) are selected. */

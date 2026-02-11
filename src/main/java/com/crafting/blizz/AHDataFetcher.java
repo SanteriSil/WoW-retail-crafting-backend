@@ -6,6 +6,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +48,8 @@ public class AHDataFetcher {
         return itemIds;
     }
 
+    // runs every 20 minutes
+    @Scheduled(cron = "0 */20 * * * *")
     public void callApi() {
         if (clientId == null || clientSecret == null) {
             System.out.println("Missing clientId/secret - check env vars and application.properties");
