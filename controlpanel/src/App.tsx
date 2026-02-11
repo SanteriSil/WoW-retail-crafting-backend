@@ -1,0 +1,117 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { archiveLogs, clearLogs, createItem, deleteItem, getItems, updateItem } from "./api";
+import type { Item } from "./types";
+import CreateItemForm from "./components/CreateItemForm";
+import UpdateItemForm from "./components/UpdateItemForm";
+import DeleteItemForm from "./components/DeleteItemForm";
+import ItemList from "./components/ItemList";
+import LogsPanel from "./components/LogsPanel";
+
+export default function App() {
+    const [items, setItems] = useState<Item[]>([]);
+    const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+    const [query, setQuery] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const refreshItems = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await getItems();
+            setItems(data);
+            if (data.length > 0 && !selectedItem) {
+                setSelectedItem(data[0]);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load items.");
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedItem]);
+
+    useEffect(() => {
+        refreshItems();
+    }, [refreshItems]);
+
+    const filteredItems = useMemo(() => {
+        const lowered = query.toLowerCase();
+        return items.filter((item) =>
+            item.name.toLowerCase().includes(lowered) || String(item.id).includes(lowered)
+        );
+    }, [items, query]);
+
+    const handleCreate = async (item: Item) => {
+        await createItem(item);
+        await refreshItems();
+    };
+
+    const handleUpdate = async (item: Item) => {
+        await updateItem(item.id, item);
+        await refreshItems();
+    };
+
+    const handleDelete = async (id: number) => {
+        await deleteItem(id);
+        await refreshItems();
+    };
+
+    const handleArchiveLogs = async () => {
+        await archiveLogs();
+    };
+
+    const handleClearLogs = async () => {
+        await clearLogs();
+    };
+
+    return (
+        <div className="app">
+            <div className="header">
+                <div>
+                    <h1>Crafting Control Panel</h1>
+                    <div className="muted">Using /items and /logs endpoints</div>
+                </div>
+                <button className="button secondary" type="button" onClick={refreshItems}>
+                    Refresh
+                </button>
+            </div>
+
+            {error && <div className="card">{error}</div>}
+
+            <div className="grid">
+                <div className="card">
+                    <h3>Items</h3>
+                    <input
+                        className="input"
+                        placeholder="Search by id or name"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                    {loading ? <div className="muted">Loading...</div> : null}
+                    <ItemList items={filteredItems} onSelect={setSelectedItem} />
+                </div>
+
+                <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
+                    <CreateItemForm onCreate={handleCreate} />
+                    <UpdateItemForm
+                        items={items}
+                        selectedItem={selectedItem}
+                        onSelect={setSelectedItem}
+                        onUpdate={handleUpdate}
+                    />
+                    <DeleteItemForm
+                        items={items}
+                        selectedItem={selectedItem}
+                        onSelect={setSelectedItem}
+                        onDelete={handleDelete}
+                    />
+                    <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} />
+                </div>
+            </div>
+
+            <div className="footer">
+                Set VITE_API_BASE_URL to your droplet base URL when needed.
+            </div>
+        </div>
+    );
+}
