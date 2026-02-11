@@ -70,18 +70,23 @@ export default function DeleteItemForm({
                 </select>
             </label>
 
-            <label>
-                <input
-                    type="checkbox"
-                    checked={bypassConfirm}
-                    disabled={saving}
-                    onChange={(e) => setBypassConfirm(e.target.checked)}
-                />
-                &nbsp;Disable confirmation
-            </label>
+            <div className="field">
+                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                        type="checkbox"
+                        checked={bypassConfirm}
+                        disabled={saving}
+                        onChange={(e) => setBypassConfirm(e.target.checked)}
+                    />
+                    <div>
+                        <div className="label">Bypass confirmation</div>
+                        <div className="helper">Check to disable the confirm dialog for item deletes</div>
+                    </div>
+                </label>
+            </div>
 
-            {error && <div className="muted">{error}</div>}
-            <div className="row">
+            {error && <div className="error">{error}</div>}
+            <div className="form-actions">
                 <button className="button danger" type="button" onClick={handleDelete} disabled={saving}>
                     {saving ? "Deleting..." : "Delete"}
                 </button>

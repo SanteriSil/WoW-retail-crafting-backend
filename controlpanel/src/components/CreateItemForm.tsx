@@ -35,9 +35,13 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="card">
-            <h3>Create</h3>
-            <label>
-                Id
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <h3 style={{ margin: 0 }}>Create</h3>
+                <div className="helper">Create new item with id and name</div>
+            </div>
+
+            <div className="field">
+                <div className="label">Id</div>
                 <input
                     className="input"
                     type="text"
@@ -45,17 +49,21 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
                     value={id}
                     onChange={(e) => setId(e.target.value.replace(/\D/g, ""))}
                 />
-            </label>
-            <label>
-                Name
+                <div className="helper">Positive integer identifier (required)</div>
+            </div>
+
+            <div className="field">
+                <div className="label">Name</div>
                 <input
                     className="input"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
-            </label>
-            {error && <div className="muted">{error}</div>}
-            <div className="row">
+            </div>
+
+            {error && <div className="error">{error}</div>}
+
+            <div className="form-actions">
                 <button className="button" type="submit" disabled={saving}>
                     {saving ? "Saving..." : "Create"}
                 </button>
