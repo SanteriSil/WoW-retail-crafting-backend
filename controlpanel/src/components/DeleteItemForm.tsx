@@ -16,6 +16,7 @@ export default function DeleteItemForm({
 }: DeleteItemFormProps) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [bypassConfirm, setBypassConfirm] = useState(false);
 
     const handleDelete = async () => {
         if (!selectedItem) {
@@ -24,6 +25,14 @@ export default function DeleteItemForm({
         }
 
         setError(null);
+
+        if (!bypassConfirm) {
+            const confirmed = window.confirm(
+                `Are you sure you want to delete "${selectedItem.name}" (#${selectedItem.id})? This action cannot be undone.`
+            );
+            if (!confirmed) return;
+        }
+
         setSaving(true);
         try {
             await onDelete(selectedItem.id);
@@ -60,6 +69,17 @@ export default function DeleteItemForm({
                     ))}
                 </select>
             </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    checked={bypassConfirm}
+                    disabled={saving}
+                    onChange={(e) => setBypassConfirm(e.target.checked)}
+                />
+                &nbsp;Disable confirmation
+            </label>
+
             {error && <div className="muted">{error}</div>}
             <div className="row">
                 <button className="button danger" type="button" onClick={handleDelete} disabled={saving}>
