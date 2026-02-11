@@ -47,7 +47,9 @@ export default function DeleteItemForm({
 
     return (
         <div className="card">
-            <h3>Delete</h3>
+            <div className="card-header">
+                <h3 style={{ margin: 0 }}>Delete</h3>
+            </div>
             <label>
                 Item
                 <select

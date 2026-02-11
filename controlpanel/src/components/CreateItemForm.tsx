@@ -35,7 +35,7 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }} className="card-header">
                 <h3 style={{ margin: 0 }}>Create</h3>
                 <div className="helper">Create new item with id and name</div>
             </div>
@@ -64,7 +64,7 @@ export default function CreateItemForm({ onCreate }: CreateItemFormProps) {
             {error && <div className="error">{error}</div>}
 
             <div className="form-actions">
-                <button className="button" type="submit" disabled={saving}>
+                <button className="button primary" type="submit" disabled={saving}>
                     {saving ? "Saving..." : "Create"}
                 </button>
             </div>
