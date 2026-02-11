@@ -13,6 +13,8 @@ export default function App() {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [logsMessage, setLogsMessage] = useState<string | null>(null);
+    const [logsBusy, setLogsBusy] = useState(false);
     const [activePane, setActivePane] = useState<"create" | "update" | "delete">("create");
 
     const refreshItems = useCallback(async () => {
@@ -58,11 +60,31 @@ export default function App() {
     };
 
     const handleArchiveLogs = async () => {
-        await archiveLogs();
+        setLogsBusy(true);
+        setLogsMessage(null);
+        try {
+            await archiveLogs();
+            setLogsMessage("Logs archived.");
+            setTimeout(() => setLogsMessage(null), 3000);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to archive logs.");
+        } finally {
+            setLogsBusy(false);
+        }
     };
 
     const handleClearLogs = async () => {
-        await clearLogs();
+        setLogsBusy(true);
+        setLogsMessage(null);
+        try {
+            await clearLogs();
+            setLogsMessage("Archives cleared.");
+            setTimeout(() => setLogsMessage(null), 3000);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to clear logs.");
+        } finally {
+            setLogsBusy(false);
+        }
     };
 
     return (
@@ -137,7 +159,7 @@ export default function App() {
                             ) : null}
                         </div>
                     </div>
-                    <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} />
+                    <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} message={logsMessage} busy={logsBusy} />
                 </div>
             </div>
         </div>
