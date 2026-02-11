@@ -6,6 +6,7 @@ import UpdateItemForm from "./components/UpdateItemForm";
 import DeleteItemForm from "./components/DeleteItemForm";
 import ItemList from "./components/ItemList";
 import LogsPanel from "./components/LogsPanel";
+import EndpointSettings from "./components/EndpointSettings";
 
 export default function App() {
     const [items, setItems] = useState<Item[]>([]);
@@ -89,6 +90,7 @@ export default function App() {
 
     return (
         <div className="app">
+            <EndpointSettings />
             <div className="header">
                 <div>
                     <h1>Crafting Control Panel</h1>
