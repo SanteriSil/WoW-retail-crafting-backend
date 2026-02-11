@@ -1,9 +1,30 @@
 import type { Item } from "./types";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+const LOCALHOST_BASE_URL = "http://localhost:8080";
+const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? LOCALHOST_BASE_URL;
+
+function resolveBaseUrl(): string {
+    try {
+        const useLocalhost = localStorage.getItem("target_use_localhost");
+        const host = localStorage.getItem("target_host");
+        const port = localStorage.getItem("target_port");
+
+        if (useLocalhost === "true") {
+            return LOCALHOST_BASE_URL;
+        }
+
+        if (host && port) {
+            return `http://${host}:${port}`;
+        }
+    } catch {
+        return DEFAULT_BASE_URL;
+    }
+
+    return DEFAULT_BASE_URL;
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-    const response = await fetch(`${baseUrl}${path}`, {
+    const response = await fetch(`${resolveBaseUrl()}${path}`, {
         headers: {
             "Content-Type": "application/json"
         },
