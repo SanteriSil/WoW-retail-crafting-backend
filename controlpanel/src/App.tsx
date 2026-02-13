@@ -27,8 +27,20 @@ export default function App() {
         try {
             const data = await getItems();
             setItems(data);
-            if (data.length > 0 && !selectedItem) {
-                setSelectedItem(data[0]);
+            // Ensure the selectedItem remains valid after a refresh.
+            // If there are no items, clear selection. If the previously
+            // selected item was deleted, select the first available item.
+            if (data.length === 0) {
+                setSelectedItem(null);
+            } else {
+                if (!selectedItem) {
+                    setSelectedItem(data[0]);
+                } else {
+                    const exists = data.some((it) => it.id === selectedItem.id);
+                    if (!exists) {
+                        setSelectedItem(data[0]);
+                    }
+                }
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load items.");
