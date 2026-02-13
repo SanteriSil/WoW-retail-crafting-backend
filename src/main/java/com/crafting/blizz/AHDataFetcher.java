@@ -45,13 +45,13 @@ public class AHDataFetcher {
     //set unnecesary since IDs should be unique
     //change later
     private HashSet<Integer> fetchDbItemIds() {
-        logger.info("Fetching item IDs from database");
+        logger.debug("Fetching item IDs from database");
         List<Item> items = itemRepository.findAll();
         HashSet<Integer> itemIds = new HashSet<>();
         for (Item item : items) {
             itemIds.add(item.getId().intValue());
         }
-        logger.info("Fetched {} item IDs from database", itemIds.size());
+        logger.debug("Fetched {} item IDs from database", itemIds.size());
         return itemIds;
     }
 
@@ -88,7 +88,7 @@ public class AHDataFetcher {
      * @return true if fetch started, false if already in progress or missing credentials
      */
     public boolean triggerFetch() {
-        logger.info("Manual fetch trigger called");
+        logger.debug("Manual fetch trigger called");
         if (!fetchLock.tryLock()) {
             logger.warn("Fetch already in progress, skipping new trigger");
             return false;
@@ -100,20 +100,20 @@ public class AHDataFetcher {
             }
             String accessToken = tokenService.getAccessToken(clientId, clientSecret);
             ResponseEntity<String> resp = blizzApiClient.fetchCommodities(accessToken);
-            logger.info("API response status: " + resp.getStatusCode());
+            logger.debug("API response status: " + resp.getStatusCode());
             String body = resp.getBody();
             if (body != null) {
                 // Collect matching auctions
-                logger.info("Processing auction data");
+                logger.debug("Processing auction data");
                 Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
                     body,
                     fetchDbItemIds()
                 );
                 // Calculate average prices
-                logger.info("Calculating average prices for matched items");
+                logger.debug("Calculating average prices for matched items");
                 Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
                 // Save to DB
-                logger.info("Saving average prices to database");
+                logger.debug("Saving average prices to database");
                 saveItemsToDb(avgPrices);
             }
             return true;
