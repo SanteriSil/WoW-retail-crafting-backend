@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getCurrentLogs } from "../api";
 
 type LogsPanelProps = {
   onArchive: () => Promise<void>;
@@ -9,6 +10,9 @@ type LogsPanelProps = {
 
 export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [logText, setLogText] = useState<string | null>(null);
+  const [loadingLog, setLoadingLog] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
 
   const handleArchive = async () => {
     const confirmed = window.confirm("Archive logs? This will create a snapshot of the current logs.");
@@ -20,6 +24,20 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
     const confirmed = window.confirm("Clear archived logs? This will permanently delete archived logs.");
     if (!confirmed) return;
     await onClear();
+  };
+
+  const handleFetchCurrent = async () => {
+    setLogError(null);
+    setLogText(null);
+    setLoadingLog(true);
+    try {
+      const txt = await getCurrentLogs();
+      setLogText(txt ?? "");
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoadingLog(false);
+    }
   };
 
   if (collapsed) {
@@ -48,11 +66,45 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
         <button className="button secondary" type="button" onClick={handleArchive} disabled={busy}>
           {busy ? "Working..." : "Archive logs"}
         </button>
+
         <button className="button secondary" type="button" onClick={handleClear} disabled={busy}>
           {busy ? "Working..." : "Clear archives"}
         </button>
+
+        <button
+          className="button secondary"
+          type="button"
+          onClick={handleFetchCurrent}
+          disabled={busy || loadingLog}
+          aria-pressed={!!logText}
+        >
+          {loadingLog ? "Loading..." : "Fetch current log"}
+        </button>
       </div>
-      <div className="muted">{message ?? "Actions map to /logs/archive and /logs/clear."}</div>
+
+      <div className="muted" style={{ marginTop: 8 }}>
+        {message ?? "Actions map to /logs/archive and /logs/clear. Use 'Fetch current log' to read /logs/current."}
+      </div>
+
+      {logError && (
+        <div className="error" style={{ marginTop: 12 }}>
+          Failed to load log: {logError}
+        </div>
+      )}
+
+      {logText !== null && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 13, marginBottom: 6, color: "#475569", fontWeight: 600 }}>Current log</div>
+          <div
+            className="list"
+            role="region"
+            aria-label="Current log output"
+            style={{ whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", maxHeight: 260, overflow: "auto", padding: 12 }}
+          >
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{logText || "(empty)"}</pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

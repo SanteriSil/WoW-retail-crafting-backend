@@ -99,6 +99,10 @@ export async function clearLogs(): Promise<void> {
     await request<void>("/logs/clear", { method: "POST" });
 }
 
+export async function getCurrentLogs(): Promise<string> {
+    return request<string>("/logs/current", { method: "GET" });
+}
+
 export async function fetchCraftingAH(): Promise<string | void> {
     // Controller exposes GET /craftingAH/fetch — use GET to avoid unnecessary preflight
     return request<string>("/craftingAH/fetch", { method: "GET" });
