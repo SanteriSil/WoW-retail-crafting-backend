@@ -29,7 +29,7 @@ public class AHFetchController {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                                     .body("Fetch already running");
             }
-            logger.info("AH data fetch triggered successfully");
+            logger.debug("AH data fetch triggered successfully");
             return ResponseEntity.accepted().body("Fetch started");
         } catch (Exception e) {
             logger.error("Error triggering AH data fetch", e);
