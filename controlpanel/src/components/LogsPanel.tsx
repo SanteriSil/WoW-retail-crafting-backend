@@ -13,6 +13,7 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
   const [logText, setLogText] = useState<string | null>(null);
   const [loadingLog, setLoadingLog] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<boolean>(false);
 
   const handleArchive = async () => {
     const confirmed = window.confirm("Archive logs? This will create a snapshot of the current logs.");
@@ -95,13 +96,39 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
       {logText !== null && (
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 13, marginBottom: 6, color: "#475569", fontWeight: 600 }}>Current log</div>
-          <div
-            className="list"
-            role="region"
-            aria-label="Current log output"
-            style={{ whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace", maxHeight: 260, overflow: "auto", padding: 12 }}
-          >
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{logText || "(empty)"}</pre>
+
+          {/* viewer wrapper - contains expand control */}
+          <div style={{ position: "relative" }}>
+            <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3 }}>
+              <button
+                type="button"
+                className="button small"
+                onClick={() => setExpanded(e => !e)}
+                aria-pressed={expanded}
+                title={expanded ? "Shrink log viewer" : "Expand log viewer"}
+                onMouseDown={e => e.preventDefault()}
+              >
+                {expanded ? "⤫" : "⤢"}
+              </button>
+            </div>
+
+            <div
+              className="list"
+              role="region"
+              aria-label="Current log output"
+              style={{
+                whiteSpace: "pre-wrap",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+                maxHeight: expanded ? "80vh" : 260,
+                overflow: "auto",
+                padding: 12,
+                transition: "max-height 180ms ease",
+                boxShadow: expanded ? "0 12px 30px rgba(2,6,23,0.15)" : undefined,
+                zIndex: expanded ? 2 : 1
+              }}
+            >
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{logText || "(empty)"}</pre>
+            </div>
           </div>
         </div>
       )}
