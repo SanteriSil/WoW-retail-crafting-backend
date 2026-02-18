@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,7 @@ public class AHDataFetcher {
             if (item != null) {
                 logger.info("Updating item ID {} with new average price {}", itemId, avgPrice);
                 item.setCurrentPrice(avgPrice);
+                item.setCurrentPriceRecordedAt(OffsetDateTime.now());
                 itemRepository.save(item);
             } else {
                 // Optionally handle missing item (e.g., log or create new)
