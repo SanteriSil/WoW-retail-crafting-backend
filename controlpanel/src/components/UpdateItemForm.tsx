@@ -41,6 +41,8 @@ export default function UpdateItemForm({
                 id: selectedItem.id,
                 name: name.trim(),
                 finishingIngredient: selectedItem.finishingIngredient ?? false,
+                profession: selectedItem.profession ?? null,
+                quality: selectedItem.quality ?? null,
                 iconUrl: selectedItem.iconUrl
             });
         } catch (err) {

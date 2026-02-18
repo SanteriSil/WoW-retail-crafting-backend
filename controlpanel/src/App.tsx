@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { archiveLogs, clearLogs, createItem, deleteItem, fetchCraftingAH, getItems, updateItem } from "./api";
-import type { Item } from "./types";
+import { archiveLogs, clearLogs, createItem, deleteItem, fetchCraftingAH, getItems, getProfessions, updateItem } from "./api";
+import type { Item, Profession } from "./types";
 import CreateItemForm from "./components/CreateItemForm";
 import UpdateItemForm from "./components/UpdateItemForm";
 import DeleteItemForm from "./components/DeleteItemForm";
@@ -20,6 +20,7 @@ export default function App() {
     const [ahMessage, setAhMessage] = useState<string | null>(null);
     const [ahError, setAhError] = useState<string | null>(null);
     const [ahBusy, setAhBusy] = useState(false);
+    const [professions, setProfessions] = useState<Profession[]>([]);
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -52,6 +53,12 @@ export default function App() {
     useEffect(() => {
         refreshItems();
     }, [refreshItems]);
+
+    useEffect(() => {
+        getProfessions()
+            .then(setProfessions)
+            .catch(() => setProfessions([]));
+    }, []);
 
     const filteredItems = useMemo(() => {
         const lowered = query.toLowerCase();
@@ -186,7 +193,7 @@ export default function App() {
                             </button>
                         </div>
                         <div className="tab-body">
-                            {activePane === "create" ? <CreateItemForm onCreate={handleCreate} /> : null}
+                            {activePane === "create" ? <CreateItemForm onCreate={handleCreate} professions={professions} /> : null}
                             {activePane === "update" ? (
                                 <UpdateItemForm
                                     items={items}
