@@ -8,6 +8,18 @@ type LogsPanelProps = {
   busy?: boolean;
 };
 
+const reverseLogLines = (value: string): string => {
+  const lines = value.split(/\r?\n/);
+  const hasTrailingEmptyLine = lines.length > 0 && lines[lines.length - 1] === "";
+
+  if (hasTrailingEmptyLine) {
+    lines.pop();
+  }
+
+  const reversed = lines.reverse().join("\n");
+  return hasTrailingEmptyLine && reversed.length > 0 ? `${reversed}\n` : reversed;
+};
+
 export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [logText, setLogText] = useState<string | null>(null);
@@ -33,7 +45,7 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
     setLoadingLog(true);
     try {
       const txt = await getCurrentLogs();
-      setLogText(txt ?? "");
+      setLogText(reverseLogLines(txt ?? ""));
     } catch (err) {
       setLogError(err instanceof Error ? err.message : String(err));
     } finally {
