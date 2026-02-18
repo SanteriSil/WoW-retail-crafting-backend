@@ -88,7 +88,6 @@ public class AHDataFetcher {
      * @return true if fetch started, false if already in progress or missing credentials
      */
     public boolean triggerFetch() {
-        logger.debug("Manual fetch trigger called");
         if (!fetchLock.tryLock()) {
             logger.warn("Fetch already in progress, skipping new trigger");
             return false;

@@ -22,7 +22,7 @@ public class AHFetchController {
 
     @GetMapping("/fetch")
     public ResponseEntity<String> fetchAHData() {
-        logger.info("Received request to refresh AH data");
+        logger.debug("Manual fetch trigger called");
         try {
             boolean started = ahDataFetcher.triggerFetch();
             if (!started) {
