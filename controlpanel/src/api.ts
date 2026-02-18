@@ -1,4 +1,4 @@
-import type { Item } from "./types";
+import type { Item, Profession } from "./types";
 
 const LOCALHOST_BASE_URL = "http://localhost:8080";
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? LOCALHOST_BASE_URL;
@@ -67,6 +67,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export async function getItems(): Promise<Item[]> {
     return request<Item[]>("/items");
+}
+
+export async function getProfessions(): Promise<Profession[]> {
+    return request<Profession[]>("/professions");
 }
 
 export async function createItem(item: Item): Promise<Item> {
