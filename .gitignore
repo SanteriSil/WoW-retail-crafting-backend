@@ -49,3 +49,7 @@ node_modules/
 
 #Vite cache
 controlpanel/.vite/
+# Vite build output — generated, do not commit
+controlpanel/dist/
+# TypeScript incremental build info
+controlpanel/tsconfig.tsbuildinfo
