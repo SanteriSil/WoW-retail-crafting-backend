@@ -200,7 +200,7 @@ export default function App() {
                         </div>
                     )}
                     {loading ? <div className="muted">Loading...</div> : null}
-                    <ItemList items={filteredItems} onSelect={setSelectedItem} />
+                    <ItemList items={filteredItems} />
                 </div>
 
                 <div className="grid" style={{ gridTemplateColumns: "1fr" }}>

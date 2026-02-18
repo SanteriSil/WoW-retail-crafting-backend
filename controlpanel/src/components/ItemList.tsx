@@ -2,7 +2,6 @@ import type { Item } from "../types";
 
 type ItemListProps = {
     items: Item[];
-    onSelect: (item: Item) => void;
 };
 
 function formatUpdatedAt(value?: string | null): { label: string; title?: string } {
@@ -36,7 +35,7 @@ function formatUpdatedAt(value?: string | null): { label: string; title?: string
     };
 }
 
-export default function ItemList({ items, onSelect }: ItemListProps) {
+export default function ItemList({ items }: ItemListProps) {
     if (items.length === 0) {
         return <div className="muted">No items found.</div>;
     }
@@ -44,7 +43,13 @@ export default function ItemList({ items, onSelect }: ItemListProps) {
     return (
         <div className="list">
             {items.map((item) => (
-                <button key={item.id} type="button" className="list-item" onClick={() => onSelect(item)}>
+                <button
+                    key={item.id}
+                    type="button"
+                    className="list-item"
+                    onClick={() => window.open(`https://www.wowhead.com/item=${item.id}`, "_blank", "noopener,noreferrer")}
+                    title="Open on Wowhead"
+                >
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
                         {item.iconUrl ? (
                             <img
