@@ -8,12 +8,57 @@ type LogsPanelProps = {
   busy?: boolean;
 };
 
+type LogLevel = "info" | "debug" | "warning" | "error";
+
+const LOG_LEVELS: Array<{ key: LogLevel; label: string }> = [
+  { key: "info", label: "Info" },
+  { key: "debug", label: "Debug" },
+  { key: "warning", label: "Warning" },
+  { key: "error", label: "Error" }
+];
+
+const detectLineLevel = (line: string): LogLevel | null => {
+  if (/\bERROR\b/i.test(line)) return "error";
+  if (/\bWARN(?:ING)?\b/i.test(line)) return "warning";
+  if (/\bINFO\b/i.test(line)) return "info";
+  if (/\bDEBUG\b/i.test(line)) return "debug";
+  return null;
+};
+
 export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [logText, setLogText] = useState<string | null>(null);
   const [loadingLog, setLoadingLog] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<boolean>(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [levelFilters, setLevelFilters] = useState<Record<LogLevel, boolean>>({
+    info: true,
+    debug: true,
+    warning: true,
+    error: true
+  });
+
+  const filteredLogText = (() => {
+    if (logText === null) return null;
+    const lines = logText.split(/\r?\n/);
+    let activeLevel: LogLevel | null = null;
+
+    const kept = lines.filter(line => {
+      const level = detectLineLevel(line);
+      if (level) {
+        activeLevel = level;
+      }
+
+      if (!activeLevel) {
+        return true;
+      }
+
+      return levelFilters[activeLevel];
+    });
+
+    return kept.join("\n");
+  })();
 
   const handleArchive = async () => {
     const confirmed = window.confirm("Archive logs? This will create a snapshot of the current logs.");
@@ -93,9 +138,66 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
         </div>
       )}
 
-      {logText !== null && (
+      {filteredLogText !== null && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 13, marginBottom: 6, color: "#475569", fontWeight: 600 }}>Current log</div>
+          <div
+            style={{
+              fontSize: 13,
+              marginBottom: 6,
+              color: "#475569",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 10
+            }}
+          >
+            <span>Current log</span>
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="button small secondary"
+                onClick={() => setShowFilters(open => !open)}
+                aria-expanded={showFilters}
+                aria-haspopup="menu"
+                title="Filter log levels"
+              >
+                Filter levels
+              </button>
+
+              {showFilters && (
+                <div
+                  role="menu"
+                  aria-label="Log level filters"
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    left: 0,
+                    zIndex: 6,
+                    background: "#fff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                    boxShadow: "0 8px 24px rgba(15,23,42,0.12)",
+                    minWidth: 160
+                  }}
+                >
+                  {LOG_LEVELS.map(level => (
+                    <label
+                      key={level.key}
+                      style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 500, marginBottom: 6 }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={levelFilters[level.key]}
+                        onChange={e => setLevelFilters(current => ({ ...current, [level.key]: e.target.checked }))}
+                      />
+                      {level.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* viewer wrapper - contains expand control */}
           <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0 }}>
@@ -140,7 +242,7 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
                   maxWidth: "100%"
                 }}
               >
-                {logText || "(empty)"}
+                {filteredLogText || "(empty)"}
               </pre>
             </div>
           </div>
