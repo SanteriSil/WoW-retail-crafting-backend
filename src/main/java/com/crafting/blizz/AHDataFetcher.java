@@ -83,6 +83,34 @@ public class AHDataFetcher {
         }
     }
 
+    @Transactional
+    private void populateMissingIcons(String accessToken) {
+        List<Item> missingIconItems = itemRepository.findByIconUrlIsNullOrIconUrl("");
+        if (missingIconItems.isEmpty()) {
+            logger.debug("No items missing icon URL");
+            return;
+        }
+
+        logger.debug("Fetching icons for {} items missing icon URL", missingIconItems.size());
+        int updated = 0;
+
+        for (Item item : missingIconItems) {
+            try {
+                blizzApiClient.fetchItemIconUrl(item.getId(), accessToken).ifPresent(iconUrl -> {
+                    item.setIconUrl(iconUrl);
+                    itemRepository.save(item);
+                });
+                if (item.getIconUrl() != null && !item.getIconUrl().isBlank()) {
+                    updated++;
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to fetch icon for item ID {}", item.getId(), e);
+            }
+        }
+
+        logger.debug("Updated icon URL for {} items", updated);
+    }
+
     /**
      * Method for manually triggering the fetch process, can be called from controller
      * @return true if fetch started, false if already in progress or missing credentials
@@ -114,6 +142,9 @@ public class AHDataFetcher {
                 // Save to DB
                 logger.debug("Saving average prices to database");
                 saveItemsToDb(avgPrices);
+
+                logger.debug("Fetching missing item icons from Blizzard media API");
+                populateMissingIcons(accessToken);
             }
             return true;
         } catch (Exception e) {

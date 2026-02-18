@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 public interface ItemRepository extends JpaRepository<Item, Long>{
     List<Item> findAll();
     List<Item> findAllById(Iterable<Long> id);
+    List<Item> findByIconUrlIsNullOrIconUrl(String iconUrl);
+
     @Query("SELECT i.id FROM Item i")
     List<Long> findAllIds();
 }

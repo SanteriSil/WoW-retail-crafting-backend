@@ -65,6 +65,9 @@ public class Item {
     @Column(name = "current_price_recorded_at")
     private OffsetDateTime currentPriceRecordedAt;
 
+    @Column(name = "icon_url")
+    private String iconUrl;
+
     @Override
     public String toString() {
         return "Item{id=" + id + ", name='" + name + '\'' + '}';
