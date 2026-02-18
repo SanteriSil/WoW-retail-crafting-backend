@@ -98,7 +98,7 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
           <div style={{ fontSize: 13, marginBottom: 6, color: "#475569", fontWeight: 600 }}>Current log</div>
 
           {/* viewer wrapper - contains expand control */}
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0 }}>
             <div style={{ position: "absolute", top: 8, right: 8, zIndex: 3 }}>
               <button
                 type="button"
@@ -117,6 +117,10 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
               role="region"
               aria-label="Current log output"
               style={{
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
                 whiteSpace: "pre-wrap",
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
                 maxHeight: expanded ? "80vh" : 260,
@@ -127,7 +131,17 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
                 zIndex: expanded ? 2 : 1
               }}
             >
-              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{logText || "(empty)"}</pre>
+              <pre
+                style={{
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  overflowWrap: "anywhere",
+                  wordBreak: "break-word",
+                  maxWidth: "100%"
+                }}
+              >
+                {logText || "(empty)"}
+              </pre>
             </div>
           </div>
         </div>
