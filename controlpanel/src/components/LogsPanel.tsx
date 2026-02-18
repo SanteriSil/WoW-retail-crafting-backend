@@ -45,7 +45,7 @@ export default function LogsPanel({ onArchive, onClear, message, busy }: LogsPan
     setLoadingLog(true);
     try {
       const txt = await getCurrentLogs();
-      setLogText(reverseLogLines(txt ?? ""));
+      setLogText(txt ?? "");
     } catch (err) {
       setLogError(err instanceof Error ? err.message : String(err));
     } finally {
