@@ -8,6 +8,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -114,6 +115,69 @@ public class AHDataFetcher {
     }
 
     /**
+     * Parses auctions from input and calculates average prices for items that are tracked in the database.
+     * @param body raw JSON string containing an "auctions" array
+     * @return map of item-id → computed average price, empty map on failure
+     */
+    @Transactional
+    public Map<Integer, Long> processAuctionData(String body) throws IOException {
+        logger.debug("Processing auction data");
+        Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
+            body,
+            fetchDbItemIds()
+        );
+        logger.debug("Calculating average prices for matched items");
+        Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+        logger.debug("Saving average prices to database");
+        saveItemsToDb(avgPrices);
+        return avgPrices;
+    }
+
+    /**
+     * Processes manually gathered auction data submitted by users
+     * @param csv raw CSV text — one line per listing: itemId,unitPrice,quantity
+     * @return map of item-id → computed average price
+     */
+    @Transactional
+    public Map<Integer, Long> processCsvAuctionData(String csv) {
+        logger.debug("Processing user-submitted CSV auction data");
+        Map<Integer, List<AuctionEntry>> matches = auctionProcesser.parseCsvAuctions(
+            csv,
+            fetchDbItemIds()
+        );
+        logger.debug("Calculating average prices for {} matched items", matches.size());
+        Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+        logger.debug("Saving average prices to database");
+        saveItemsToDb(avgPrices);
+        return avgPrices;
+    }
+
+    /**
+     * Public entry point for user-submitted CSV auction data (e.g. from an
+     * in-game addon via copy-paste). Acquires the fetch lock so that
+     * simultaneous Blizzard API fetches and user submissions don't collide.
+     *
+     * @param csv raw CSV text — one line per listing: itemId,unitPrice,quantity
+     * @return number of item prices updated, or -1 if another fetch is already running
+     */
+    public int submitAuctionData(String csv) {
+        if (!fetchLock.tryLock()) {
+            logger.warn("Fetch already in progress, skipping user-submitted data");
+            return -1;
+        }
+        try {
+            Map<Integer, Long> results = processCsvAuctionData(csv);
+            logger.info("User-submitted auction data processed – {} item prices updated", results.size());
+            return results.size();
+        } catch (Exception e) {
+            logger.error("Error processing user-submitted auction data", e);
+            return -1;
+        } finally {
+            fetchLock.unlock();
+        }
+    }
+
+    /**
      * Method for manually triggering the fetch process, can be called from controller
      * @return true if fetch started, false if already in progress or missing credentials
      */
@@ -132,18 +196,7 @@ public class AHDataFetcher {
             logger.debug("API response status: " + resp.getStatusCode());
             String body = resp.getBody();
             if (body != null) {
-                // Collect matching auctions
-                logger.debug("Processing auction data");
-                Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
-                    body,
-                    fetchDbItemIds()
-                );
-                // Calculate average prices
-                logger.debug("Calculating average prices for matched items");
-                Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
-                // Save to DB
-                logger.debug("Saving average prices to database");
-                saveItemsToDb(avgPrices);
+                processAuctionData(body);
 
                 logger.debug("Fetching missing item icons from Blizzard media API");
                 populateMissingIcons(accessToken);

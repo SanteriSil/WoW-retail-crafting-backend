@@ -14,6 +14,46 @@ import java.util.Set;
 @Service
 public class AuctionProcesser {
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuctionProcesser.class);
+
+    /**
+     * Parses addon collected auction data:
+     *   itemId,unitPrice,quantity
+     * Blank lines and malformed rows are skipped with a warning.
+     */
+    public Map<Integer, List<AuctionEntry>> parseCsvAuctions(String csv, Set<Integer> dbIds) {
+        Map<Integer, List<AuctionEntry>> result = new HashMap<>();
+        if (csv == null || csv.isBlank()) return result;
+
+        String[] lines = csv.split("\\r?\\n");
+        int skipped = 0;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+
+            String[] parts = trimmed.split(",");
+            if (parts.length < 3) {
+                skipped++;
+                continue;
+            }
+            try {
+                int itemId = Integer.parseInt(parts[0].trim());
+                long unitPrice = Long.parseLong(parts[1].trim());
+                int quantity = Integer.parseInt(parts[2].trim());
+                if (itemId == 0 || !dbIds.contains(itemId)) continue;
+                result.computeIfAbsent(itemId, k -> new ArrayList<>())
+                        .add(new AuctionEntry(unitPrice, quantity));
+            } catch (NumberFormatException e) {
+                skipped++;
+            }
+        }
+        if (skipped > 0) {
+            logger.warn("Skipped {} bad CSV auction lines", skipped);
+        }
+        logger.debug("Parsed {} auction entries for {} items from CSV",
+            result.values().stream().mapToInt(List::size).sum(), result.size());
+        return result;
+    }
 
     public Map<Integer, List<AuctionEntry>> processAndCollect(String body, Set<Integer> dbIds) throws IOException {
         JsonNode root = objectMapper.readTree(body);
