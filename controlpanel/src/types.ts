@@ -10,5 +10,6 @@ export type Item = {
   profession?: Profession | null;
   quality?: number | null;
   iconUrl?: string | null;
+  currentPrice?: number | null;
   currentPriceRecordedAt?: string | null;
 };

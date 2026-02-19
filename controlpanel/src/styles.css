@@ -230,6 +230,33 @@ body {
     border-bottom: 1px solid #e2e8f0;
 }
 
+/* slightly darker item background for better coin contrast */
+.list-item {
+    background: linear-gradient(180deg,#f1f5f9 0%,#eef6fb 100%);
+}
+
+.list-item:hover {
+    background: linear-gradient(180deg,#e6eef6 0%,#eaf4fb 100%);
+}
+
+.coin {
+    font-size: 12px;
+    line-height: 1;
+    margin-left: 2px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.coin.silver {
+    filter: grayscale(1) brightness(0.95);
+    opacity: 0.95;
+}
+
+.price-value {
+    font-weight: 600;
+    font-size: 11px;
+}
+
 .list-item:last-child { border-bottom: none; }
 
 .row {
