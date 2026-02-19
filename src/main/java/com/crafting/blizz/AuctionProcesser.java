@@ -13,6 +13,8 @@ import java.util.Set;
 
 @Service
 public class AuctionProcesser {
+    private static final int MAX_AUCTIONS_FOR_AVERAGE = 5000;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuctionProcesser.class);
 
@@ -84,8 +86,9 @@ public class AuctionProcesser {
             auctionEntries.sort((a, b) -> Long.compare(a.getUnitPrice(), b.getUnitPrice()));
 
             int totalEntries = auctionEntries.size();
-            /* The top 20% of the entries (rounded up) are selected. */
-            int selectedCount = Math.max(1, (int) Math.ceil(totalEntries * 0.2));
+            /* Select the top 20% of entries (rounded up), capped at 5000 entries. */
+            int selectedCountByPercent = Math.max(1, (int) Math.ceil(totalEntries * 0.2));
+            int selectedCount = Math.min(selectedCountByPercent, MAX_AUCTIONS_FOR_AVERAGE);
             int toDouble = selectedCount / 2; // First half will be doubled
 
             long totalQty = 0;
