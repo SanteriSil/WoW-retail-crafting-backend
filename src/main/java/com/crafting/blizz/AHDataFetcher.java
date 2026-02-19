@@ -9,6 +9,8 @@ import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +24,8 @@ import com.crafting.model.Item;
 @Service
 @EnableConfigurationProperties(BlizzConfig.class)
 public class AHDataFetcher {
+    private static final Duration MANUAL_SUBMIT_SCHEDULE_PAUSE = Duration.ofMinutes(30);
+
     private final BlizzConfig blizzConfig;
     private final TokenService tokenService;
     private final BlizzApiClient blizzApiClient;
@@ -30,6 +34,7 @@ public class AHDataFetcher {
     private String clientSecret;
     private final ItemRepository itemRepository;
     private final ReentrantLock fetchLock = new ReentrantLock();
+    private volatile Instant scheduledFetchPausedUntil = Instant.EPOCH;
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AHDataFetcher.class);
 
@@ -57,15 +62,35 @@ public class AHDataFetcher {
         return itemIds;
     }
 
-    // runs every 20 minutes
+    /**
+     * Scheduled method to fetch AH data every 20 minutes. Checks if a manual submit has recently paused the schedule to avoid conflicts.
+     */
     @Scheduled(cron = "0 */20 * * * *")
     public void callApi() {
+        if (isScheduledFetchPaused()) {
+            long remainingMinutes = Math.max(1, Duration.between(Instant.now(), scheduledFetchPausedUntil).toMinutes());
+            logger.info("Scheduled fetch skipped: paused for manual submit ({} minute(s) remaining)", remainingMinutes);
+            return;
+        }
+
         logger.info("Scheduled task triggered: Fetching AH data");
         try {
             triggerFetch();
         } catch (Exception e) {
             logger.error("Error during scheduled fetch", e);
         }
+    }
+
+    private boolean isScheduledFetchPaused() {
+        return Instant.now().isBefore(scheduledFetchPausedUntil);
+    }
+
+    private void pauseScheduledFetchForManualSubmit() {
+        Instant pauseUntil = Instant.now().plus(MANUAL_SUBMIT_SCHEDULE_PAUSE);
+        if (pauseUntil.isAfter(scheduledFetchPausedUntil)) {
+            scheduledFetchPausedUntil = pauseUntil;
+        }
+        logger.info("Scheduled AH fetch paused until {} due to manual auction submission", scheduledFetchPausedUntil);
     }
 
     @Transactional
@@ -166,6 +191,7 @@ public class AHDataFetcher {
             return -1;
         }
         try {
+            pauseScheduledFetchForManualSubmit();
             Map<Integer, Long> results = processCsvAuctionData(csv);
             logger.info("User-submitted auction data processed – {} item prices updated", results.size());
             return results.size();
