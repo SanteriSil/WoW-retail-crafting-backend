@@ -111,3 +111,15 @@ export async function fetchCraftingAH(): Promise<string | void> {
     // Controller exposes GET /craftingAH/fetch — use GET to avoid unnecessary preflight
     return request<string>("/craftingAH/fetch", { method: "GET" });
 }
+
+export async function getItemIds(): Promise<number[]> {
+    return request<number[]>("/items/ids");
+}
+
+export async function submitAuctionData(csv: string): Promise<string> {
+    return request<string>("/craftingAH/submit", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: csv
+    });
+}

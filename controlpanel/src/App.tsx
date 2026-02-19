@@ -6,6 +6,7 @@ import UpdateItemForm from "./components/UpdateItemForm";
 import DeleteItemForm from "./components/DeleteItemForm";
 import ItemList from "./components/ItemList";
 import LogsPanel from "./components/LogsPanel";
+import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
 import EndpointSettings from "./components/EndpointSettings";
 
 export default function App() {
@@ -248,6 +249,7 @@ export default function App() {
                             ) : null}
                         </div>
                     </div>
+                    <AuctionSubmitPanel />
                     <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} message={logsMessage} busy={logsBusy} />
                 </div>
             </div>
