@@ -13,7 +13,7 @@ import java.util.Set;
 
 @Service
 public class AuctionProcesser {
-    private static final int MAX_AUCTIONS_FOR_AVERAGE = 5000;
+    private static final long MAX_QUANTITY_FOR_AVERAGE = 5000;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuctionProcesser.class);
@@ -86,23 +86,52 @@ public class AuctionProcesser {
             auctionEntries.sort((a, b) -> Long.compare(a.getUnitPrice(), b.getUnitPrice()));
 
             int totalEntries = auctionEntries.size();
-            /* Select the top 20% of entries (rounded up), capped at 5000 entries. */
-            int selectedCountByPercent = Math.max(1, (int) Math.ceil(totalEntries * 0.2));
-            int selectedCount = Math.min(selectedCountByPercent, MAX_AUCTIONS_FOR_AVERAGE);
-            int toDouble = selectedCount / 2; // First half will be doubled
+            long totalQuantity = 0;
+            for (AuctionEntry ae : auctionEntries) {
+                totalQuantity += Math.max(0, ae.getQuantity());
+            }
+            if (totalQuantity <= 0) continue;
+
+            /* Select from lowest-priced entries until reaching 20% of total quantity, capped at 5000 units. */
+            long selectedQuantityByPercent = Math.max(1L, (long) Math.ceil(totalQuantity * 0.2d));
+            long quantityTarget = Math.min(selectedQuantityByPercent, MAX_QUANTITY_FOR_AVERAGE);
+            long[] quantitiesUsed = new long[totalEntries];
+
+            long remainingQuantity = quantityTarget;
+            int effectiveSelectedEntries = 0;
+            for (int i = 0; i < totalEntries && remainingQuantity > 0; i++) {
+                AuctionEntry ae = auctionEntries.get(i);
+                long entryQty = Math.max(0, ae.getQuantity());
+                if (entryQty == 0) {
+                    continue;
+                }
+
+                long qtyToUse = Math.min(entryQty, remainingQuantity);
+                quantitiesUsed[i] = qtyToUse;
+                remainingQuantity -= qtyToUse;
+                effectiveSelectedEntries++;
+            }
+
+            int toDouble = effectiveSelectedEntries / 2; // First half of selected entries will be doubled
 
             long totalQty = 0;
             long weightedSum = 0;
 
-            for (int i = 0; i < selectedCount; i++) {
-                AuctionEntry ae = auctionEntries.get(i);
-                long qty = ae.getQuantity();
+            int selectedEntryIndex = 0;
+            for (int i = 0; i < totalEntries; i++) {
+                long qty = quantitiesUsed[i];
+                if (qty <= 0) {
+                    continue;
+                }
 
-                if (i < toDouble) {
+                AuctionEntry ae = auctionEntries.get(i);
+
+                if (selectedEntryIndex < toDouble) {
                     qty *= 2; // Double the quantity for the first half
                 }
                 totalQty += qty;
                 weightedSum += ae.getUnitPrice() * qty;
+                selectedEntryIndex++;
             }
             if (totalQty > 0) {
                 averagePrices.put(entry.getKey(), weightedSum / totalQty);
