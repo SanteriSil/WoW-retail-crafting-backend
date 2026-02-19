@@ -6,6 +6,7 @@ import UpdateItemForm from "./components/UpdateItemForm";
 import DeleteItemForm from "./components/DeleteItemForm";
 import ItemList from "./components/ItemList";
 import LogsPanel from "./components/LogsPanel";
+import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
 import EndpointSettings from "./components/EndpointSettings";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
     const [ahError, setAhError] = useState<string | null>(null);
     const [ahBusy, setAhBusy] = useState(false);
     const [professions, setProfessions] = useState<Profession[]>([]);
+    const [selectedProfessionIds, setSelectedProfessionIds] = useState<Set<number>>(new Set());
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -62,10 +64,22 @@ export default function App() {
 
     const filteredItems = useMemo(() => {
         const lowered = query.toLowerCase();
-        return items.filter((item) =>
-            item.name.toLowerCase().includes(lowered) || String(item.id).includes(lowered)
-        );
-    }, [items, query]);
+        return items.filter((item) => {
+            const matchesQuery = item.name.toLowerCase().includes(lowered) || String(item.id).includes(lowered);
+            if (!matchesQuery) return false;
+            if (selectedProfessionIds.size === 0) return true;
+            return item.profession != null && selectedProfessionIds.has(item.profession.id);
+        });
+    }, [items, query, selectedProfessionIds]);
+
+    const toggleProfession = useCallback((id: number) => {
+        setSelectedProfessionIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }, []);
 
     const handleCreate = async (item: Item) => {
         await createItem(item);
@@ -163,8 +177,31 @@ export default function App() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
+                    {professions.length > 0 && (
+                        <div className="profession-filter">
+                            {professions.map((p) => (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    className={`profession-chip${selectedProfessionIds.has(p.id) ? " active" : ""}`}
+                                    onClick={() => toggleProfession(p.id)}
+                                >
+                                    {p.name}
+                                </button>
+                            ))}
+                            {selectedProfessionIds.size > 0 && (
+                                <button
+                                    type="button"
+                                    className="profession-chip clear"
+                                    onClick={() => setSelectedProfessionIds(new Set())}
+                                >
+                                    ✕ Clear
+                                </button>
+                            )}
+                        </div>
+                    )}
                     {loading ? <div className="muted">Loading...</div> : null}
-                    <ItemList items={filteredItems} onSelect={setSelectedItem} />
+                    <ItemList items={filteredItems} />
                 </div>
 
                 <div className="grid" style={{ gridTemplateColumns: "1fr" }}>
@@ -212,6 +249,7 @@ export default function App() {
                             ) : null}
                         </div>
                     </div>
+                    <AuctionSubmitPanel />
                     <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} message={logsMessage} busy={logsBusy} />
                 </div>
             </div>
