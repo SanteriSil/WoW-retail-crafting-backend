@@ -1,0 +1,7 @@
+## Interface: 120000, 120001
+## Title: Commodity Export
+## Notes: Scans AH commodity auctions by item ID and exports price data as copyable CSV
+## Author: CommodityExport
+## Version: 1.0.0
+
+CommodityExport.lua
