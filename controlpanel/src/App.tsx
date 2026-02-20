@@ -8,6 +8,7 @@ import ItemList from "./components/ItemList";
 import LogsPanel from "./components/LogsPanel";
 import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
 import EndpointSettings from "./components/EndpointSettings";
+import SheetBuilder from "./components/SheetBuilder";
 
 export default function App() {
     const [items, setItems] = useState<Item[]>([]);
@@ -145,6 +146,7 @@ export default function App() {
     return (
         <div className="app">
             <EndpointSettings />
+            <SheetBuilder items={items} />
             <div className="header">
                 <div>
                     <h1>Crafting Control Panel</h1>

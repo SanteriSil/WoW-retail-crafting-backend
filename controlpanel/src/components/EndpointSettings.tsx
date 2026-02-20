@@ -54,14 +54,14 @@ export default function EndpointSettings() {
         <div className={`endpoint-panel ${expanded ? "expanded" : "collapsed"}`}>
             {!expanded ? (
                 <button className="endpoint-toggle" type="button" onClick={() => setExpanded(true)} aria-label="Open endpoint settings">
-                    &gt;
+                    &lt;
                 </button>
             ) : (
                 <div className="endpoint-card">
                     <div className="endpoint-header">
                         <div className="endpoint-title">Endpoint</div>
                         <button className="endpoint-toggle" type="button" onClick={() => setExpanded(false)} aria-label="Close endpoint settings">
-                            &lt;
+                            &gt;
                         </button>
                     </div>
 
