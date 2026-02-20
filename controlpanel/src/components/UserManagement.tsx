@@ -27,9 +27,9 @@ export default function UserManagement() {
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        const id = Number(discordId.trim());
+        const id = discordId.trim();
         const name = username.trim();
-        if (!id || !name) return;
+        if (!id || !name || !/^\d+$/.test(id)) return;
 
         setAdding(true);
         setError(null);
@@ -45,7 +45,7 @@ export default function UserManagement() {
         }
     };
 
-    const handleRemove = async (id: number) => {
+    const handleRemove = async (id: string) => {
         setError(null);
         try {
             await removeAllowedUser(id);

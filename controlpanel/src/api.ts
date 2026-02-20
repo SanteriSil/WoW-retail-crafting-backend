@@ -161,13 +161,13 @@ export async function getAllowedUsers(): Promise<AllowedUser[]> {
     return request<AllowedUser[]>("/auth/users");
 }
 
-export async function addAllowedUser(discordId: number, discordUsername: string): Promise<AllowedUser> {
+export async function addAllowedUser(discordId: string, discordUsername: string): Promise<AllowedUser> {
     return request<AllowedUser>("/auth/users", {
         method: "POST",
         body: JSON.stringify({ discordId, discordUsername })
     });
 }
 
-export async function removeAllowedUser(discordId: number): Promise<void> {
+export async function removeAllowedUser(discordId: string): Promise<void> {
     await request<void>(`/auth/users/${discordId}`, { method: "DELETE" });
 }

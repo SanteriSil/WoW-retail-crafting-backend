@@ -21,7 +21,7 @@ export type AuthResponse = {
 };
 
 export type AllowedUser = {
-  discordId: number;
+  discordId: string;
   discordUsername: string;
   createdAt: string;
 };
