@@ -35,6 +35,11 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	runtimeOnly("org.flywaydb:flyway-database-postgresql")
 
+	// JWT
+	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
 	// Lombok compile-only and annotation processor
 	val lombokVersion = "1.18.32"
 	compileOnly("org.projectlombok:lombok:$lombokVersion")
