@@ -47,6 +47,13 @@ function formatUpdatedAt(value?: string | null): { label: string; title?: string
     };
 }
 
+function qualityStars(quality?: number | null): string | null {
+    if (quality == null) return null;
+    if (quality === 1) return "★";
+    if (quality === 2) return "★★";
+    return "?";
+}
+
 export default function ItemList({ items }: ItemListProps) {
     if (items.length === 0) {
         return <div className="muted">No items found.</div>;
@@ -56,6 +63,7 @@ export default function ItemList({ items }: ItemListProps) {
         <div className="list">
             {items.map((item) => {
                 const updated = formatUpdatedAt(item.currentPriceRecordedAt);
+                const stars = qualityStars(item.quality);
 
                 return (
                     <button
@@ -121,7 +129,10 @@ export default function ItemList({ items }: ItemListProps) {
                                     })()}
                                 </span>
                             </span>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {item.name}
+                                {stars && <span className={`quality-stars q${item.quality}`} aria-label={`Quality ${item.quality}`}> {stars}</span>}
+                            </span>
                         </span>
                         <span
                             style={{

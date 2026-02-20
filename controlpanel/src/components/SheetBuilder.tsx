@@ -1,35 +1,51 @@
 import { useMemo, useState } from "react";
 import type { Item } from "../types";
 
-type SheetEntry = { id: number; name: string; multiplier: number };
+type SheetEntry = { id: number; name: string; quality?: number | null; multiplier: number };
 
 type SheetBuilderProps = {
     items: Item[];
 };
 
+function qualityStars(quality?: number | null): string | null {
+    if (quality == null) return null;
+    if (quality === 1) return "★";
+    if (quality === 2) return "★★";
+    return "?";
+}
+
 export default function SheetBuilder({ items }: SheetBuilderProps) {
     const [expanded, setExpanded] = useState(false);
+    const [outputItem, setOutputItem] = useState<{ id: number; name: string } | null>(null);
+    const [searchOutput, setSearchOutput] = useState("");
     const [withRes, setWithRes] = useState<SheetEntry[]>([]);
     const [withoutRes, setWithoutRes] = useState<SheetEntry[]>([]);
     const [searchWith, setSearchWith] = useState("");
     const [searchWithout, setSearchWithout] = useState("");
     const [copied, setCopied] = useState(false);
 
-    const filterItems = (query: string, exclude: SheetEntry[]) => {
+    const filterItems = (query: string, excludeIds: Set<number>) => {
         if (!query.trim()) return [];
         const lowered = query.toLowerCase();
-        const excludeIds = new Set(exclude.map((e) => e.id));
         return items
             .filter((it) => !excludeIds.has(it.id) && (it.name.toLowerCase().includes(lowered) || String(it.id).includes(lowered)))
             .slice(0, 12);
     };
 
-    const suggestionsWith = useMemo(() => filterItems(searchWith, withRes), [searchWith, items, withRes]);
-    const suggestionsWithout = useMemo(() => filterItems(searchWithout, withoutRes), [searchWithout, items, withoutRes]);
+    const allUsedIds = useMemo(() => {
+        const ids = new Set(withRes.map((e) => e.id));
+        withoutRes.forEach((e) => ids.add(e.id));
+        if (outputItem) ids.add(outputItem.id);
+        return ids;
+    }, [withRes, withoutRes, outputItem]);
+
+    const suggestionsOutput = useMemo(() => filterItems(searchOutput, new Set(outputItem ? [outputItem.id] : [])), [searchOutput, items, outputItem]);
+    const suggestionsWith = useMemo(() => filterItems(searchWith, allUsedIds), [searchWith, items, allUsedIds]);
+    const suggestionsWithout = useMemo(() => filterItems(searchWithout, allUsedIds), [searchWithout, items, allUsedIds]);
 
     const addTo = (list: SheetEntry[], setList: React.Dispatch<React.SetStateAction<SheetEntry[]>>, item: Item) => {
         if (list.some((e) => e.id === item.id)) return;
-        setList([...list, { id: item.id, name: item.name, multiplier: 1 }]);
+        setList([...list, { id: item.id, name: item.name, quality: item.quality, multiplier: 1 }]);
     };
 
     const removeFrom = (setList: React.Dispatch<React.SetStateAction<SheetEntry[]>>, id: number) => {
@@ -42,13 +58,14 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
 
     const outputJson = useMemo(() => {
         const payload = {
+            outputId: outputItem?.id ?? null,
             withResourcefulness: withRes.map((e) => ({ id: e.id, multiplier: e.multiplier })),
             withoutResourcefulness: withoutRes.map((e) => ({ id: e.id, multiplier: e.multiplier }))
         };
         return JSON.stringify(payload, null, 2);
-    }, [withRes, withoutRes]);
+    }, [outputItem, withRes, withoutRes]);
 
-    const hasContent = withRes.length > 0 || withoutRes.length > 0;
+    const hasContent = outputItem != null || withRes.length > 0 || withoutRes.length > 0;
 
     const handleCopy = async () => {
         try {
@@ -87,6 +104,60 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                             </svg>
                         </button>
                         <div className="sheet-title">Sheet Builder</div>
+                    </div>
+
+                    {/* Output Item */}
+                    <div className="sheet-section">
+                        <div className="sheet-section-label">Output Item</div>
+                        {outputItem ? (
+                            <div className="sheet-entries">
+                                <div className="sheet-entry">
+                                    <span className="sheet-entry-name" title={`#${outputItem.id}`}>{outputItem.name}</span>
+                                    <button
+                                        type="button"
+                                        className="sheet-remove-btn"
+                                        onClick={() => setOutputItem(null)}
+                                        aria-label="Remove output item"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ position: "relative" }}>
+                                <input
+                                    className="input"
+                                    placeholder="Search output item…"
+                                    value={searchOutput}
+                                    onChange={(e) => setSearchOutput(e.target.value)}
+                                    style={{ fontSize: 12, padding: "6px 10px" }}
+                                />
+                                {suggestionsOutput.length > 0 && (
+                                    <div className="sheet-suggestions">
+                                        {suggestionsOutput.map((item) => {
+                                            const stars = qualityStars(item.quality);
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    className="sheet-suggestion-item"
+                                                    onClick={() => { setOutputItem({ id: item.id, name: item.name }); setSearchOutput(""); }}
+                                                >
+                                                    {item.iconUrl && (
+                                                        <img src={item.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3 }} />
+                                                    )}
+                                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                        {item.name}
+                                                        {stars && <span className={`quality-stars q${item.quality}`}> {stars}</span>}
+                                                    </span>
+                                                    <span className="muted" style={{ fontSize: 11 }}>#{item.id}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* With Resourcefulness */}
@@ -163,31 +234,40 @@ function Section({ label, entries, search, onSearchChange, suggestions, onAdd, o
                 />
                 {suggestions.length > 0 && (
                     <div className="sheet-suggestions">
-                        {suggestions.map((item) => (
-                            <button
-                                key={item.id}
-                                type="button"
-                                className="sheet-suggestion-item"
-                                onClick={() => onAdd(item)}
-                            >
-                                {item.iconUrl && (
-                                    <img src={item.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3 }} />
-                                )}
-                                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {item.name}
-                                </span>
-                                <span className="muted" style={{ fontSize: 11 }}>#{item.id}</span>
-                            </button>
-                        ))}
+                        {suggestions.map((item) => {
+                            const stars = qualityStars(item.quality);
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    className="sheet-suggestion-item"
+                                    onClick={() => onAdd(item)}
+                                >
+                                    {item.iconUrl && (
+                                        <img src={item.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3 }} />
+                                    )}
+                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {item.name}
+                                        {stars && <span className={`quality-stars q${item.quality}`}> {stars}</span>}
+                                    </span>
+                                    <span className="muted" style={{ fontSize: 11 }}>#{item.id}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
 
             {entries.length > 0 && (
                 <div className="sheet-entries">
-                    {entries.map((entry) => (
+                    {entries.map((entry) => {
+                        const stars = qualityStars(entry.quality);
+                        return (
                         <div key={entry.id} className="sheet-entry">
-                            <span className="sheet-entry-name" title={`#${entry.id}`}>{entry.name}</span>
+                            <span className="sheet-entry-name" title={`#${entry.id}`}>
+                                {entry.name}
+                                {stars && <span className={`quality-stars q${entry.quality}`}> {stars}</span>}
+                            </span>
                             <span className="sheet-entry-controls">
                                 <span className="muted" style={{ fontSize: 11 }}>×</span>
                                 <input
@@ -207,7 +287,8 @@ function Section({ label, entries, search, onSearchChange, suggestions, onAdd, o
                                 </button>
                             </span>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

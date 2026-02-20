@@ -556,6 +556,21 @@ body {
     padding-top: 10px;
 }
 
+/* Quality stars */
+.quality-stars {
+    font-size: 11px;
+    letter-spacing: 1px;
+    vertical-align: baseline;
+}
+
+.quality-stars.q1 {
+    color: #b87333;
+}
+
+.quality-stars.q2 {
+    color: #d4a017;
+}
+
 .footer {
     margin-top: 16px;
     font-size: 12px;
