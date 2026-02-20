@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { archiveLogs, clearLogs, createItem, deleteItem, fetchCraftingAH, getItems, getProfessions, updateItem } from "./api";
+import { archiveLogs, clearAuth, clearLogs, createItem, deleteItem, exchangeDiscordCode, fetchCraftingAH, getItems, getProfessions, getStoredUser, getToken, setAuth, updateItem } from "./api";
 import type { Item, Profession } from "./types";
 import CreateItemForm from "./components/CreateItemForm";
 import UpdateItemForm from "./components/UpdateItemForm";
@@ -7,10 +7,56 @@ import DeleteItemForm from "./components/DeleteItemForm";
 import ItemList from "./components/ItemList";
 import LogsPanel from "./components/LogsPanel";
 import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
-import EndpointSettings from "./components/EndpointSettings";
 import SheetBuilder from "./components/SheetBuilder";
+import LoginPage from "./components/LoginPage";
 
 export default function App() {
+    // ── Auth state ──
+    const [authed, setAuthed] = useState(() => !!getToken());
+    const [user, setUser] = useState(getStoredUser);
+    const [authError, setAuthError] = useState<string | null>(null);
+
+    // Handle Discord OAuth callback (?code= in URL)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
+        if (!code) return;
+
+        // Clean the URL immediately so a refresh doesn't re-send the code
+        window.history.replaceState({}, "", window.location.pathname);
+
+        exchangeDiscordCode(code, window.location.origin + "/")
+            .then((auth) => {
+                setAuth(auth);
+                setAuthed(true);
+                setUser({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl });
+            })
+            .catch((err) => {
+                setAuthError(err instanceof Error ? err.message : "Login failed.");
+            });
+    }, []);
+
+    const handleLogout = () => {
+        clearAuth();
+        setAuthed(false);
+        setUser(null);
+    };
+
+    // Show login page when not authenticated
+    if (!authed) {
+        return (
+            <>
+                <LoginPage />
+                {authError && <div className="login-error">{authError}</div>}
+            </>
+        );
+    }
+
+    // ── Authenticated app ──
+    return <AuthenticatedApp user={user} onLogout={handleLogout} />;
+}
+
+function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string; avatarUrl: string | null } | null; onLogout: () => void }) {
     const [items, setItems] = useState<Item[]>([]);
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [query, setQuery] = useState("");
@@ -145,7 +191,6 @@ export default function App() {
 
     return (
         <div className="app">
-            <EndpointSettings />
             <SheetBuilder items={items} />
             <div className="header">
                 <div>
@@ -153,6 +198,16 @@ export default function App() {
                     <div className="muted">Using /items and /logs endpoints</div>
                 </div>
                 <div className="header-actions">
+                    {user && (
+                        <span className="user-badge">
+                            {user.avatarUrl && <img src={user.avatarUrl} alt="" className="user-avatar" />}
+                            <span className="muted">{user.discordUsername}</span>
+                        </span>
+                    )}
+                    <button className="button secondary" type="button" onClick={onLogout}>
+                        Logout
+                    </button>
+                    <span className="separator" />
                     <button className="button secondary" type="button" onClick={refreshItems}>
                         Refresh
                     </button>

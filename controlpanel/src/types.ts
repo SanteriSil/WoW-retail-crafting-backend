@@ -13,3 +13,9 @@ export type Item = {
   currentPrice?: number | null;
   currentPriceRecordedAt?: string | null;
 };
+
+export type AuthResponse = {
+  token: string;
+  discordUsername: string;
+  avatarUrl: string | null;
+};

@@ -1,38 +1,56 @@
-import type { Item, Profession } from "./types";
+import type { AuthResponse, Item, Profession } from "./types";
 
-const LOCALHOST_BASE_URL = "http://localhost:8080";
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? LOCALHOST_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
-function resolveBaseUrl(): string {
-    try {
-        const useLocalhost = localStorage.getItem("target_use_localhost");
-        const host = localStorage.getItem("target_host");
-        const port = localStorage.getItem("target_port");
+// ── Token helpers ──
 
-        if (useLocalhost === "true") {
-            return LOCALHOST_BASE_URL;
-        }
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
 
-        if (host && port) {
-            return `http://${host}:${port}`;
-        }
-    } catch {
-        return DEFAULT_BASE_URL;
-    }
-
-    return DEFAULT_BASE_URL;
+export function getToken(): string | null {
+    return localStorage.getItem(TOKEN_KEY);
 }
+
+export function getStoredUser(): { discordUsername: string; avatarUrl: string | null } | null {
+    try {
+        const raw = localStorage.getItem(USER_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function setAuth(auth: AuthResponse): void {
+    localStorage.setItem(TOKEN_KEY, auth.token);
+    localStorage.setItem(USER_KEY, JSON.stringify({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl }));
+}
+
+export function clearAuth(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    // clean up legacy endpoint keys
+    localStorage.removeItem("target_host");
+    localStorage.removeItem("target_port");
+    localStorage.removeItem("target_use_localhost");
+}
+
+// ── Core request helper ──
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
     const method = (options?.method ?? "GET").toString().toUpperCase();
 
-    // Only set Content-Type for requests that have a body or commonly include one
     const defaultHeaders: Record<string, string> = {};
     if (options?.body || ["POST", "PUT", "PATCH"].includes(method)) {
         defaultHeaders["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(`${resolveBaseUrl()}${path}`, {
+    // Attach JWT if available
+    const token = getToken();
+    if (token) {
+        defaultHeaders["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${BASE_URL}${path}`, {
         headers: {
             ...defaultHeaders,
             ...(options?.headers as Record<string, string> | undefined)
@@ -40,15 +58,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ...options
     });
 
+    // Auto-logout on 401
+    if (response.status === 401) {
+        clearAuth();
+        window.location.reload();
+        throw new Error("Session expired — please log in again.");
+    }
+
     if (!response.ok) {
         const text = await response.text();
         throw new Error(text || `Request failed: ${response.status}`);
     }
 
-    // Read raw text first — handles empty bodies (204 No Content) safely
     const text = await response.text();
     if (!text) {
-        // no content to parse
         return undefined as unknown as T;
     }
 
@@ -61,8 +84,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         }
     }
 
-    // Not JSON — return raw text
     return text as unknown as T;
+}
+
+// ── Auth ──
+
+export async function exchangeDiscordCode(code: string, redirectUri: string): Promise<AuthResponse> {
+    return request<AuthResponse>("/auth/discord/callback", {
+        method: "POST",
+        body: JSON.stringify({ code, redirectUri })
+    });
 }
 
 export async function getItems(): Promise<Item[]> {
