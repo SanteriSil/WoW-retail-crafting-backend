@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.crafting.cache.CachedResult;
+
 import java.util.Comparator;
 import java.util.List;
 
@@ -17,17 +19,22 @@ import java.util.List;
 public class ProfessionController {
 
     private final ProfessionRepository professionRepository;
+    private final CachedResult<List<Profession>> professionCache;
 
-    public ProfessionController(ProfessionRepository professionRepository) {
+    public ProfessionController(ProfessionRepository professionRepository,
+                                CachedResult<List<Profession>> professionCache) {
         this.professionRepository = professionRepository;
+        this.professionCache = professionCache;
     }
 
     @GetMapping
     public ResponseEntity<List<Profession>> getAllProfessions() {
-        List<Profession> professions = professionRepository.findAll()
-            .stream()
-            .sorted(Comparator.comparing(Profession::getName, String.CASE_INSENSITIVE_ORDER))
-            .toList();
+        List<Profession> professions = professionCache.get(() ->
+            professionRepository.findAll()
+                .stream()
+                .sorted(Comparator.comparing(Profession::getName, String.CASE_INSENSITIVE_ORDER))
+                .toList()
+        );
         return ResponseEntity.ok(professions);
     }
 }

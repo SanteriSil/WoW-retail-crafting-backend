@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.crafting.cache.CachedResult;
 
 import java.util.List;
 
@@ -31,9 +32,15 @@ public class ItemController {
 
     private static final Logger logger = LoggerFactory.getLogger(ItemController.class);
     private final ItemRepository itemRepository;
+    private final CachedResult<List<Item>> itemCache;
+    private final CachedResult<List<Long>> itemIdCache;
 
-    public ItemController(ItemRepository itemRepository) {
+    public ItemController(ItemRepository itemRepository,
+                          CachedResult<List<Item>> itemCache,
+                          CachedResult<List<Long>> itemIdCache) {
         this.itemRepository = itemRepository;
+        this.itemCache = itemCache;
+        this.itemIdCache = itemIdCache;
     }
 
     /**
@@ -43,7 +50,7 @@ public class ItemController {
     @GetMapping
     public ResponseEntity<List<Item>> getAllItems() {
         logger.info("GET /items called");
-        List<Item> items = itemRepository.findAll();
+        List<Item> items = itemCache.get(() -> itemRepository.findAll());
         logger.info(items.isEmpty()
             ? "No items found in the database"
             : "Returning {} items", items.size());
@@ -57,7 +64,7 @@ public class ItemController {
     @GetMapping("/ids")
     public ResponseEntity<List<Long>> getAllItemIds() {
         logger.info("GET /items/ids called");
-        List<Long> itemIds = itemRepository.findAllIds();
+        List<Long> itemIds = itemIdCache.get(() -> itemRepository.findAllIds());
         logger.info(itemIds.isEmpty()
             ? "No item IDs found in the database"
             : "Returning {} item IDs", itemIds.size());
@@ -106,6 +113,8 @@ public class ItemController {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         Item savedItem = itemRepository.save(item);
+        itemCache.invalidate();
+        itemIdCache.invalidate();
         logger.info("Item created with ID: {}", savedItem.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(savedItem);
     }
@@ -122,6 +131,8 @@ public class ItemController {
             return ResponseEntity.notFound().build();
         }
         itemRepository.deleteById(id);
+        itemCache.invalidate();
+        itemIdCache.invalidate();
         logger.info("Item with ID: {} deleted", id);
         return ResponseEntity.noContent().build();
     }
@@ -144,6 +155,8 @@ public class ItemController {
         }
         item.setId(id);
         Item updatedItem = itemRepository.save(item);
+        itemCache.invalidate();
+        itemIdCache.invalidate();
         logger.info("Item with ID: {} updated", id);
         return ResponseEntity.ok(updatedItem);
     }

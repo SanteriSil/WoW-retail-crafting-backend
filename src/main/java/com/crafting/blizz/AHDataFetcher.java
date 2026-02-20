@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.crafting.repository.ItemRepository;
+import com.crafting.cache.CachedResult;
 import com.crafting.model.Item;
 
 
@@ -33,6 +34,8 @@ public class AHDataFetcher {
     private String clientId;
     private String clientSecret;
     private final ItemRepository itemRepository;
+    private final CachedResult<List<Item>> itemCache;
+    private final CachedResult<List<Long>> itemIdCache;
     private final ReentrantLock fetchLock = new ReentrantLock();
     private volatile Instant scheduledFetchPausedUntil = Instant.EPOCH;
 
@@ -40,12 +43,17 @@ public class AHDataFetcher {
 
 
     public AHDataFetcher(BlizzConfig blizzConfig, TokenService tokenService,
-                        BlizzApiClient blizzApiClient, AuctionProcesser auctionProcesser, ItemRepository itemRepository) {
+                        BlizzApiClient blizzApiClient, AuctionProcesser auctionProcesser,
+                        ItemRepository itemRepository,
+                        CachedResult<List<Item>> itemCache,
+                        CachedResult<List<Long>> itemIdCache) {
         this.blizzConfig = blizzConfig;
         this.tokenService = tokenService;
         this.blizzApiClient = blizzApiClient;
         this.auctionProcesser = auctionProcesser;
         this.itemRepository = itemRepository;
+        this.itemCache = itemCache;
+        this.itemIdCache = itemIdCache;
     }
 
     //gets item IDs from repo
@@ -109,6 +117,7 @@ public class AHDataFetcher {
                 logger.warn("Item with ID {} not found in DB.", itemId);
             }
         }
+        itemCache.invalidate();
     }
 
     @Transactional
@@ -137,6 +146,9 @@ public class AHDataFetcher {
         }
 
         logger.debug("Updated icon URL for {} items", updated);
+        if (updated > 0) {
+            itemCache.invalidate();
+        }
     }
 
     /**
