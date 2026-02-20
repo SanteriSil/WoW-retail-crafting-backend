@@ -73,86 +73,37 @@ export default function ItemList({ items }: ItemListProps) {
                         onClick={() => window.open(`https://www.wowhead.com/item=${item.id}`, "_blank", "noopener,noreferrer")}
                         title="Open on Wowhead"
                     >
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
-                            <span
-                                style={{
-                                    display: "inline-flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                    gap: 2,
-                                    flexShrink: 0,
-                                    minWidth: 48
-                                }}
-                            >
-                                {item.iconUrl ? (
-                                    <img
-                                        src={item.iconUrl}
-                                        alt={item.name}
-                                        width={20}
-                                        height={20}
-                                        style={{ borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
-                                        loading="lazy"
-                                    />
-                                ) : (
-                                    <span
-                                        aria-hidden="true"
-                                        style={{
-                                            width: 20,
-                                            height: 20,
-                                            borderRadius: 4,
-                                            border: "1px solid #cbd5e1",
-                                            background: "#f8fafc",
-                                            display: "inline-block",
-                                            flexShrink: 0
-                                        }}
-                                    />
-                                )}
-                                <span className="muted" style={{ fontSize: 11, lineHeight: 1.1 }}>
-                                    {(() => {
-                                        const price = formatPriceFromCopper(item.currentPrice);
-                                        if (!price) {
-                                            return "-";
-                                        }
-
-                                        return (
-                                            <>
-                                                <span className="price-piece" style={{ display: "inline-flex", alignItems: "center" }}>
-                                                    <span className="price-value">{price.gold}</span>
-                                                    <span className="coin gold" aria-hidden="true">🪙</span>
-                                                </span>
-                                                <span className="price-piece" style={{ display: "inline-flex", alignItems: "center", marginLeft: 8 }}>
-                                                    <span className="price-value">{price.silver}</span>
-                                                    <span className="coin silver" aria-hidden="true">🪙</span>
-                                                </span>
-                                            </>
-                                        );
-                                    })()}
-                                </span>
-                            </span>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {item.name}
-                                {stars && <span className={`quality-stars q${item.quality}`} aria-label={`Quality ${item.quality}`}> {stars}</span>}
-                            </span>
-                        </span>
-                        <span
-                            style={{
-                                display: "inline-flex",
-                                flexDirection: "column",
-                                alignItems: "flex-end",
-                                gap: 2,
-                                marginLeft: 8,
-                                flexShrink: 0
-                            }}
-                        >
-                            <span className="muted">#{item.id}</span>
-                            <span
-                                className="muted"
-                                title={updated.title}
-                                style={{ fontSize: 11 }}
-                            >
-                                {updated.label}
-                            </span>
-                        </span>
+                                <div className="list-item-left">
+                                    <div className="list-item-icon">
+                                        {item.iconUrl ? (
+                                            <img src={item.iconUrl} alt={item.name} width={28} height={28} style={{ borderRadius: 4, objectFit: "cover" }} loading="lazy" />
+                                        ) : (
+                                            <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 4, border: "1px solid #cbd5e1", background: "#f8fafc", display: "inline-block" }} />
+                                        )}
+                                    </div>
+                                    <div className="item-cost muted">
+                                        {(() => {
+                                            const price = formatPriceFromCopper(item.currentPrice);
+                                            if (!price) return "-";
+                                            return (
+                                                <>
+                                                    <span className="price-piece"><span className="price-value">{price.gold}</span><span className="coin gold">🪙</span></span>
+                                                    <span className="price-piece" style={{ marginLeft: 8 }}><span className="price-value">{price.silver}</span><span className="coin silver">🪙</span></span>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                    <div className="list-item-main">
+                                        <div className="item-name">
+                                            <span className="item-name-text">{item.name}</span>
+                                            {stars && <span className={`quality-stars q${item.quality}`} aria-label={`Quality ${item.quality}`}> {stars}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="list-item-right">
+                                    <div className="muted">#{item.id}</div>
+                                    <div className="muted" title={updated.title} style={{ fontSize: 11 }}>{updated.label}</div>
+                                </div>
                     </button>
                 );
             })}

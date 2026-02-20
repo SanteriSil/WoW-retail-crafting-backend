@@ -241,10 +241,10 @@ body {
     justify-content: space-between;
     padding: 8px 12px;
     border-bottom: 1px solid #e2e8f0;
-}
-
-/* slightly darker item background for better coin contrast */
-.list-item {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    border: none;
     background: linear-gradient(180deg,#f1f5f9 0%,#eef6fb 100%);
 }
 
@@ -271,6 +271,53 @@ body {
 }
 
 .list-item:last-child { border-bottom: none; }
+
+/* Left / Right layout for list items */
+.list-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    overflow: hidden;
+    flex: 1 1 auto;
+}
+.list-item-icon img {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    object-fit: cover;
+    display: block;
+}
+.list-item-main {
+    min-width: 0; /* allow ellipsis */
+}
+.item-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+.item-name-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+.item-cost {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 56px;
+}
+.price-piece { display: inline-flex; align-items: center; }
+.list-item-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: 12px;
+    flex: 0 0 auto;
+}
 
 .row {
     display: flex;
