@@ -4,6 +4,7 @@ import com.crafting.auth.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -37,6 +38,9 @@ public class SecurityConfig {
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/auth/**", "/health", "/actuator/**", "/h2-console/**").permitAll()
+                // Public read-only endpoints
+                .requestMatchers(HttpMethod.GET, "/items", "/items/ids", "/items/ordered").permitAll()
+                .requestMatchers(HttpMethod.GET, "/professions").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
