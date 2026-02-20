@@ -668,3 +668,73 @@ body {
     border-radius: 50%;
     object-fit: cover;
 }
+
+/* ── User management ── */
+
+.user-management h3 {
+    margin: 0 0 12px;
+}
+
+.um-list {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.um-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #f1f5f9;
+}
+
+.um-name {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.um-id {
+    font-size: 12px;
+    flex: 1;
+}
+
+.um-remove {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 120ms;
+}
+
+.um-remove:hover {
+    background: #fee2e2;
+}
+
+.um-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.um-form .input {
+    flex: 1;
+    min-width: 0;
+}
+
+.um-error {
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #b91c1c;
+    background: #fff1f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+}

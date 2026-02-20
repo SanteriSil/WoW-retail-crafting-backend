@@ -19,3 +19,9 @@ export type AuthResponse = {
   discordUsername: string;
   avatarUrl: string | null;
 };
+
+export type AllowedUser = {
+  discordId: number;
+  discordUsername: string;
+  createdAt: string;
+};

@@ -1,4 +1,4 @@
-import type { AuthResponse, Item, Profession } from "./types";
+import type { AllowedUser, AuthResponse, Item, Profession } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -153,4 +153,21 @@ export async function submitAuctionData(csv: string): Promise<string> {
         headers: { "Content-Type": "text/plain" },
         body: csv
     });
+}
+
+// ── User management ──
+
+export async function getAllowedUsers(): Promise<AllowedUser[]> {
+    return request<AllowedUser[]>("/auth/users");
+}
+
+export async function addAllowedUser(discordId: number, discordUsername: string): Promise<AllowedUser> {
+    return request<AllowedUser>("/auth/users", {
+        method: "POST",
+        body: JSON.stringify({ discordId, discordUsername })
+    });
+}
+
+export async function removeAllowedUser(discordId: number): Promise<void> {
+    await request<void>(`/auth/users/${discordId}`, { method: "DELETE" });
 }

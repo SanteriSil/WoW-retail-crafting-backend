@@ -37,7 +37,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/auth/**", "/health", "/actuator/**", "/h2-console/**").permitAll()
+                .requestMatchers("/auth/discord/**", "/health", "/actuator/**", "/h2-console/**").permitAll()
                 // Public read-only endpoints
                 .requestMatchers(HttpMethod.GET, "/items", "/items/ids", "/items/ordered").permitAll()
                 .requestMatchers(HttpMethod.GET, "/professions").permitAll()

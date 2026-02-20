@@ -1,15 +1,15 @@
 package com.crafting.controller;
 
 import com.crafting.auth.DiscordOAuthService;
+import com.crafting.model.AllowedUser;
+import com.crafting.repository.AllowedUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -18,9 +18,11 @@ public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
     private final DiscordOAuthService discordOAuthService;
+    private final AllowedUserRepository allowedUserRepository;
 
-    public AuthController(DiscordOAuthService discordOAuthService) {
+    public AuthController(DiscordOAuthService discordOAuthService, AllowedUserRepository allowedUserRepository) {
         this.discordOAuthService = discordOAuthService;
+        this.allowedUserRepository = allowedUserRepository;
     }
 
     /**
@@ -46,5 +48,36 @@ public class AuthController {
         }
     }
 
+    // ── User management (authenticated) ──
+
+    @GetMapping("/users")
+    public List<AllowedUser> getUsers() {
+        return allowedUserRepository.findAll();
+    }
+
+    @PostMapping("/users")
+    public ResponseEntity<?> addUser(@RequestBody AddUserRequest body) {
+        if (allowedUserRepository.existsById(body.discordId())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "User already exists"));
+        }
+        AllowedUser user = new AllowedUser(body.discordId(), body.discordUsername());
+        allowedUserRepository.save(user);
+        log.info("Added allowed user: {} ({})", body.discordUsername(), body.discordId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(user);
+    }
+
+    @DeleteMapping("/users/{discordId}")
+    public ResponseEntity<?> removeUser(@PathVariable Long discordId) {
+        if (!allowedUserRepository.existsById(discordId)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+        allowedUserRepository.deleteById(discordId);
+        log.info("Removed allowed user with discord_id: {}", discordId);
+        return ResponseEntity.noContent().build();
+    }
+
     record CallbackRequest(String code, String redirectUri) {}
+    record AddUserRequest(Long discordId, String discordUsername) {}
 }

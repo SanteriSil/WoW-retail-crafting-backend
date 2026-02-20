@@ -9,6 +9,7 @@ import LogsPanel from "./components/LogsPanel";
 import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
 import SheetBuilder from "./components/SheetBuilder";
 import LoginPage from "./components/LoginPage";
+import UserManagement from "./components/UserManagement";
 
 export default function App() {
     // ── Auth state ──
@@ -308,6 +309,9 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                     </div>
                     <AuctionSubmitPanel />
                     <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} message={logsMessage} busy={logsBusy} />
+                    <div className="card">
+                        <UserManagement />
+                    </div>
                 </div>
             </div>
         </div>
