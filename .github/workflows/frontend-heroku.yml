@@ -37,10 +37,11 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      - name: Deploy to Heroku
-        uses: akhileshns/heroku-deploy@v3.13.15
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_FRONTEND_APP_NAME }}
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          appdir: controlpanel
+      - name: Deploy frontend subtree to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_FRONTEND_APP_NAME }}
+        run: |
+          set -euo pipefail
+          FRONTEND_SHA=$(git subtree split --prefix controlpanel HEAD)
+          git push "https://heroku:${HEROKU_API_KEY}@git.heroku.com/${HEROKU_APP_NAME}.git" "${FRONTEND_SHA}:main" --force
