@@ -69,7 +69,9 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                     onClick={() => setExpanded(true)}
                     aria-label="Open Sheet Builder"
                 >
-                    &gt;
+                    <svg className={`chev ${expanded ? "rotated" : ""}`} width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                 </button>
             ) : (
                 <div className="sheet-card">
@@ -80,7 +82,9 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                             onClick={() => setExpanded(false)}
                             aria-label="Close Sheet Builder"
                         >
-                            &lt;
+                            <svg className={`chev ${expanded ? "rotated" : ""}`} width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
                         </button>
                         <div className="sheet-title">Sheet Builder</div>
                     </div>

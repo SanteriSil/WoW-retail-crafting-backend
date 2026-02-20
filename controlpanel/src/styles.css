@@ -98,6 +98,19 @@ body {
     box-shadow: 0 12px 32px rgba(37,99,235,0.22);
 }
 
+.chev {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    transition: transform 140ms ease;
+    color: inherit;
+}
+
+.chev.rotated {
+    transform: rotate(180deg);
+}
+
 .header-actions {
     display: flex;
     align-items: center;
