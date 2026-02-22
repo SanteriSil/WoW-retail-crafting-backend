@@ -12,6 +12,8 @@ export type Item = {
   iconUrl?: string | null;
   currentPrice?: number | null;
   currentPriceRecordedAt?: string | null;
+  vendorItem?: boolean | null;
+  vendorPrice?: number | null;
 };
 
 export type AuthResponse = {

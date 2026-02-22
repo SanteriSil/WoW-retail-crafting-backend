@@ -20,6 +20,8 @@ export default function UpdateItemForm({
     const [professionId, setProfessionId] = useState("");
     const [quality, setQuality] = useState("");
     const [finishingIngredient, setFinishingIngredient] = useState(false);
+    const [vendorItem, setVendorItem] = useState(false);
+    const [vendorPrice, setVendorPrice] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +30,8 @@ export default function UpdateItemForm({
         setProfessionId(selectedItem?.profession?.id?.toString() ?? "");
         setQuality(selectedItem?.quality?.toString() ?? "");
         setFinishingIngredient(selectedItem?.finishingIngredient ?? false);
+        setVendorItem(selectedItem?.vendorItem ?? false);
+        setVendorPrice(selectedItem?.vendorPrice?.toString() ?? "");
     }, [selectedItem]);
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -51,6 +55,12 @@ export default function UpdateItemForm({
 
         const parsedProfessionId = professionId.trim() === "" ? null : Number(professionId);
 
+        const parsedVendorPrice = vendorPrice.trim() === "" ? null : Number(vendorPrice);
+        if (parsedVendorPrice !== null && (!Number.isInteger(parsedVendorPrice) || parsedVendorPrice < 0)) {
+            setError("Vendor price must be a non-negative integer (copper).");
+            return;
+        }
+
         setSaving(true);
         try {
             await onUpdate({
@@ -59,7 +69,9 @@ export default function UpdateItemForm({
                 finishingIngredient,
                 profession: parsedProfessionId === null ? null : { id: parsedProfessionId, name: "" },
                 quality: parsedQuality,
-                iconUrl: selectedItem.iconUrl
+                iconUrl: selectedItem.iconUrl,
+                vendorItem: vendorItem || null,
+                vendorPrice: parsedVendorPrice
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to update item.");
@@ -147,6 +159,32 @@ export default function UpdateItemForm({
                     Finishing ingredient
                 </label>
             </div>
+
+            <div className="field">
+                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                        type="checkbox"
+                        checked={vendorItem}
+                        onChange={(e) => setVendorItem(e.target.checked)}
+                    />
+                    Vendor item
+                </label>
+            </div>
+
+            {vendorItem && (
+                <div className="field">
+                    <div className="label">Vendor price (copper)</div>
+                    <input
+                        className="input"
+                        type="number"
+                        min={0}
+                        step={1}
+                        placeholder="Price in copper"
+                        value={vendorPrice}
+                        onChange={(e) => setVendorPrice(e.target.value)}
+                    />
+                </div>
+            )}
 
             {error && <div className="error">{error}</div>}
 

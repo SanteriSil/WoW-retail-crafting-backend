@@ -12,6 +12,8 @@ export default function CreateItemForm({ onCreate, professions }: CreateItemForm
     const [showExtra, setShowExtra] = useState(false);
     const [professionId, setProfessionId] = useState<string>("");
     const [quality, setQuality] = useState<string>("");
+    const [vendorItem, setVendorItem] = useState(false);
+    const [vendorPrice, setVendorPrice] = useState<string>("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +39,12 @@ export default function CreateItemForm({ onCreate, professions }: CreateItemForm
             return;
         }
 
+        const parsedVendorPrice = vendorPrice.trim() === "" ? null : Number(vendorPrice);
+        if (parsedVendorPrice !== null && (!Number.isInteger(parsedVendorPrice) || parsedVendorPrice < 0)) {
+            setError("Vendor price must be a non-negative integer (copper).");
+            return;
+        }
+
         setSaving(true);
         try {
             await onCreate({
@@ -44,12 +52,16 @@ export default function CreateItemForm({ onCreate, professions }: CreateItemForm
                 name: name.trim(),
                 finishingIngredient: false,
                 profession: parsedProfessionId === null ? null : { id: parsedProfessionId, name: "" },
-                quality: parsedQuality
+                quality: parsedQuality,
+                vendorItem: vendorItem || null,
+                vendorPrice: parsedVendorPrice
             });
             setId("");
             setName("");
             setProfessionId("");
             setQuality("");
+            setVendorItem(false);
+            setVendorPrice("");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to create item.");
         } finally {
@@ -128,6 +140,32 @@ export default function CreateItemForm({ onCreate, professions }: CreateItemForm
                             onChange={(e) => setQuality(e.target.value)}
                         />
                     </div>
+
+                    <div className="field">
+                        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <input
+                                type="checkbox"
+                                checked={vendorItem}
+                                onChange={(e) => setVendorItem(e.target.checked)}
+                            />
+                            Vendor item
+                        </label>
+                    </div>
+
+                    {vendorItem && (
+                        <div className="field">
+                            <div className="label">Vendor price (copper)</div>
+                            <input
+                                className="input"
+                                type="number"
+                                min={0}
+                                step={1}
+                                placeholder="Price in copper"
+                                value={vendorPrice}
+                                onChange={(e) => setVendorPrice(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </>
             )}
 
