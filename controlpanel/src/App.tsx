@@ -307,6 +307,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                                     selectedItem={selectedItem}
                                     onSelect={setSelectedItem}
                                     onUpdate={handleUpdate}
+                                    professions={professions}
                                 />
                             ) : null}
                             {activePane === "delete" ? (

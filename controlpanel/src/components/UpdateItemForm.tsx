@@ -1,25 +1,33 @@
 import { useEffect, useState } from "react";
-import type { Item } from "../types";
+import type { Item, Profession } from "../types";
 
 type UpdateItemFormProps = {
     items: Item[];
     selectedItem: Item | null;
     onSelect: (item: Item) => void;
     onUpdate: (item: Item) => Promise<void>;
+    professions: Profession[];
 };
 
 export default function UpdateItemForm({
     items,
     selectedItem,
     onSelect,
-    onUpdate
+    onUpdate,
+    professions
 }: UpdateItemFormProps) {
     const [name, setName] = useState("");
+    const [professionId, setProfessionId] = useState("");
+    const [quality, setQuality] = useState("");
+    const [finishingIngredient, setFinishingIngredient] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setName(selectedItem?.name ?? "");
+        setProfessionId(selectedItem?.profession?.id?.toString() ?? "");
+        setQuality(selectedItem?.quality?.toString() ?? "");
+        setFinishingIngredient(selectedItem?.finishingIngredient ?? false);
     }, [selectedItem]);
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -35,14 +43,22 @@ export default function UpdateItemForm({
             return;
         }
 
+        const parsedQuality = quality.trim() === "" ? null : Number(quality);
+        if (parsedQuality !== null && (!Number.isInteger(parsedQuality) || parsedQuality < 0 || parsedQuality > 5)) {
+            setError("Quality must be an integer between 0 and 5.");
+            return;
+        }
+
+        const parsedProfessionId = professionId.trim() === "" ? null : Number(professionId);
+
         setSaving(true);
         try {
             await onUpdate({
                 id: selectedItem.id,
                 name: name.trim(),
-                finishingIngredient: selectedItem.finishingIngredient ?? false,
-                profession: selectedItem.profession ?? null,
-                quality: selectedItem.quality ?? null,
+                finishingIngredient,
+                profession: parsedProfessionId === null ? null : { id: parsedProfessionId, name: "" },
+                quality: parsedQuality,
                 iconUrl: selectedItem.iconUrl
             });
         } catch (err) {
@@ -89,6 +105,47 @@ export default function UpdateItemForm({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
+            </div>
+
+            <div className="field">
+                <div className="label">Profession</div>
+                <select
+                    className="select"
+                    value={professionId}
+                    onChange={(e) => setProfessionId(e.target.value)}
+                >
+                    <option value="">None</option>
+                    {professions.map((p) => (
+                        <option key={p.id} value={p.id}>
+                            {p.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="field">
+                <div className="label">Quality (0–5)</div>
+                <input
+                    className="input"
+                    type="number"
+                    min={0}
+                    max={5}
+                    step={1}
+                    placeholder="Optional"
+                    value={quality}
+                    onChange={(e) => setQuality(e.target.value)}
+                />
+            </div>
+
+            <div className="field">
+                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                        type="checkbox"
+                        checked={finishingIngredient}
+                        onChange={(e) => setFinishingIngredient(e.target.checked)}
+                    />
+                    Finishing ingredient
+                </label>
             </div>
 
             {error && <div className="error">{error}</div>}
