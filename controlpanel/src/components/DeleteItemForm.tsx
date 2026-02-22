@@ -39,7 +39,7 @@ export default function DeleteItemForm({
     };
 
     const handleDelete = async () => {
-        if (!selectedItem) {
+        if (!selectedItem || !filteredItems.some((i) => i.id === selectedItem.id)) {
             setError("Select an item first.");
             return;
         }
@@ -84,7 +84,11 @@ export default function DeleteItemForm({
                 Item
                 <select
                     className="select"
-                    value={selectedItem?.id ?? ""}
+                    value={
+                        selectedItem && filteredItems.some((i) => i.id === selectedItem.id)
+                            ? selectedItem.id
+                            : ""
+                    }
                     onChange={(e) => {
                         const id = Number(e.target.value);
                         const match = items.find((item) => item.id === id);
