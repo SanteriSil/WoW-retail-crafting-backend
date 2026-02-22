@@ -68,6 +68,12 @@ public class Item {
     @Column(name = "icon_url")
     private String iconUrl;
 
+    @Column(name = "vendor_item")
+    private Boolean vendorItem;
+
+    @Column(name = "vendor_price")
+    private Long vendorPrice;
+
     @Override
     public String toString() {
         return "Item{id=" + id + ", name='" + name + '\'' + '}';
