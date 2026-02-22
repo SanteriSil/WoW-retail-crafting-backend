@@ -39,11 +39,15 @@ export default function CreateItemForm({ onCreate, professions }: CreateItemForm
             return;
         }
 
-        const parsedVendorPrice = vendorPrice.trim() === "" ? null : Number(vendorPrice);
-        if (parsedVendorPrice !== null && (!Number.isInteger(parsedVendorPrice) || parsedVendorPrice < 0)) {
-            setError("Vendor price must be a non-negative integer (copper).");
+        const parsedVendorPriceGold = vendorPrice.trim() === "" ? null : parseFloat(vendorPrice);
+        if (parsedVendorPriceGold !== null && (isNaN(parsedVendorPriceGold) || parsedVendorPriceGold < 0)) {
+            setError("Vendor price must be a non-negative number (gold).");
             return;
         }
+        // convert gold to copper
+        const parsedVendorPrice = parsedVendorPriceGold === null
+            ? null
+            : Math.floor(parsedVendorPriceGold * 10000);
 
         setSaving(true);
         try {
@@ -154,13 +158,13 @@ export default function CreateItemForm({ onCreate, professions }: CreateItemForm
 
                     {vendorItem && (
                         <div className="field">
-                            <div className="label">Vendor price (copper)</div>
+                            <div className="label">Vendor price (gold)</div>
                             <input
                                 className="input"
                                 type="number"
                                 min={0}
-                                step={1}
-                                placeholder="Price in copper"
+                                step={0.01}
+                                placeholder="Price in gold"
                                 value={vendorPrice}
                                 onChange={(e) => setVendorPrice(e.target.value)}
                             />
