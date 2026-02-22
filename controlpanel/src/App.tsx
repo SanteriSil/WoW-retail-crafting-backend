@@ -83,6 +83,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
     const [ahBusy, setAhBusy] = useState(false);
     const [professions, setProfessions] = useState<Profession[]>([]);
     const [selectedProfessionIds, setSelectedProfessionIds] = useState<Set<number>>(new Set());
+    const [showMissingIcons, setShowMissingIcons] = useState(false);
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -127,10 +128,11 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
         return items.filter((item) => {
             const matchesQuery = item.name.toLowerCase().includes(lowered) || String(item.id).includes(lowered);
             if (!matchesQuery) return false;
+            if (showMissingIcons && item.iconUrl) return false;
             if (selectedProfessionIds.size === 0) return true;
             return item.profession != null && selectedProfessionIds.has(item.profession.id);
         });
-    }, [items, query, selectedProfessionIds]);
+    }, [items, query, selectedProfessionIds, showMissingIcons]);
 
     const toggleProfession = useCallback((id: number) => {
         setSelectedProfessionIds((prev) => {
@@ -247,29 +249,34 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
-                    {professions.length > 0 && (
-                        <div className="profession-filter">
-                            {professions.map((p) => (
-                                <button
-                                    key={p.id}
-                                    type="button"
-                                    className={`profession-chip${selectedProfessionIds.has(p.id) ? " active" : ""}`}
-                                    onClick={() => toggleProfession(p.id)}
-                                >
-                                    {p.name}
-                                </button>
-                            ))}
-                            {selectedProfessionIds.size > 0 && (
-                                <button
-                                    type="button"
-                                    className="profession-chip clear"
-                                    onClick={() => setSelectedProfessionIds(new Set())}
-                                >
-                                    ✕ Clear
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    <div className="profession-filter">
+                        <button
+                            type="button"
+                            className={`profession-chip${showMissingIcons ? " active" : ""}`}
+                            onClick={() => setShowMissingIcons((v) => !v)}
+                        >
+                            🖼 Missing icons
+                        </button>
+                        {professions.map((p) => (
+                            <button
+                                key={p.id}
+                                type="button"
+                                className={`profession-chip${selectedProfessionIds.has(p.id) ? " active" : ""}`}
+                                onClick={() => toggleProfession(p.id)}
+                            >
+                                {p.name}
+                            </button>
+                        ))}
+                        {(selectedProfessionIds.size > 0 || showMissingIcons) && (
+                            <button
+                                type="button"
+                                className="profession-chip clear"
+                                onClick={() => { setSelectedProfessionIds(new Set()); setShowMissingIcons(false); }}
+                            >
+                                ✕ Clear
+                            </button>
+                        )}
+                    </div>
                     {loading ? <div className="muted">Loading...</div> : null}
                     <ItemList items={filteredItems} />
                 </div>
