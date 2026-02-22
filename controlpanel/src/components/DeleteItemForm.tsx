@@ -8,6 +8,14 @@ type DeleteItemFormProps = {
     onDelete: (id: number) => Promise<void>;
 };
 
+const qualityLabels: Record<number, string> = {
+    1: "★",
+    2: "★★",
+    3: "★★★",
+    4: "★★★★",
+    5: "★★★★★",
+};
+
 export default function DeleteItemForm({
     items,
     selectedItem,
@@ -17,6 +25,18 @@ export default function DeleteItemForm({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [bypassConfirm, setBypassConfirm] = useState(false);
+    const [nameFilter, setNameFilter] = useState("");
+
+    const filteredItems = nameFilter
+        ? items.filter((item) =>
+              item.name.toLowerCase().includes(nameFilter.toLowerCase())
+          )
+        : items;
+
+    const formatItemLabel = (item: Item) => {
+        const quality = item.quality ? ` ${qualityLabels[item.quality] ?? `Q${item.quality}`}` : "";
+        return `${item.name}${quality} (#${item.id})`;
+    };
 
     const handleDelete = async () => {
         if (!selectedItem) {
@@ -51,6 +71,16 @@ export default function DeleteItemForm({
                 <h3 style={{ margin: 0 }}>Delete</h3>
             </div>
             <label>
+                Filter by name
+                <input
+                    type="text"
+                    className="input"
+                    placeholder="Type to filter items…"
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                />
+            </label>
+            <label>
                 Item
                 <select
                     className="select"
@@ -64,9 +94,9 @@ export default function DeleteItemForm({
                     <option value="" disabled>
                         Select an item
                     </option>
-                    {items.map((item) => (
+                    {filteredItems.map((item) => (
                         <option key={item.id} value={item.id}>
-                            {item.name} (#{item.id})
+                            {formatItemLabel(item)}
                         </option>
                     ))}
                 </select>
