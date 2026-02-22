@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Item } from "../types";
 
-type SheetEntry = { id: number; name: string; quality?: number | null; multiplier: number };
+type SheetEntry = { id: number; name: string; quality?: number | null; multiplier: number; finishingIngredient: boolean };
 
 type SheetBuilderProps = {
     items: Item[];
@@ -18,10 +18,8 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
     const [expanded, setExpanded] = useState(false);
     const [outputItem, setOutputItem] = useState<{ id: number; name: string } | null>(null);
     const [searchOutput, setSearchOutput] = useState("");
-    const [withRes, setWithRes] = useState<SheetEntry[]>([]);
-    const [withoutRes, setWithoutRes] = useState<SheetEntry[]>([]);
-    const [searchWith, setSearchWith] = useState("");
-    const [searchWithout, setSearchWithout] = useState("");
+    const [ingredients, setIngredients] = useState<SheetEntry[]>([]);
+    const [searchIngredients, setSearchIngredients] = useState("");
     const [copied, setCopied] = useState(false);
 
     const filterItems = (query: string, excludeIds: Set<number>) => {
@@ -33,19 +31,17 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
     };
 
     const allUsedIds = useMemo(() => {
-        const ids = new Set(withRes.map((e) => e.id));
-        withoutRes.forEach((e) => ids.add(e.id));
+        const ids = new Set(ingredients.map((e) => e.id));
         if (outputItem) ids.add(outputItem.id);
         return ids;
-    }, [withRes, withoutRes, outputItem]);
+    }, [ingredients, outputItem]);
 
     const suggestionsOutput = useMemo(() => filterItems(searchOutput, new Set(outputItem ? [outputItem.id] : [])), [searchOutput, items, outputItem]);
-    const suggestionsWith = useMemo(() => filterItems(searchWith, allUsedIds), [searchWith, items, allUsedIds]);
-    const suggestionsWithout = useMemo(() => filterItems(searchWithout, allUsedIds), [searchWithout, items, allUsedIds]);
+    const suggestionsIngredients = useMemo(() => filterItems(searchIngredients, allUsedIds), [searchIngredients, items, allUsedIds]);
 
     const addTo = (list: SheetEntry[], setList: React.Dispatch<React.SetStateAction<SheetEntry[]>>, item: Item) => {
         if (list.some((e) => e.id === item.id)) return;
-        setList([...list, { id: item.id, name: item.name, quality: item.quality, multiplier: 1 }]);
+        setList([...list, { id: item.id, name: item.name, quality: item.quality, multiplier: 1, finishingIngredient: !!item.finishingIngredient }]);
     };
 
     const removeFrom = (setList: React.Dispatch<React.SetStateAction<SheetEntry[]>>, id: number) => {
@@ -57,15 +53,17 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
     };
 
     const outputJson = useMemo(() => {
+        const withResEntries = ingredients.filter((e) => !e.finishingIngredient);
+        const withoutResEntries = ingredients.filter((e) => e.finishingIngredient);
         const payload = {
             outputId: outputItem?.id ?? null,
-            withResourcefulness: withRes.map((e) => ({ id: e.id, multiplier: e.multiplier })),
-            withoutResourcefulness: withoutRes.map((e) => ({ id: e.id, multiplier: e.multiplier }))
+            withResourcefulness: withResEntries.map((e) => ({ id: e.id, multiplier: e.multiplier })),
+            withoutResourcefulness: withoutResEntries.map((e) => ({ id: e.id, multiplier: e.multiplier }))
         };
         return JSON.stringify(payload, null, 2);
-    }, [outputItem, withRes, withoutRes]);
+    }, [outputItem, ingredients]);
 
-    const hasContent = outputItem != null || withRes.length > 0 || withoutRes.length > 0;
+    const hasContent = outputItem != null || ingredients.length > 0;
 
     const handleCopy = async () => {
         try {
@@ -160,28 +158,16 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                         )}
                     </div>
 
-                    {/* With Resourcefulness */}
+                    {/* Ingredients */}
                     <Section
-                        label="With Resourcefulness"
-                        entries={withRes}
-                        search={searchWith}
-                        onSearchChange={setSearchWith}
-                        suggestions={suggestionsWith}
-                        onAdd={(item) => { addTo(withRes, setWithRes, item); setSearchWith(""); }}
-                        onRemove={(id) => removeFrom(setWithRes, id)}
-                        onMultiplier={(id, v) => setMultiplier(setWithRes, id, v)}
-                    />
-
-                    {/* Without Resourcefulness */}
-                    <Section
-                        label="Without Resourcefulness"
-                        entries={withoutRes}
-                        search={searchWithout}
-                        onSearchChange={setSearchWithout}
-                        suggestions={suggestionsWithout}
-                        onAdd={(item) => { addTo(withoutRes, setWithoutRes, item); setSearchWithout(""); }}
-                        onRemove={(id) => removeFrom(setWithoutRes, id)}
-                        onMultiplier={(id, v) => setMultiplier(setWithoutRes, id, v)}
+                        label="Ingredients"
+                        entries={ingredients}
+                        search={searchIngredients}
+                        onSearchChange={setSearchIngredients}
+                        suggestions={suggestionsIngredients}
+                        onAdd={(item) => { addTo(ingredients, setIngredients, item); setSearchIngredients(""); }}
+                        onRemove={(id) => removeFrom(setIngredients, id)}
+                        onMultiplier={(id, v) => setMultiplier(setIngredients, id, v)}
                     />
 
                     {/* JSON output */}
