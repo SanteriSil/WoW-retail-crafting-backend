@@ -1,4 +1,5 @@
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID ?? "";
+const IS_DEV_MODE = import.meta.env.VITE_DEV_MODE === "true";
 
 function getRedirectUri(): string {
     return window.location.origin + "/";
@@ -14,7 +15,7 @@ function handleLogin() {
     window.location.href = `https://discord.com/oauth2/authorize?${params}`;
 }
 
-export default function LoginPage() {
+export default function LoginPage({ onDevLogin }: { onDevLogin?: () => void }) {
     return (
         <div className="login-page">
             <div className="login-card">
@@ -26,6 +27,11 @@ export default function LoginPage() {
                     </svg>
                     Login with Discord
                 </button>
+                {IS_DEV_MODE && onDevLogin && (
+                    <button className="login-dev-btn" type="button" onClick={onDevLogin}>
+                        Dev Bypass Login
+                    </button>
+                )}
                 {!DISCORD_CLIENT_ID && (
                     <div className="login-warning">
                         ⚠ VITE_DISCORD_CLIENT_ID is not set. Discord login will not work.

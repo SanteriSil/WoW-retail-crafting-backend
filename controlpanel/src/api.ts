@@ -96,6 +96,14 @@ export async function exchangeDiscordCode(code: string, redirectUri: string): Pr
     });
 }
 
+/**
+ * Dev-only: bypass Discord OAuth by calling the backend dev login endpoint.
+ * Only works when the backend is running with the "dev" Spring profile.
+ */
+export async function devLogin(): Promise<AuthResponse> {
+    return request<AuthResponse>("/auth/dev/login", { method: "POST" });
+}
+
 export async function getItems(): Promise<Item[]> {
     return request<Item[]>("/items");
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { archiveLogs, clearAuth, clearLogs, createItem, deleteItem, exchangeDiscordCode, fetchCraftingAH, getItems, getProfessions, getStoredUser, getToken, setAuth, updateItem } from "./api";
+import { archiveLogs, clearAuth, clearLogs, createItem, deleteItem, devLogin, exchangeDiscordCode, fetchCraftingAH, getItems, getProfessions, getStoredUser, getToken, setAuth, updateItem } from "./api";
 import type { Item, Profession } from "./types";
 import CreateItemForm from "./components/CreateItemForm";
 import UpdateItemForm from "./components/UpdateItemForm";
@@ -43,11 +43,23 @@ export default function App() {
         setUser(null);
     };
 
+    const handleDevLogin = async () => {
+        setAuthError(null);
+        try {
+            const auth = await devLogin();
+            setAuth(auth);
+            setAuthed(true);
+            setUser({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl });
+        } catch (err) {
+            setAuthError(err instanceof Error ? err.message : "Dev login failed.");
+        }
+    };
+
     // Show login page when not authenticated
     if (!authed) {
         return (
             <>
-                <LoginPage />
+                <LoginPage onDevLogin={handleDevLogin} />
                 {authError && <div className="login-error">{authError}</div>}
             </>
         );

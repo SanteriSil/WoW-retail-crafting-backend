@@ -630,6 +630,26 @@ body {
     background: #4752c4;
 }
 
+.login-dev-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 20px;
+    background: #f59e0b;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 150ms;
+}
+
+.login-dev-btn:hover {
+    background: #d97706;
+}
+
 .login-warning {
     margin-top: 16px;
     padding: 8px 12px;
