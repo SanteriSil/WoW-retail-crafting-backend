@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -18,6 +20,11 @@ import java.util.Map;
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
+    private static String currentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? String.valueOf(auth.getPrincipal()) : "anonymous";
+    }
     private final DiscordOAuthService discordOAuthService;
     private final AllowedUserRepository allowedUserRepository;
 
@@ -32,7 +39,7 @@ public class AuthController {
      */
     @PostMapping("/discord/callback")
     public ResponseEntity<?> discordCallback(@RequestBody CallbackRequest body) {
-        log.info("Discord callback received");
+        log.debug("Discord callback received");
         try {
             DiscordOAuthService.AuthResult result = discordOAuthService.handleCallback(body.code(), body.redirectUri());
             return ResponseEntity.ok(Map.of(
@@ -74,7 +81,7 @@ public class AuthController {
         }
         AllowedUser user = new AllowedUser(discordId, body.discordUsername());
         allowedUserRepository.save(user);
-        log.info("Added allowed user: {} ({})", body.discordUsername(), discordId);
+        log.info("[{}] Added allowed user: {} ({})", currentUser(), body.discordUsername(), discordId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(user));
     }
 
@@ -85,7 +92,7 @@ public class AuthController {
                     .body(Map.of("error", "User not found"));
         }
         allowedUserRepository.deleteById(discordId);
-        log.info("Removed allowed user with discord_id: {}", discordId);
+        log.info("[{}] Removed allowed user with discord_id: {}", currentUser(), discordId);
         return ResponseEntity.noContent().build();
     }
 

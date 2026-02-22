@@ -2,6 +2,8 @@ package com.crafting.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +17,11 @@ import com.crafting.blizz.AHDataFetcher;
 public class AHFetchController {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AHFetchController.class);
     private final AHDataFetcher ahDataFetcher;
+
+    private static String currentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? String.valueOf(auth.getPrincipal()) : "anonymous";
+    }
 
     public AHFetchController(AHDataFetcher ahDataFetcher) {
         this.ahDataFetcher = ahDataFetcher;
@@ -51,7 +58,7 @@ public class AHFetchController {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                                     .body("Another fetch is already running");
             }
-            logger.info("User auction submission processed – {} items updated", updated);
+            logger.info("[{}] Auction submission processed – {} items updated", currentUser(), updated);
             return ResponseEntity.ok(updated + " item prices updated");
         } catch (Exception e) {
             logger.error("Error processing user-submitted auction data", e);

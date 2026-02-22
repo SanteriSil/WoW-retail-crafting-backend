@@ -32,7 +32,7 @@ public class DevAuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<?> devLogin() {
-        log.info("Dev bypass login used");
+        log.debug("Dev bypass login used");
         String token = jwtService.generateToken(1L, "dev-user");
         return ResponseEntity.ok(Map.of(
                 "token", token,
