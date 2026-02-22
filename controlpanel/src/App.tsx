@@ -242,14 +242,8 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
 
             <div className="grid">
                 <div className="card">
-                    <h3>Items</h3>
-                    <input
-                        className="input"
-                        placeholder="Search by id or name"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
-                    <div className="profession-filter">
+                    <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3>Items</h3>
                         <button
                             type="button"
                             className={`profession-chip${showMissingIcons ? " active" : ""}`}
@@ -257,6 +251,14 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                         >
                             🖼 Missing icons
                         </button>
+                    </div>
+                    <input
+                        className="input"
+                        placeholder="Search by id or name"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                    <div className="profession-filter">
                         {professions.map((p) => (
                             <button
                                 key={p.id}
