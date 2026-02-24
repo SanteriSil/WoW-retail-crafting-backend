@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Item } from "../types";
 
-type SheetEntry = { id: number; name: string; quality?: number | null; multiplier: number; finishingIngredient: boolean };
+type SheetEntry = { id: number; name: string; quality?: number | null; multiplier: number; finishingIngredient: boolean; iconUrl?: string | null };
 
 type SheetBuilderProps = {
     items: Item[];
@@ -16,7 +16,7 @@ function qualityStars(quality?: number | null): string | null {
 
 export default function SheetBuilder({ items }: SheetBuilderProps) {
     const [expanded, setExpanded] = useState(false);
-    const [outputItem, setOutputItem] = useState<{ id: number; name: string } | null>(null);
+    const [outputItem, setOutputItem] = useState<{ id: number; name: string; iconUrl?: string | null } | null>(null);
     const [searchOutput, setSearchOutput] = useState("");
     const [ingredients, setIngredients] = useState<SheetEntry[]>([]);
     const [searchIngredients, setSearchIngredients] = useState("");
@@ -41,7 +41,7 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
 
     const addTo = (list: SheetEntry[], setList: React.Dispatch<React.SetStateAction<SheetEntry[]>>, item: Item) => {
         if (list.some((e) => e.id === item.id)) return;
-        setList([...list, { id: item.id, name: item.name, quality: item.quality, multiplier: 1, finishingIngredient: !!item.finishingIngredient }]);
+        setList([...list, { id: item.id, name: item.name, quality: item.quality, multiplier: 1, finishingIngredient: !!item.finishingIngredient, iconUrl: item.iconUrl }]);
     };
 
     const removeFrom = (setList: React.Dispatch<React.SetStateAction<SheetEntry[]>>, id: number) => {
@@ -53,8 +53,9 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
     };
 
     const outputJson = useMemo(() => {
-        const withResEntries = ingredients.filter((e) => !e.finishingIngredient);
-        const withoutResEntries = ingredients.filter((e) => e.finishingIngredient);
+        const active = ingredients.filter((e) => e.multiplier > 0);
+        const withResEntries = active.filter((e) => !e.finishingIngredient);
+        const withoutResEntries = active.filter((e) => e.finishingIngredient);
         const payload = {
             outputId: outputItem?.id ?? null,
             withResourcefulness: withResEntries.map((e) => ({ id: e.id, multiplier: e.multiplier })),
@@ -110,7 +111,12 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                         {outputItem ? (
                             <div className="sheet-entries">
                                 <div className="sheet-entry">
-                                    <span className="sheet-entry-name" title={`#${outputItem.id}`}>{outputItem.name}</span>
+                                    <span className="sheet-entry-name" title={`#${outputItem.id}`}>
+                                        {outputItem.iconUrl && (
+                                            <img src={outputItem.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 4 }} />
+                                        )}
+                                        {outputItem.name}
+                                    </span>
                                     <button
                                         type="button"
                                         className="sheet-remove-btn"
@@ -139,7 +145,7 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                                                     key={item.id}
                                                     type="button"
                                                     className="sheet-suggestion-item"
-                                                    onClick={() => { setOutputItem({ id: item.id, name: item.name }); setSearchOutput(""); }}
+                                                    onClick={() => { setOutputItem({ id: item.id, name: item.name, iconUrl: item.iconUrl }); setSearchOutput(""); }}
                                                 >
                                                     {item.iconUrl && (
                                                         <img src={item.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3 }} />
@@ -249,8 +255,11 @@ function Section({ label, entries, search, onSearchChange, suggestions, onAdd, o
                     {entries.map((entry) => {
                         const stars = qualityStars(entry.quality);
                         return (
-                        <div key={entry.id} className="sheet-entry">
+                        <div key={entry.id} className={`sheet-entry${entry.multiplier === 0 ? " dimmed" : ""}`}>
                             <span className="sheet-entry-name" title={`#${entry.id}`}>
+                                {entry.iconUrl && (
+                                    <img src={entry.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 4 }} />
+                                )}
                                 {entry.name}
                                 {stars && <span className={`quality-stars q${entry.quality}`}> {stars}</span>}
                             </span>
@@ -260,8 +269,8 @@ function Section({ label, entries, search, onSearchChange, suggestions, onAdd, o
                                     type="number"
                                     className="sheet-multiplier-input"
                                     value={entry.multiplier}
-                                    min={1}
-                                    onChange={(e) => onMultiplier(entry.id, Math.max(1, Number(e.target.value) || 1))}
+                                    min={0}
+                                    onChange={(e) => onMultiplier(entry.id, Math.max(0, Number(e.target.value) || 0))}
                                 />
                                 <button
                                     type="button"

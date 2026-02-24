@@ -508,6 +508,10 @@ body {
     border-bottom: none;
 }
 
+.sheet-entry.dimmed {
+    opacity: 0.4;
+}
+
 .sheet-entry-name {
     flex: 1;
     overflow: hidden;
