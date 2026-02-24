@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,11 @@ import java.util.List;
 public class ItemController {
 
     private static final Logger logger = LoggerFactory.getLogger(ItemController.class);
+
+    private static String currentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? String.valueOf(auth.getPrincipal()) : "anonymous";
+    }
     private final ItemRepository itemRepository;
     private final CachedResult<List<Item>> itemCache;
     private final CachedResult<List<Long>> itemIdCache;
@@ -47,11 +54,9 @@ public class ItemController {
      */
     @GetMapping
     public ResponseEntity<List<Item>> getAllItems() {
-        logger.info("GET /items called");
+        logger.debug("GET /items called");
         List<Item> items = itemCache.get(() -> itemRepository.findAll());
-        logger.info(items.isEmpty()
-            ? "No items found in the database"
-            : "Returning {} items", items.size());
+        logger.debug("Returning {} items", items.size());
         return ResponseEntity.ok(items);
     }
 
@@ -61,11 +66,9 @@ public class ItemController {
      */
     @GetMapping("/ids")
     public ResponseEntity<List<Long>> getAllItemIds() {
-        logger.info("GET /items/ids called");
+        logger.debug("GET /items/ids called");
         List<Long> itemIds = itemIdCache.get(() -> itemRepository.findAllIds());
-        logger.info(itemIds.isEmpty()
-            ? "No item IDs found in the database"
-            : "Returning {} item IDs", itemIds.size());
+        logger.debug("Returning {} item IDs", itemIds.size());
         return ResponseEntity.ok(itemIds);
     }
 
@@ -78,7 +81,7 @@ public class ItemController {
     public ResponseEntity<List<Item>> getItems(
         @RequestParam(required = false) List<Long> ids
     ) {
-        logger.info("GET /items/ordered called with ids: {}", ids);
+        logger.debug("GET /items/ordered called with {} ids", ids != null ? ids.size() : 0);
         if (ids == null || ids.isEmpty()) {
             logger.warn("GET /items/ordered called without ids parameter");
             throw new IllegalArgumentException(
@@ -92,7 +95,7 @@ public class ItemController {
         List<Item> orderedItems = ids.stream()
             .map(id -> itemsMap.get(id))
             .toList();
-        logger.info("Returning {} items in requested order", orderedItems.size());
+        logger.debug("Returning {} items in requested order", orderedItems.size());
         return ResponseEntity.ok(orderedItems);
     }
 
@@ -101,19 +104,20 @@ public class ItemController {
      */
     @PostMapping
     public ResponseEntity<Item> createItem(@Valid @RequestBody Item item) {
-        logger.info("POST /items called with: {}", item);
+        String user = currentUser();
+        logger.info("[{}] Creating item: {}", user, item);
         if (item.getId() == null) {
-            logger.warn("Attempted to create item without ID");
+            logger.warn("[{}] Attempted to create item without ID", user);
             return ResponseEntity.badRequest().build();
         }
         if (itemRepository.existsById(item.getId())) {
-            logger.warn("Attempted to create item with existing ID: {}", item.getId());
+            logger.warn("[{}] Attempted to create item with existing ID: {}", user, item.getId());
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         Item savedItem = itemRepository.save(item);
         itemCache.invalidate();
         itemIdCache.invalidate();
-        logger.info("Item created with ID: {}", savedItem.getId());
+        logger.info("[{}] Item created with ID: {}", user, savedItem.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(savedItem);
     }
 
@@ -123,15 +127,16 @@ public class ItemController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
-        logger.info("DELETE /items/{} called", id);
+        String user = currentUser();
+        logger.info("[{}] Deleting item ID: {}", user, id);
         if (!itemRepository.existsById(id)) {
-            logger.warn("Attempted to delete non-existing item with ID: {}", id);
+            logger.warn("[{}] Attempted to delete non-existing item with ID: {}", user, id);
             return ResponseEntity.notFound().build();
         }
         itemRepository.deleteById(id);
         itemCache.invalidate();
         itemIdCache.invalidate();
-        logger.info("Item with ID: {} deleted", id);
+        logger.info("[{}] Item with ID: {} deleted", user, id);
         return ResponseEntity.noContent().build();
     }
 
@@ -146,16 +151,17 @@ public class ItemController {
         @PathVariable Long id,
         @Valid @RequestBody Item item
     ) {
-        logger.info("PUT /items/{} called with: {}", id, item);
+        String user = currentUser();
+        logger.info("[{}] Updating item ID: {} with: {}", user, id, item);
         if (!itemRepository.existsById(id)) {
-            logger.warn("Attempted to update non-existing item with ID: {}", id);
+            logger.warn("[{}] Attempted to update non-existing item with ID: {}", user, id);
             return ResponseEntity.notFound().build();
         }
         item.setId(id);
         Item updatedItem = itemRepository.save(item);
         itemCache.invalidate();
         itemIdCache.invalidate();
-        logger.info("Item with ID: {} updated", id);
+        logger.info("[{}] Item with ID: {} updated", user, id);
         return ResponseEntity.ok(updatedItem);
     }
 }

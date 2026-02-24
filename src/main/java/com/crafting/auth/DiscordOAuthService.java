@@ -61,7 +61,7 @@ public class DiscordOAuthService {
                     ? "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png"
                     : null;
 
-            log.info("Discord login attempt by {} ({})", username, discordId);
+            log.debug("Discord login attempt by {} ({})", username, discordId);
 
             // 3. Check allowlist
             if (!allowedUserRepository.existsById(discordId)) {
