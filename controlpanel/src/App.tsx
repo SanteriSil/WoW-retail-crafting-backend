@@ -84,6 +84,8 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
     const [professions, setProfessions] = useState<Profession[]>([]);
     const [selectedProfessionIds, setSelectedProfessionIds] = useState<Set<number>>(new Set());
     const [showMissingIcons, setShowMissingIcons] = useState(false);
+    const [showNoProfession, setShowNoProfession] = useState(false);
+    const [showVendorItems, setShowVendorItems] = useState(false);
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -129,10 +131,12 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
             const matchesQuery = item.name.toLowerCase().includes(lowered) || String(item.id).includes(lowered);
             if (!matchesQuery) return false;
             if (showMissingIcons && item.iconUrl) return false;
+            if (showNoProfession && item.profession != null) return false;
+            if (showVendorItems && !item.vendorItem) return false;
             if (selectedProfessionIds.size === 0) return true;
             return item.profession != null && selectedProfessionIds.has(item.profession.id);
         });
-    }, [items, query, selectedProfessionIds, showMissingIcons]);
+    }, [items, query, selectedProfessionIds, showMissingIcons, showNoProfession, showVendorItems]);
 
     const toggleProfession = useCallback((id: number) => {
         setSelectedProfessionIds((prev) => {
@@ -242,15 +246,31 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
 
             <div className="grid">
                 <div className="card">
-                    <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                         <h3>Items</h3>
-                        <button
-                            type="button"
-                            className={`profession-chip${showMissingIcons ? " active" : ""}`}
-                            onClick={() => setShowMissingIcons((v) => !v)}
-                        >
-                            🖼 Missing icons
-                        </button>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            <button
+                                type="button"
+                                className={`profession-chip${showMissingIcons ? " active" : ""}`}
+                                onClick={() => setShowMissingIcons((v) => !v)}
+                            >
+                                🖼 Missing icons
+                            </button>
+                            <button
+                                type="button"
+                                className={`profession-chip${showNoProfession ? " active" : ""}`}
+                                onClick={() => setShowNoProfession((v) => !v)}
+                            >
+                                📋 No category
+                            </button>
+                            <button
+                                type="button"
+                                className={`profession-chip${showVendorItems ? " active" : ""}`}
+                                onClick={() => setShowVendorItems((v) => !v)}
+                            >
+                                💰 Vendor items
+                            </button>
+                        </div>
                     </div>
                     <input
                         className="input"
@@ -269,11 +289,11 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                                 {p.name}
                             </button>
                         ))}
-                        {(selectedProfessionIds.size > 0 || showMissingIcons) && (
+                        {(selectedProfessionIds.size > 0 || showMissingIcons || showNoProfession || showVendorItems) && (
                             <button
                                 type="button"
                                 className="profession-chip clear"
-                                onClick={() => { setSelectedProfessionIds(new Set()); setShowMissingIcons(false); }}
+                                onClick={() => { setSelectedProfessionIds(new Set()); setShowMissingIcons(false); setShowNoProfession(false); setShowVendorItems(false); }}
                             >
                                 ✕ Clear
                             </button>
