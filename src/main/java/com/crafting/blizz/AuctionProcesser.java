@@ -74,10 +74,10 @@ public class AuctionProcesser {
         return result;
     }
 
-    public Map<Integer, Long> calculateAveragePrices(Map<Integer, List<AuctionEntry>> auctions) {
+    public Map<Integer, Pair<Long, Long>> calculateAveragePrices(Map<Integer, List<AuctionEntry>> auctions) {
         /* The list of action entries is first sorted by unit price from lowest
         to highest. */
-        Map<Integer, Long> averagePrices = new HashMap<>();
+        Map<Integer, Pair<Long, Long>> averagePrices = new HashMap<>();
         for (Map.Entry<Integer, List<AuctionEntry>> entry : auctions.entrySet()) {
             List<AuctionEntry> auctionEntries = entry.getValue();
 
@@ -134,7 +134,8 @@ public class AuctionProcesser {
                 selectedEntryIndex++;
             }
             if (totalQty > 0) {
-                averagePrices.put(entry.getKey(), weightedSum / totalQty);
+                Pair<Long, Long> priceAndQty = new Pair<>(weightedSum / totalQty, totalQuantity);
+                averagePrices.put(entry.getKey(), priceAndQty);
             }
         }
         return averagePrices;

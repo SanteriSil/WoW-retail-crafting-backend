@@ -74,6 +74,9 @@ public class Item {
     @Column(name = "vendor_price")
     private Long vendorPrice;
 
+    @Column(name = "quantity")
+    private Long quantity;
+
     @Override
     public String toString() {
         return "Item{id=" + id + ", name='" + name + '\'' + '}';

@@ -102,14 +102,16 @@ public class AHDataFetcher {
     }
 
     @Transactional
-    private void saveItemsToDb(Map<Integer, Long> avgPrices) {
-        for (Map.Entry<Integer, Long> entry : avgPrices.entrySet()) {
+    private void saveItemsToDb(Map<Integer, Pair<Long, Long>> avgPrices) {
+        for (Map.Entry<Integer, Pair<Long, Long>> entry : avgPrices.entrySet()) {
             Integer itemId = entry.getKey();
-            Long avgPrice = entry.getValue();
+            Long avgPrice = entry.getValue().getLeft(); // Get the average price from the Pair
+            Long quantity = entry.getValue().getRight(); // Get the quantity from the Pair
             Item item = itemRepository.findById(itemId.longValue()).orElse(null);
             if (item != null) {
-                logger.info("Updating item ID {} with new average price {}", itemId, avgPrice);
+                logger.info("Updating item ID {} with new average price {} and quantity {}", itemId, avgPrice, quantity);
                 item.setCurrentPrice(avgPrice);
+                item.setQuantity(quantity);
                 item.setCurrentPriceRecordedAt(OffsetDateTime.now());
                 itemRepository.save(item);
             } else {
@@ -157,17 +159,16 @@ public class AHDataFetcher {
      * @return map of item-id → computed average price, empty map on failure
      */
     @Transactional
-    public Map<Integer, Long> processAuctionData(String body) throws IOException {
+    public void processAuctionData(String body) throws IOException {
         logger.debug("Processing auction data");
         Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
             body,
             fetchDbItemIds()
         );
         logger.debug("Calculating average prices for matched items");
-        Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+        Map<Integer, Pair<Long, Long>> avgPrices = auctionProcesser.calculateAveragePrices(matches);
         logger.debug("Saving average prices to database");
         saveItemsToDb(avgPrices);
-        return avgPrices;
     }
 
     /**
@@ -176,14 +177,14 @@ public class AHDataFetcher {
      * @return map of item-id → computed average price
      */
     @Transactional
-    public Map<Integer, Long> processCsvAuctionData(String csv) {
+    public Map<Integer, Pair<Long, Long>> processCsvAuctionData(String csv) {
         logger.debug("Processing user-submitted CSV auction data");
         Map<Integer, List<AuctionEntry>> matches = auctionProcesser.parseCsvAuctions(
             csv,
             fetchDbItemIds()
         );
         logger.debug("Calculating average prices for {} matched items", matches.size());
-        Map<Integer, Long> avgPrices = auctionProcesser.calculateAveragePrices(matches);
+        Map<Integer, Pair<Long, Long>> avgPrices = auctionProcesser.calculateAveragePrices(matches);
         logger.debug("Saving average prices to database");
         saveItemsToDb(avgPrices);
         return avgPrices;
@@ -204,7 +205,7 @@ public class AHDataFetcher {
         }
         try {
             pauseScheduledFetchForManualSubmit();
-            Map<Integer, Long> results = processCsvAuctionData(csv);
+            Map<Integer, Pair<Long, Long>> results = processCsvAuctionData(csv);
             logger.info("User-submitted auction data processed – {} item prices updated", results.size());
             return results.size();
         } catch (Exception e) {
