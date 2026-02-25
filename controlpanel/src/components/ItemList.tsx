@@ -2,6 +2,8 @@ import type { Item } from "../types";
 
 type ItemListProps = {
     items: Item[];
+    selectedItem?: Item | null;
+    onSelect?: (item: Item) => void;
 };
 
 function formatPriceFromCopper(value?: number | null): { gold: number; silver: number } | null {
@@ -54,7 +56,7 @@ function qualityStars(quality?: number | null): string | null {
     return "?";
 }
 
-export default function ItemList({ items }: ItemListProps) {
+export default function ItemList({ items, selectedItem, onSelect }: ItemListProps) {
     if (items.length === 0) {
         return <div className="muted">No items found.</div>;
     }
@@ -66,12 +68,13 @@ export default function ItemList({ items }: ItemListProps) {
                 const stars = qualityStars(item.quality);
 
                 return (
-                    <button
+                    <div
                         key={item.id}
-                        type="button"
-                        className="list-item"
-                        onClick={() => window.open(`https://www.wowhead.com/item=${item.id}`, "_blank", "noopener,noreferrer")}
-                        title="Open on Wowhead"
+                        className={`list-item${selectedItem?.id === item.id ? " selected" : ""}`}
+                        onClick={() => onSelect?.(item)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect?.(item); }}
                     >
                                 <div className="list-item-left">
                                     <div className="list-item-icon">
@@ -106,8 +109,18 @@ export default function ItemList({ items }: ItemListProps) {
                                         <div className="muted" style={{ fontSize: 11 }}>Qty: {item.quantity}</div>
                                     )}
                                     <div className="muted" title={updated.title} style={{ fontSize: 11 }}>{updated.label}</div>
+                                    <a
+                                        className="wowhead-link"
+                                        href={`https://www.wowhead.com/item=${item.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Open on Wowhead"
+                                    >
+                                        🔗 Link
+                                    </a>
                                 </div>
-                    </button>
+                    </div>
                 );
             })}
         </div>

@@ -300,7 +300,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                         )}
                     </div>
                     {loading ? <div className="muted">Loading...</div> : null}
-                    <ItemList items={filteredItems} />
+                    <ItemList items={filteredItems} selectedItem={selectedItem} onSelect={setSelectedItem} />
                 </div>
 
                 <div className="grid" style={{ gridTemplateColumns: "1fr" }}>

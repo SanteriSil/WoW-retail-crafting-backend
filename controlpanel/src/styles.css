@@ -203,8 +203,34 @@ body {
     background: linear-gradient(180deg,#f1f5f9 0%,#eef6fb 100%);
 }
 
+.list-item {
+    cursor: pointer;
+}
+
 .list-item:hover {
     background: linear-gradient(180deg,#e6eef6 0%,#eaf4fb 100%);
+}
+
+.list-item.selected {
+    background: linear-gradient(180deg, #dbeafe 0%, #d0ecff 100%);
+    box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+.wowhead-link {
+    font-size: 11px;
+    color: #3b82f6;
+    text-decoration: none;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.wowhead-link:hover {
+    background: #dbeafe;
+    text-decoration: none;
 }
 
 .coin {
