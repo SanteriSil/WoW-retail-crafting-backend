@@ -14,6 +14,7 @@ export type Item = {
   currentPriceRecordedAt?: string | null;
   vendorItem?: boolean | null;
   vendorPrice?: number | null;
+  quantity?: number | null;
 };
 
 export type AuthResponse = {

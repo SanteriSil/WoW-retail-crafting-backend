@@ -102,6 +102,9 @@ export default function ItemList({ items }: ItemListProps) {
                                 </div>
                                 <div className="list-item-right">
                                     <div className="muted">#{item.id}</div>
+                                    {item.quantity != null && (
+                                        <div className="muted" style={{ fontSize: 11 }}>Qty: {item.quantity}</div>
+                                    )}
                                     <div className="muted" title={updated.title} style={{ fontSize: 11 }}>{updated.label}</div>
                                 </div>
                     </button>
