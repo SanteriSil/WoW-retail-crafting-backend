@@ -9,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -159,10 +160,10 @@ public class AHDataFetcher {
      * @return map of item-id → computed average price, empty map on failure
      */
     @Transactional
-    public void processAuctionData(String body) throws IOException {
+    public void processAuctionData(InputStream inputStream) throws IOException {
         logger.debug("Processing auction data");
-        Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollect(
-            body,
+        Map<Integer, List<AuctionEntry>> matches = auctionProcesser.processAndCollectStreaming(
+            inputStream,
             fetchDbItemIds()
         );
         logger.debug("Calculating average prices for matched items");
@@ -231,15 +232,17 @@ public class AHDataFetcher {
             return false;
             }
             String accessToken = tokenService.getAccessToken(clientId, clientSecret);
-            ResponseEntity<String> resp = blizzApiClient.fetchCommodities(accessToken);
-            logger.debug("API response status: " + resp.getStatusCode());
-            String body = resp.getBody();
-            if (body != null) {
-                processAuctionData(body);
 
-                logger.debug("Fetching missing item icons from Blizzard media API");
-                populateMissingIcons(accessToken);
-            }
+            // Stream the response instead of loading entire JSON into a String
+            // to avoid OOM on large auction datasets (expansion launches etc.)
+            HttpStatusCode status = blizzApiClient.streamCommodities(accessToken, inputStream -> {
+                processAuctionData(inputStream);
+            });
+            logger.debug("API response status: {}", status);
+
+            logger.debug("Fetching missing item icons from Blizzard media API");
+            populateMissingIcons(accessToken);
+
             return true;
         } catch (Exception e) {
             e.printStackTrace();

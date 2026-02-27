@@ -1,10 +1,13 @@
 package com.crafting.blizz;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +74,44 @@ public class AuctionProcesser {
             result.computeIfAbsent(itemId, k -> new ArrayList<>())
                     .add(new AuctionEntry(unitPrice, quantity));
         }
+        return result;
+    }
+
+    /**
+     * Streaming version of processAndCollect that reads from an InputStream
+     * using Jackson's streaming parser. Only one auction entry is in memory at a
+     * time, so this can handle responses of any size without OOM.
+     */
+    public Map<Integer, List<AuctionEntry>> processAndCollectStreaming(InputStream inputStream, Set<Integer> dbIds) throws IOException {
+        Map<Integer, List<AuctionEntry>> result = new HashMap<>();
+
+        try (JsonParser parser = objectMapper.getFactory().createParser(inputStream)) {
+            // Navigate to the "auctions" array
+            while (parser.nextToken() != null) {
+                if (parser.currentToken() == JsonToken.FIELD_NAME && "auctions".equals(parser.currentName())) {
+                    if (parser.nextToken() != JsonToken.START_ARRAY) {
+                        logger.warn("Expected auctions array but found: {}", parser.currentToken());
+                        return result;
+                    }
+                    break;
+                }
+            }
+
+            // Process each auction entry individually — only matched items stay in memory
+            while (parser.nextToken() == JsonToken.START_OBJECT) {
+                JsonNode auction = objectMapper.readTree(parser);
+                int itemId = auction.path("item").path("id").asInt(0);
+                if (itemId != 0 && dbIds.contains(itemId)) {
+                    long unitPrice = auction.path("unit_price").asLong(0);
+                    int quantity = auction.path("quantity").asInt(0);
+                    result.computeIfAbsent(itemId, k -> new ArrayList<>())
+                            .add(new AuctionEntry(unitPrice, quantity));
+                }
+            }
+        }
+
+        logger.debug("Streaming parse complete: matched {} items with {} total entries",
+            result.size(), result.values().stream().mapToInt(List::size).sum());
         return result;
     }
 
