@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +25,12 @@ import com.crafting.model.Item;
 @Service
 @EnableConfigurationProperties(BlizzConfig.class)
 public class AHDataFetcher {
-    private static final Duration MANUAL_SUBMIT_SCHEDULE_PAUSE = Duration.ofMinutes(30);
+    /**
+     * Items whose price was updated within this window (e.g. by addon chunk submissions)
+     * are skipped during scheduled Blizzard API fetches so that fresher addon data is
+     * not overwritten.
+     */
+    private static final Duration ADDON_FRESHNESS_THRESHOLD = Duration.ofHours(1);
 
     private final BlizzConfig blizzConfig;
     private final TokenService tokenService;
@@ -38,7 +42,6 @@ public class AHDataFetcher {
     private final CachedResult<List<Item>> itemCache;
     private final CachedResult<List<Long>> itemIdCache;
     private final ReentrantLock fetchLock = new ReentrantLock();
-    private volatile Instant scheduledFetchPausedUntil = Instant.EPOCH;
 
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AHDataFetcher.class);
 
@@ -72,16 +75,12 @@ public class AHDataFetcher {
     }
 
     /**
-     * Scheduled method to fetch AH data every 20 minutes. Checks if a manual submit has recently paused the schedule to avoid conflicts.
+     * Scheduled method to fetch AH data at :00 and :30 of every hour.
+     * Items whose price was recently updated (within {@link #ADDON_FRESHNESS_THRESHOLD})
+     * are skipped so that fresher addon data is not overwritten.
      */
-    @Scheduled(cron = "0 */20 * * * *")
+    @Scheduled(cron = "0 0,30 * * * *")
     public void callApi() {
-        if (isScheduledFetchPaused()) {
-            long remainingMinutes = Math.max(1, Duration.between(Instant.now(), scheduledFetchPausedUntil).toMinutes());
-            logger.info("Scheduled fetch skipped: paused for manual submit ({} minute(s) remaining)", remainingMinutes);
-            return;
-        }
-
         logger.info("Scheduled task triggered: Fetching AH data");
         try {
             triggerFetch();
@@ -90,35 +89,50 @@ public class AHDataFetcher {
         }
     }
 
-    private boolean isScheduledFetchPaused() {
-        return Instant.now().isBefore(scheduledFetchPausedUntil);
-    }
-
-    private void pauseScheduledFetchForManualSubmit() {
-        Instant pauseUntil = Instant.now().plus(MANUAL_SUBMIT_SCHEDULE_PAUSE);
-        if (pauseUntil.isAfter(scheduledFetchPausedUntil)) {
-            scheduledFetchPausedUntil = pauseUntil;
-        }
-        logger.info("Scheduled AH fetch paused until {} due to manual auction submission", scheduledFetchPausedUntil);
-    }
-
+    /**
+     * Persists computed average prices to the database.
+     *
+     * @param avgPrices       map of item-id → (avgPrice, quantity)
+     * @param skipRecentlyUpdated when {@code true}, items whose price was updated within
+     *                            {@link #ADDON_FRESHNESS_THRESHOLD} are left untouched so that
+     *                            fresher addon data is not overwritten by Blizzard API results
+     */
     @Transactional
-    private void saveItemsToDb(Map<Integer, Pair<Long, Long>> avgPrices) {
+    private void saveItemsToDb(Map<Integer, Pair<Long, Long>> avgPrices, boolean skipRecentlyUpdated) {
+        OffsetDateTime freshnessCutoff = skipRecentlyUpdated
+                ? OffsetDateTime.now().minus(ADDON_FRESHNESS_THRESHOLD)
+                : null;
+        int updated = 0;
+        int skipped = 0;
+
         for (Map.Entry<Integer, Pair<Long, Long>> entry : avgPrices.entrySet()) {
             Integer itemId = entry.getKey();
-            Long avgPrice = entry.getValue().getLeft(); // Get the average price from the Pair
-            Long quantity = entry.getValue().getRight(); // Get the quantity from the Pair
+            Long avgPrice = entry.getValue().getLeft();
+            Long quantity = entry.getValue().getRight();
             Item item = itemRepository.findById(itemId.longValue()).orElse(null);
-            if (item != null) {
-                logger.info("Updating item ID {} with new average price {} and quantity {}", itemId, avgPrice, quantity);
-                item.setCurrentPrice(avgPrice);
-                item.setQuantity(quantity);
-                item.setCurrentPriceRecordedAt(OffsetDateTime.now());
-                itemRepository.save(item);
-            } else {
-                // Optionally handle missing item (e.g., log or create new)
+            if (item == null) {
                 logger.warn("Item with ID {} not found in DB.", itemId);
+                continue;
             }
+
+            if (freshnessCutoff != null
+                    && item.getCurrentPriceRecordedAt() != null
+                    && item.getCurrentPriceRecordedAt().isAfter(freshnessCutoff)) {
+                skipped++;
+                continue;
+            }
+
+            item.setCurrentPrice(avgPrice);
+            item.setQuantity(quantity);
+            item.setCurrentPriceRecordedAt(OffsetDateTime.now());
+            itemRepository.save(item);
+            updated++;
+        }
+
+        if (skipped > 0) {
+            logger.info("Saved {} item prices, skipped {} recently-updated items", updated, skipped);
+        } else {
+            logger.info("Saved {} item prices", updated);
         }
         itemCache.invalidate();
     }
@@ -169,7 +183,7 @@ public class AHDataFetcher {
         logger.debug("Calculating average prices for matched items");
         Map<Integer, Pair<Long, Long>> avgPrices = auctionProcesser.calculateAveragePrices(matches);
         logger.debug("Saving average prices to database");
-        saveItemsToDb(avgPrices);
+        saveItemsToDb(avgPrices, true);
     }
 
     /**
@@ -187,7 +201,7 @@ public class AHDataFetcher {
         logger.debug("Calculating average prices for {} matched items", matches.size());
         Map<Integer, Pair<Long, Long>> avgPrices = auctionProcesser.calculateAveragePrices(matches);
         logger.debug("Saving average prices to database");
-        saveItemsToDb(avgPrices);
+        saveItemsToDb(avgPrices, false);
         return avgPrices;
     }
 
@@ -205,7 +219,6 @@ public class AHDataFetcher {
             return -1;
         }
         try {
-            pauseScheduledFetchForManualSubmit();
             Map<Integer, Pair<Long, Long>> results = processCsvAuctionData(csv);
             logger.info("User-submitted auction data processed – {} item prices updated", results.size());
             return results.size();
