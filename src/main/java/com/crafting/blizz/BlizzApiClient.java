@@ -6,6 +6,8 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 @Service
@@ -30,6 +32,32 @@ public class BlizzApiClient {
             throw new IllegalStateException("Failed to fetch commodities: " + resp.getStatusCode());
         }
         return resp;
+    }
+
+    /**
+     * Streams the commodities response to avoid loading the entire (potentially 100MB+)
+     * JSON payload into memory. The consumer receives the raw InputStream which must
+     * be fully consumed before the method returns (connection closes afterwards).
+     */
+    public HttpStatusCode streamCommodities(String accessToken, StreamConsumer consumer) {
+        return rest.execute(
+            BASE_URL + "?namespace=dynamic-eu&locale=en_GB",
+            HttpMethod.GET,
+            request -> request.getHeaders().setBearerAuth(accessToken),
+            response -> {
+                HttpStatusCode status = response.getStatusCode();
+                if (!status.is2xxSuccessful()) {
+                    throw new IllegalStateException("Failed to fetch commodities: " + status);
+                }
+                consumer.accept(response.getBody());
+                return status;
+            }
+        );
+    }
+
+    @FunctionalInterface
+    public interface StreamConsumer {
+        void accept(InputStream inputStream) throws IOException;
     }
 
     public Optional<String> fetchItemIconUrl(Long itemId, String accessToken) {
