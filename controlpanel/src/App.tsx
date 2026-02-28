@@ -349,7 +349,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                             ) : null}
                         </div>
                     </div>
-                    <AuctionSubmitPanel />
+                    <AuctionSubmitPanel items={items} professions={professions} />
                     <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} message={logsMessage} busy={logsBusy} />
                     <div className="card">
                         <UserManagement />
