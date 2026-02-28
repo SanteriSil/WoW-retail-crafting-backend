@@ -1,23 +1,54 @@
-import { useState } from "react";
-import { getItemIds, submitAuctionData } from "../api";
+import { useMemo, useState } from "react";
+import { submitAuctionData } from "../api";
+import type { Item, Profession } from "../types";
 
-export default function AuctionSubmitPanel() {
+type AuctionSubmitPanelProps = {
+    items: Item[];
+    professions: Profession[];
+};
+
+export default function AuctionSubmitPanel({ items, professions }: AuctionSubmitPanelProps) {
     const [csv, setCsv] = useState("");
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [copyMsg, setCopyMsg] = useState<string | null>(null);
+    const [selectedProfIds, setSelectedProfIds] = useState<Set<number | null>>(new Set());
+
+    const toggleProfession = (id: number | null) => {
+        setSelectedProfIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const selectAll = () => {
+        const all = new Set<number | null>(professions.map((p) => p.id));
+        all.add(null); // General
+        setSelectedProfIds(all);
+    };
+
+    const filteredIds = useMemo(() => {
+        if (selectedProfIds.size === 0) return items.map((i) => i.id);
+        return items
+            .filter((item) => {
+                const profId = item.profession?.id ?? null;
+                return selectedProfIds.has(profId);
+            })
+            .map((i) => i.id);
+    }, [items, selectedProfIds]);
 
     const handleCopyIds = async () => {
         setCopyMsg(null);
         try {
-            const ids = await getItemIds();
-            if (ids.length === 0) {
-                setCopyMsg("No tracked items.");
+            if (filteredIds.length === 0) {
+                setCopyMsg("No items match the current filter.");
                 return;
             }
-            await navigator.clipboard.writeText(ids.join(","));
-            setCopyMsg(`${ids.length} IDs copied!`);
+            await navigator.clipboard.writeText(filteredIds.join(","));
+            setCopyMsg(`${filteredIds.length} IDs copied!`);
             setTimeout(() => setCopyMsg(null), 3000);
         } catch (err) {
             setCopyMsg(err instanceof Error ? err.message : "Failed to copy IDs");
@@ -56,9 +87,43 @@ export default function AuctionSubmitPanel() {
         <div className="card">
             <h3>Addon Auction Data</h3>
 
+            <div className="profession-filter" style={{ marginBottom: 8 }}>
+                <button
+                    type="button"
+                    className={`profession-chip${selectedProfIds.has(null) ? " active" : ""}`}
+                    onClick={() => toggleProfession(null)}
+                >
+                    General
+                </button>
+                {professions.map((p) => (
+                    <button
+                        key={p.id}
+                        type="button"
+                        className={`profession-chip${selectedProfIds.has(p.id) ? " active" : ""}`}
+                        onClick={() => toggleProfession(p.id)}
+                    >
+                        {p.name}
+                    </button>
+                ))}
+                {selectedProfIds.size > 0 && selectedProfIds.size < professions.length + 1 && (
+                    <button type="button" className="profession-chip" onClick={selectAll}>
+                        All
+                    </button>
+                )}
+                {selectedProfIds.size > 0 && (
+                    <button
+                        type="button"
+                        className="profession-chip clear"
+                        onClick={() => setSelectedProfIds(new Set())}
+                    >
+                        ✕ Clear
+                    </button>
+                )}
+            </div>
+
             <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <button type="button" className="button secondary" onClick={handleCopyIds}>
-                    Copy Item IDs
+                    Copy Item IDs ({filteredIds.length})
                 </button>
                 {copyMsg && <span className="muted" style={{ fontSize: 12 }}>{copyMsg}</span>}
             </div>
