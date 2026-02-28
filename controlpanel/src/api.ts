@@ -51,11 +51,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     }
 
     const response = await fetch(`${BASE_URL}${path}`, {
+        ...options,
         headers: {
             ...defaultHeaders,
             ...(options?.headers as Record<string, string> | undefined)
-        },
-        ...options
+        }
     });
 
     // Auto-logout on 401
