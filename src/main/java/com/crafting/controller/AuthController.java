@@ -3,6 +3,7 @@ package com.crafting.controller;
 import com.crafting.auth.DiscordOAuthService;
 import com.crafting.auth.Role;
 import com.crafting.cache.CachedResult;
+import com.crafting.config.OwnerConfig;
 import com.crafting.model.AllowedUser;
 import com.crafting.repository.AllowedUserRepository;
 import org.slf4j.Logger;
@@ -30,13 +31,16 @@ public class AuthController {
     private final DiscordOAuthService discordOAuthService;
     private final AllowedUserRepository allowedUserRepository;
     private final CachedResult<Map<Long, Role>> roleLookupCache;
+    private final OwnerConfig ownerConfig;
 
     public AuthController(DiscordOAuthService discordOAuthService,
                           AllowedUserRepository allowedUserRepository,
-                          CachedResult<Map<Long, Role>> roleLookupCache) {
+                          CachedResult<Map<Long, Role>> roleLookupCache,
+                          OwnerConfig ownerConfig) {
         this.discordOAuthService = discordOAuthService;
         this.allowedUserRepository = allowedUserRepository;
         this.roleLookupCache = roleLookupCache;
+        this.ownerConfig = ownerConfig;
     }
 
     /**
@@ -95,24 +99,102 @@ public class AuthController {
 
     @DeleteMapping("/users/{discordId}")
     public ResponseEntity<?> removeUser(@PathVariable Long discordId) {
+        // Privilege-escalation guard: cannot remove the Owner (PLAN.md §4.5)
+        if (discordId.equals(ownerConfig.getDiscordId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Cannot remove the Owner"));
+        }
         if (!allowedUserRepository.existsById(discordId)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "User not found"));
         }
+        // Privilege-escalation guard: only Owner can remove an Admin;
+        // Admin callers reaching here have ROLE_ADMIN but not ROLE_OWNER.
+        // We re-check the target's role to enforce this.
+        allowedUserRepository.findById(discordId).ifPresent(target -> {
+            if (target.getRole() == Role.ADMIN) {
+                throw new SecurityException("Only the Owner can remove an Admin");
+            }
+        });
         allowedUserRepository.deleteById(discordId);
         roleLookupCache.invalidate();
         log.info("[{}] Removed allowed user with discord_id: {}", currentUser(), discordId);
         return ResponseEntity.noContent().build();
     }
 
+    /** OWNER only — promotes an ALLOWED_USER to ADMIN (PLAN.md §6.1). */
+    @PostMapping("/users/{discordId}/promote")
+    public ResponseEntity<?> promoteUser(@PathVariable Long discordId) {
+        if (discordId.equals(ownerConfig.getDiscordId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Cannot modify the Owner"));
+        }
+        AllowedUser user = allowedUserRepository.findById(discordId)
+                .orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+        user.setRole(Role.ADMIN);
+        allowedUserRepository.save(user);
+        roleLookupCache.invalidate();
+        log.info("[{}] Promoted user {} to ADMIN", currentUser(), discordId);
+        return ResponseEntity.ok(toResponse(user));
+    }
+
+    /** OWNER only — demotes an ADMIN back to ALLOWED_USER (PLAN.md §6.1). */
+    @PostMapping("/users/{discordId}/demote")
+    public ResponseEntity<?> demoteUser(@PathVariable Long discordId) {
+        if (discordId.equals(ownerConfig.getDiscordId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Cannot modify the Owner"));
+        }
+        AllowedUser user = allowedUserRepository.findById(discordId)
+                .orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "User not found"));
+        }
+        user.setRole(Role.ALLOWED_USER);
+        allowedUserRepository.save(user);
+        roleLookupCache.invalidate();
+        log.info("[{}] Demoted user {} to ALLOWED_USER", currentUser(), discordId);
+        return ResponseEntity.ok(toResponse(user));
+    }
+
+    /** Any authenticated user — returns their own Discord info and resolved role (PLAN.md §6.1). */
+    @GetMapping("/me")
+    public ResponseEntity<?> me(Authentication auth) {
+        if (auth == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        long discordId = Long.parseLong(auth.getName());
+        String role;
+        if (discordId == ownerConfig.getDiscordId()) {
+            role = Role.OWNER.name();
+        } else {
+            role = allowedUserRepository.findById(discordId)
+                    .map(u -> u.getRole().name())
+                    .orElse(null);
+            if (role == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+        }
+        return ResponseEntity.ok(Map.of(
+                "discordId", String.valueOf(discordId),
+                "role", role
+        ));
+    }
+
     record CallbackRequest(String code, String redirectUri) {}
     record AddUserRequest(String discordId, String discordUsername) {}
-    record AllowedUserResponse(String discordId, String discordUsername, Instant createdAt) {}
+    record AllowedUserResponse(String discordId, String discordUsername, String role, Instant createdAt) {}
 
     private AllowedUserResponse toResponse(AllowedUser user) {
         return new AllowedUserResponse(
                 String.valueOf(user.getDiscordId()),
                 user.getDiscordUsername(),
+                user.getRole().name(),
                 user.getCreatedAt()
         );
     }

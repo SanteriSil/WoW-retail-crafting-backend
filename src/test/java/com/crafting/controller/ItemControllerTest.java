@@ -133,7 +133,7 @@ class ItemControllerTest {
             String json = "{\"id\":12345,\"name\":\"Enchanted Dust\",\"finishingIngredient\":false}";
 
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("USER"))
+                            .with(user("testuser").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated())
@@ -150,7 +150,7 @@ class ItemControllerTest {
 
             String json = "{\"id\":100,\"name\":\"Duplicate\",\"finishingIngredient\":false}";
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("USER"))
+                            .with(user("testuser").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isConflict());
@@ -162,7 +162,7 @@ class ItemControllerTest {
             String json = "{\"id\": 999}";
 
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("USER"))
+                            .with(user("testuser").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
@@ -178,7 +178,7 @@ class ItemControllerTest {
             // Create an item
             String json = "{\"id\":100,\"name\":\"New Item\",\"finishingIngredient\":false}";
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("USER"))
+                            .with(user("testuser").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated());
@@ -204,7 +204,7 @@ class ItemControllerTest {
 
             String json = "{\"id\":100,\"name\":\"New Name\",\"finishingIngredient\":false}";
             mockMvc.perform(put("/items/100")
-                            .with(user("testuser").roles("USER"))
+                            .with(user("testuser").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isOk())
@@ -219,7 +219,7 @@ class ItemControllerTest {
         void notFound() throws Exception {
             String json = "{\"id\":99999,\"name\":\"Ghost\",\"finishingIngredient\":false}";
             mockMvc.perform(put("/items/99999")
-                            .with(user("testuser").roles("USER"))
+                            .with(user("testuser").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isNotFound());
@@ -238,7 +238,7 @@ class ItemControllerTest {
             itemRepository.save(testItem(100L, "Doomed"));
 
             mockMvc.perform(delete("/items/100")
-                            .with(user("testuser").roles("USER")))
+                            .with(user("testuser").roles("ADMIN")))
                     .andExpect(status().isNoContent());
 
             assertThat(itemRepository.existsById(100L)).isFalse();
@@ -248,7 +248,7 @@ class ItemControllerTest {
         @DisplayName("non-existent ID → 404")
         void notFound() throws Exception {
             mockMvc.perform(delete("/items/99999")
-                            .with(user("testuser").roles("USER")))
+                            .with(user("testuser").roles("ADMIN")))
                     .andExpect(status().isNotFound());
         }
 
@@ -264,7 +264,7 @@ class ItemControllerTest {
 
             // Delete
             mockMvc.perform(delete("/items/100")
-                            .with(user("testuser").roles("USER")))
+                            .with(user("testuser").roles("ADMIN")))
                     .andExpect(status().isNoContent());
 
             // Cache should be invalidated → GET returns empty

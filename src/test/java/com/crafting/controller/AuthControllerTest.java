@@ -1,5 +1,6 @@
 package com.crafting.controller;
 
+import com.crafting.auth.Role;
 import com.crafting.model.AllowedUser;
 import com.crafting.repository.AllowedUserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,9 +24,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
  * Integration tests for the user-management endpoints in {@link AuthController}.
  * Uses full Spring context with H2 in-memory database.
  *
- * Note: Discord OAuth callback (POST /auth/discord/callback) is NOT tested here
- * because it requires live Discord API interaction. It is covered separately when
- * a mock HTTP client is available (see PLAN.md §4.2).
+ * All write operations require at minimum ADMIN role per PLAN.md §4.4.
+ * promote/demote require OWNER role.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -49,7 +49,7 @@ class AuthControllerTest {
         @DisplayName("returns empty list when no users exist")
         void emptyList() throws Exception {
             mockMvc.perform(get("/auth/users")
-                            .with(user("admin").roles("USER")))
+                            .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(0)));
         }
@@ -61,7 +61,7 @@ class AuthControllerTest {
             allowedUserRepository.save(new AllowedUser(222L, "bob"));
 
             mockMvc.perform(get("/auth/users")
-                            .with(user("admin").roles("USER")))
+                            .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(2)))
                     .andExpect(jsonPath("$[*].discordUsername",
@@ -74,9 +74,22 @@ class AuthControllerTest {
             allowedUserRepository.save(new AllowedUser(148170052171071488L, "silkku"));
 
             mockMvc.perform(get("/auth/users")
-                            .with(user("admin").roles("USER")))
+                            .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].discordId", is("148170052171071488")));
+        }
+
+        @Test
+        @DisplayName("response includes role field")
+        void responseIncludesRole() throws Exception {
+            AllowedUser admin = new AllowedUser(333L, "moderator");
+            admin.setRole(Role.ADMIN);
+            allowedUserRepository.save(admin);
+
+            mockMvc.perform(get("/auth/users")
+                            .with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].role", is("ADMIN")));
         }
     }
 
@@ -94,12 +107,13 @@ class AuthControllerTest {
                 """;
 
             mockMvc.perform(post("/auth/users")
-                            .with(user("admin").roles("USER"))
+                            .with(user("admin").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.discordId", is("123456789")))
                     .andExpect(jsonPath("$.discordUsername", is("newuser")))
+                    .andExpect(jsonPath("$.role", is("ALLOWED_USER")))
                     .andExpect(jsonPath("$.createdAt", notNullValue()));
 
             assertThat(allowedUserRepository.existsById(123456789L)).isTrue();
@@ -115,7 +129,7 @@ class AuthControllerTest {
                 """;
 
             mockMvc.perform(post("/auth/users")
-                            .with(user("admin").roles("USER"))
+                            .with(user("admin").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isConflict())
@@ -130,7 +144,7 @@ class AuthControllerTest {
                 """;
 
             mockMvc.perform(post("/auth/users")
-                            .with(user("admin").roles("USER"))
+                            .with(user("admin").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -145,7 +159,7 @@ class AuthControllerTest {
                 """;
 
             mockMvc.perform(post("/auth/users")
-                            .with(user("admin").roles("USER"))
+                            .with(user("admin").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest())
@@ -160,10 +174,23 @@ class AuthControllerTest {
                 """;
 
             mockMvc.perform(post("/auth/users")
-                            .with(user("admin").roles("USER"))
+                            .with(user("admin").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("ALLOWED_USER cannot add users → 403")
+        void allowedUserCannotAddUsers() throws Exception {
+            String json = """
+                {"discordId": "999", "discordUsername": "newuser"}
+                """;
+            mockMvc.perform(post("/auth/users")
+                            .with(user("99999").roles("ALLOWED_USER"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isForbidden());
         }
     }
 
@@ -174,12 +201,12 @@ class AuthControllerTest {
     class RemoveUser {
 
         @Test
-        @DisplayName("removes existing user → 204")
+        @DisplayName("removes existing ALLOWED_USER → 204")
         void removesUser() throws Exception {
             allowedUserRepository.save(new AllowedUser(111L, "doomed"));
 
             mockMvc.perform(delete("/auth/users/111")
-                            .with(user("admin").roles("USER")))
+                            .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isNoContent());
 
             assertThat(allowedUserRepository.existsById(111L)).isFalse();
@@ -189,9 +216,158 @@ class AuthControllerTest {
         @DisplayName("non-existent user → 404")
         void notFound() throws Exception {
             mockMvc.perform(delete("/auth/users/99999")
-                            .with(user("admin").roles("USER")))
+                            .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.error", is("User not found")));
+        }
+
+        @Test
+        @DisplayName("cannot remove the Owner → 403")
+        void cannotRemoveOwner() throws Exception {
+            // owner.discord-id is set to 148170052171071488 in test properties
+            mockMvc.perform(delete("/auth/users/148170052171071488")
+                            .with(user("admin").roles("OWNER")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error", containsString("Owner")));
+        }
+    }
+
+    // ── Promote / Demote ───────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("POST /auth/users/{discordId}/promote")
+    class PromoteUser {
+
+        @Test
+        @DisplayName("promotes ALLOWED_USER to ADMIN → 200 with role=ADMIN")
+        void promotesToAdmin() throws Exception {
+            allowedUserRepository.save(new AllowedUser(555L, "candidate"));
+
+            mockMvc.perform(post("/auth/users/555/promote")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.discordId", is("555")))
+                    .andExpect(jsonPath("$.role", is("ADMIN")));
+
+            assertThat(allowedUserRepository.findById(555L))
+                    .hasValueSatisfying(u -> assertThat(u.getRole()).isEqualTo(Role.ADMIN));
+        }
+
+        @Test
+        @DisplayName("promote non-existent user → 404")
+        void promoteNotFound() throws Exception {
+            mockMvc.perform(post("/auth/users/99999/promote")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error", is("User not found")));
+        }
+
+        @Test
+        @DisplayName("cannot promote the Owner → 403")
+        void cannotPromoteOwner() throws Exception {
+            mockMvc.perform(post("/auth/users/148170052171071488/promote")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error", containsString("Owner")));
+        }
+
+        @Test
+        @DisplayName("ADMIN cannot promote → 403")
+        void adminCannotPromote() throws Exception {
+            mockMvc.perform(post("/auth/users/555/promote")
+                            .with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /auth/users/{discordId}/demote")
+    class DemoteUser {
+
+        @Test
+        @DisplayName("demotes ADMIN to ALLOWED_USER → 200 with role=ALLOWED_USER")
+        void demotesToAllowedUser() throws Exception {
+            AllowedUser admin = new AllowedUser(666L, "former-admin");
+            admin.setRole(Role.ADMIN);
+            allowedUserRepository.save(admin);
+
+            mockMvc.perform(post("/auth/users/666/demote")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.discordId", is("666")))
+                    .andExpect(jsonPath("$.role", is("ALLOWED_USER")));
+
+            assertThat(allowedUserRepository.findById(666L))
+                    .hasValueSatisfying(u -> assertThat(u.getRole()).isEqualTo(Role.ALLOWED_USER));
+        }
+
+        @Test
+        @DisplayName("demote non-existent user → 404")
+        void demoteNotFound() throws Exception {
+            mockMvc.perform(post("/auth/users/99999/demote")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error", is("User not found")));
+        }
+
+        @Test
+        @DisplayName("cannot demote the Owner → 403")
+        void cannotDemoteOwner() throws Exception {
+            mockMvc.perform(post("/auth/users/148170052171071488/demote")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error", containsString("Owner")));
+        }
+    }
+
+    // ── GET /auth/me ───────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("GET /auth/me")
+    class GetMe {
+
+        @Test
+        @DisplayName("returns discordId and role for ALLOWED_USER")
+        void returnsInfoForAllowedUser() throws Exception {
+            allowedUserRepository.save(new AllowedUser(77777L, "me-user"));
+
+            mockMvc.perform(get("/auth/me")
+                            .with(user("77777").roles("ALLOWED_USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.discordId", is("77777")))
+                    .andExpect(jsonPath("$.role", is("ALLOWED_USER")));
+        }
+
+        @Test
+        @DisplayName("returns ADMIN role for ADMIN user")
+        void returnsInfoForAdmin() throws Exception {
+            AllowedUser adminUser = new AllowedUser(88888L, "admin-user");
+            adminUser.setRole(Role.ADMIN);
+            allowedUserRepository.save(adminUser);
+
+            mockMvc.perform(get("/auth/me")
+                            .with(user("88888").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.discordId", is("88888")))
+                    .andExpect(jsonPath("$.role", is("ADMIN")));
+        }
+
+        @Test
+        @DisplayName("returns OWNER role for the configured owner ID")
+        void returnsOwnerRole() throws Exception {
+            // owner.discord-id = 148170052171071488 in test application.properties
+            mockMvc.perform(get("/auth/me")
+                            .with(user("148170052171071488").roles("OWNER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.discordId", is("148170052171071488")))
+                    .andExpect(jsonPath("$.role", is("OWNER")));
+        }
+
+        @Test
+        @DisplayName("unauthenticated → 403")
+        void unauthenticatedForbidden() throws Exception {
+            mockMvc.perform(get("/auth/me"))
+                    .andExpect(status().isForbidden());
         }
     }
 }

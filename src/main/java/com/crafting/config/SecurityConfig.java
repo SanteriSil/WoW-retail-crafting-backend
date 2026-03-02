@@ -37,10 +37,34 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/auth/discord/**", "/auth/dev/**", "/health", "/actuator/**", "/h2-console/**").permitAll()
-                // Public read-only endpoints
+
+                // ── Public (no auth required) ──────────────────────────────
+                .requestMatchers("/auth/discord/**", "/auth/dev/**",
+                                 "/health", "/actuator/**", "/h2-console/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/items", "/items/ids", "/items/ordered").permitAll()
                 .requestMatchers(HttpMethod.GET, "/professions").permitAll()
+                .requestMatchers(HttpMethod.GET, "/expansions").permitAll()
+
+                // ── ALLOWED_USER or higher: read recipes, profit, export ───
+                .requestMatchers(HttpMethod.GET, "/recipes", "/recipes/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.GET, "/export/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
+
+                // ── OWNER only: promote / demote admins ───────────────────
+                .requestMatchers("/auth/users/*/promote", "/auth/users/*/demote").hasRole("OWNER")
+
+                // ── ADMIN or higher: everything else that requires login ───
+                .requestMatchers(HttpMethod.GET, "/auth/me").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
+                .requestMatchers("/auth/users/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.POST, "/items/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.PUT,  "/items/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.DELETE, "/items/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.POST, "/recipes/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.PUT,  "/recipes/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.DELETE, "/recipes/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers("/craftingAH/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers("/logs/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers("/scraper/**").hasAnyRole("ADMIN", "OWNER")
+
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
