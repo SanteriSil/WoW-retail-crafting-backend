@@ -209,6 +209,14 @@ export async function getRecipe(id: number): Promise<RecipeDetail> {
     return request<RecipeDetail>(`/recipes/${id}`);
 }
 
+export async function duplicateRecipe(id: number): Promise<RecipeDetail> {
+    return request<RecipeDetail>(`/recipes/${id}/duplicate`, { method: "POST" });
+}
+
+export async function deleteRecipe(id: number): Promise<void> {
+    await request<void>(`/recipes/${id}`, { method: "DELETE" });
+}
+
 // ── Export ──────────────────────────────────────────────────────────────────────
 
 /**

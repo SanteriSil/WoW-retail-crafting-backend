@@ -10,6 +10,7 @@ import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
 import SheetBuilder from "./components/SheetBuilder";
 import LoginPage from "./components/LoginPage";
 import UserManagement from "./components/UserManagement";
+import RecipesPage from "./components/RecipesPage";
 
 export default function App() {
     // ── Auth state ──
@@ -86,6 +87,11 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
     const [showMissingIcons, setShowMissingIcons] = useState(false);
     const [showNoProfession, setShowNoProfession] = useState(false);
     const [showVendorItems, setShowVendorItems] = useState(false);
+    const [activeTab, setActiveTab] = useState<"items" | "recipes">("items");
+
+    const role = user?.role ?? null;
+    // Frontend hides UI elements for UX only; backend enforces auth on every request.
+    const isAdmin = role === "ADMIN" || role === "OWNER";
 
     const refreshItems = useCallback(async () => {
         setLoading(true);
@@ -214,7 +220,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
             <div className="header">
                 <div>
                     <h1>Crafting Control Panel</h1>
-                    <div className="muted">Using /items and /logs endpoints</div>
+                    <div className="muted">Items, Recipes &amp; Logs</div>
                 </div>
                 <div className="header-actions">
                     {user && (
@@ -227,13 +233,15 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                         Logout
                     </button>
                     <span className="separator" />
-                    <button className="button secondary" type="button" onClick={refreshItems}>
+                    <button className="button secondary" type="button" onClick={refreshItems} disabled={activeTab !== "items"}>
                         Refresh
                     </button>
                     <span className="separator" />
-                    <button className="button" type="button" onClick={handleAhRefresh} disabled={ahBusy}>
-                        {ahBusy ? "Refreshing..." : "AH Refresh"}
-                    </button>
+                    {isAdmin && (
+                        <button className="button" type="button" onClick={handleAhRefresh} disabled={ahBusy}>
+                            {ahBusy ? "Refreshing..." : "AH Refresh"}
+                        </button>
+                    )}
                     {(ahMessage || ahError) && (
                         <span className={`status-inline ${ahError ? "status-error" : "status-success"}`}>
                             {ahError ?? ahMessage}
@@ -242,8 +250,33 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                 </div>
             </div>
 
+            {/* ── Top-level tab navigation ── */}
+            <div className="app-tabs">
+                <button
+                    type="button"
+                    className={`app-tab${activeTab === "items" ? " active" : ""}`}
+                    onClick={() => setActiveTab("items")}
+                >
+                    Items
+                </button>
+                <button
+                    type="button"
+                    className={`app-tab${activeTab === "recipes" ? " active" : ""}`}
+                    onClick={() => setActiveTab("recipes")}
+                >
+                    Recipes
+                </button>
+            </div>
+
             {error && <div className="card">{error}</div>}
 
+            {activeTab === "recipes" && (
+                <div className="card" style={{ marginTop: 16 }}>
+                    <RecipesPage professions={professions} role={role} />
+                </div>
+            )}
+
+            {activeTab === "items" && (
             <div className="grid">
                 <div className="card">
                     <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -356,6 +389,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                     </div>
                 </div>
             </div>
+            )}
         </div>
     );
 }

@@ -1104,3 +1104,51 @@ body {
     border-top: 1px solid #e2e8f0;
     margin-top: auto;
 }
+
+/* ── Top-level app tab navigation (Items / Recipes) ── */
+
+.app-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 16px;
+}
+
+.app-tab {
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px; /* overlap the border-bottom of .app-tabs */
+    background: none;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 120ms, border-color 120ms;
+    border-radius: 6px 6px 0 0;
+}
+
+.app-tab:hover {
+    color: #0f172a;
+}
+
+.app-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+/* ── Recipes page layout ── */
+
+.recipes-page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.recipes-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
