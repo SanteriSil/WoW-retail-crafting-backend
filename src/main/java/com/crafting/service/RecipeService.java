@@ -62,7 +62,7 @@ public class RecipeService {
     @Transactional
     public RecipeDTO updateRecipe(Long recipeId, CreateOrUpdateRecipeCommand command) {
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
-                .orElseThrow(() -> new IllegalArgumentException("Recipe not found: " + recipeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
 
         ValidationContext validation = validateCommand(command, recipeId);
         applyRecipeFields(recipe, command, validation);
@@ -74,7 +74,7 @@ public class RecipeService {
     @Transactional
     public RecipeDTO duplicateRecipe(Long recipeId, Long createdByDiscordId) {
         Recipe source = recipeRepository.findByIdAndDeletedFalse(recipeId)
-                .orElseThrow(() -> new IllegalArgumentException("Recipe not found: " + recipeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
 
         Recipe copy = new Recipe();
         copy.setName(source.getName() + " (Copy)");
@@ -122,7 +122,7 @@ public class RecipeService {
     @Transactional
     public void softDeleteRecipe(Long recipeId) {
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
-                .orElseThrow(() -> new IllegalArgumentException("Recipe not found: " + recipeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
         recipe.setDeleted(true);
         recipeRepository.save(recipe);
     }
@@ -130,8 +130,15 @@ public class RecipeService {
     @Transactional
     public RecipeDTO getRecipe(Long recipeId) {
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
-                .orElseThrow(() -> new IllegalArgumentException("Recipe not found: " + recipeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
         return toRecipeDTO(recipe);
+    }
+
+    @Transactional
+    public ProfitEstimateDTO getRecipeProfit(Long recipeId) {
+        Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
+        return profitCalculationService.calculate(recipe);
     }
 
     @Transactional
@@ -172,7 +179,7 @@ public class RecipeService {
         if (command.wowheadSpellId() != null) {
             Optional<Recipe> bySpell = recipeRepository.findByWowheadSpellId(command.wowheadSpellId());
             if (bySpell.isPresent() && !bySpell.get().getId().equals(updatingRecipeId)) {
-                throw new IllegalStateException("Duplicate wowheadSpellId: " + command.wowheadSpellId());
+                throw new ConflictException("Duplicate wowheadSpellId: " + command.wowheadSpellId());
             }
         }
 
