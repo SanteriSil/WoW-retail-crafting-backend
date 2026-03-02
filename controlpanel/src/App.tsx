@@ -30,7 +30,7 @@ export default function App() {
             .then((auth) => {
                 setAuth(auth);
                 setAuthed(true);
-                setUser({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl });
+                setUser({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl, role: auth.role });
             })
             .catch((err) => {
                 setAuthError(err instanceof Error ? err.message : "Login failed.");
@@ -49,7 +49,7 @@ export default function App() {
             const auth = await devLogin();
             setAuth(auth);
             setAuthed(true);
-            setUser({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl });
+            setUser({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl, role: auth.role });
         } catch (err) {
             setAuthError(err instanceof Error ? err.message : "Dev login failed.");
         }
@@ -69,7 +69,7 @@ export default function App() {
     return <AuthenticatedApp user={user} onLogout={handleLogout} />;
 }
 
-function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string; avatarUrl: string | null } | null; onLogout: () => void }) {
+function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string; avatarUrl: string | null; role: string | null } | null; onLogout: () => void }) {
     const [items, setItems] = useState<Item[]>([]);
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [query, setQuery] = useState("");

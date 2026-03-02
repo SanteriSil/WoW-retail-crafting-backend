@@ -1,4 +1,4 @@
-import type { AllowedUser, AuthResponse, Item, Profession } from "./types";
+import type { AllowedUser, AuthResponse, Expansion, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeSummary } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -11,7 +11,7 @@ export function getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
 }
 
-export function getStoredUser(): { discordUsername: string; avatarUrl: string | null } | null {
+export function getStoredUser(): { discordUsername: string; avatarUrl: string | null; role: string | null } | null {
     try {
         const raw = localStorage.getItem(USER_KEY);
         return raw ? JSON.parse(raw) : null;
@@ -22,7 +22,7 @@ export function getStoredUser(): { discordUsername: string; avatarUrl: string | 
 
 export function setAuth(auth: AuthResponse): void {
     localStorage.setItem(TOKEN_KEY, auth.token);
-    localStorage.setItem(USER_KEY, JSON.stringify({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl }));
+    localStorage.setItem(USER_KEY, JSON.stringify({ discordUsername: auth.discordUsername, avatarUrl: auth.avatarUrl, role: auth.role }));
 }
 
 export function clearAuth(): void {
@@ -178,4 +178,68 @@ export async function addAllowedUser(discordId: string, discordUsername: string)
 
 export async function removeAllowedUser(discordId: string): Promise<void> {
     await request<void>(`/auth/users/${discordId}`, { method: "DELETE" });
+}
+
+// ── Expansions ────────────────────────────────────────────────────────────────
+
+export async function getExpansions(): Promise<Expansion[]> {
+    return request<Expansion[]>("/expansions");
+}
+
+// ── Recipes ───────────────────────────────────────────────────────────────────
+
+function buildRecipeQuery(params: RecipeFilterParams): string {
+    const query = new URLSearchParams();
+    if (params.page != null) query.set("page", String(params.page));
+    if (params.size != null) query.set("size", String(params.size));
+    if (params.sort) query.set("sort", params.sort);
+    if (params.professionId != null) query.set("professionId", String(params.professionId));
+    if (params.expansionId != null) query.set("expansionId", String(params.expansionId));
+    if (params.search) query.set("search", params.search);
+    if (params.outputItemId != null) query.set("outputItemId", String(params.outputItemId));
+    if (params.ingredientItemId != null) query.set("ingredientItemId", String(params.ingredientItemId));
+    return query.toString();
+}
+
+export async function getRecipes(params: RecipeFilterParams): Promise<Page<RecipeSummary>> {
+    return request<Page<RecipeSummary>>(`/recipes?${buildRecipeQuery(params)}`);
+}
+
+export async function getRecipe(id: number): Promise<RecipeDetail> {
+    return request<RecipeDetail>(`/recipes/${id}`);
+}
+
+// ── Export ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Triggers an Excel download of matching recipes. Handles the binary response
+ * by creating a temporary <a> element to initiate the browser's file-save dialog.
+ */
+export async function exportRecipesExcel(params: RecipeFilterParams): Promise<void> {
+    const token = getToken();
+    const response = await fetch(`${BASE_URL}/export/recipes/excel?${buildRecipeQuery(params)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+
+    if (response.status === 401) {
+        clearAuth();
+        window.location.reload();
+        throw new Error("Session expired — please log in again.");
+    }
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Export failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const disposition = response.headers.get("content-disposition");
+    const match = disposition?.match(/filename="([^"]+)"/);
+    a.download = match?.[1] ?? "recipes.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }

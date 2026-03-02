@@ -22,7 +22,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -157,6 +159,27 @@ public class RecipeService {
                         pageable
                 )
                 .map(this::toRecipeSummaryDTO);
+    }
+
+    /**
+     * Loads all recipes matching the given filters (no pagination), capped at 500,
+     * and maps each to a full {@link RecipeDTO} including ingredients and profit estimate.
+     * Used by {@link com.crafting.service.ExcelExportService} for Excel export.
+     */
+    @Transactional
+    public List<RecipeDTO> getRecipesForExport(
+            Integer professionId,
+            Integer expansionId,
+            Long outputItemId,
+            Long ingredientItemId,
+            String search) {
+        Pageable pageable = PageRequest.of(0, 500, Sort.by("name").ascending());
+        return recipeRepository.findActiveRecipes(
+                        professionId, expansionId, outputItemId, ingredientItemId, search, pageable)
+                .getContent()
+                .stream()
+                .map(this::toRecipeDTO)
+                .toList();
     }
 
     private ValidationContext validateCommand(CreateOrUpdateRecipeCommand command, Long updatingRecipeId) {
