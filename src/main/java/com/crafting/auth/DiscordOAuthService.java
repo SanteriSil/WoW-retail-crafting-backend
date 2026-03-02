@@ -1,5 +1,7 @@
 package com.crafting.auth;
 
+import com.crafting.config.OwnerConfig;
+import com.crafting.model.AllowedUser;
 import com.crafting.repository.AllowedUserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +31,7 @@ public class DiscordOAuthService {
     private final String clientSecret;
     private final JwtService jwtService;
     private final AllowedUserRepository allowedUserRepository;
+    private final OwnerConfig ownerConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -36,15 +39,18 @@ public class DiscordOAuthService {
             @Value("${discord.clientId}") String clientId,
             @Value("${discord.clientSecret}") String clientSecret,
             JwtService jwtService,
-            AllowedUserRepository allowedUserRepository) {
+            AllowedUserRepository allowedUserRepository,
+            OwnerConfig ownerConfig) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.jwtService = jwtService;
         this.allowedUserRepository = allowedUserRepository;
+        this.ownerConfig = ownerConfig;
     }
 
     /**
-     * Full OAuth flow: exchange code → fetch user → check allowlist → return JWT + user info.
+     * Full OAuth flow: exchange code → fetch Discord user → resolve role → return JWT + user info.
+     * See PLAN.md §7.1 and §4.8 for the detailed flow.
      */
     public AuthResult handleCallback(String code, String redirectUri) {
         try {
@@ -63,17 +69,30 @@ public class DiscordOAuthService {
 
             log.debug("Discord login attempt by {} ({})", username, discordId);
 
-            // 3. Check allowlist
-            if (!allowedUserRepository.existsById(discordId)) {
-                log.warn("Discord user {} ({}) not in allowlist", username, discordId);
-                throw new SecurityException("User not authorized");
+            // 3. Resolve role (PLAN.md §4.8)
+            Role role;
+            if (discordId == ownerConfig.getDiscordId()) {
+                // Owner is identified by config — no allowed_users row required
+                role = Role.OWNER;
+                log.info("Owner {} ({}) authenticated", username, discordId);
+            } else {
+                AllowedUser dbUser = allowedUserRepository.findById(discordId)
+                        .orElseThrow(() -> {
+                            log.warn("Discord user {} ({}) not in allowed_users", username, discordId);
+                            return new SecurityException("User not authorized");
+                        });
+                role = dbUser.getRole();
+                // Update stored username if the user has changed their Discord display name
+                if (!username.equals(dbUser.getDiscordUsername())) {
+                    dbUser.setDiscordUsername(username);
+                    allowedUserRepository.save(dbUser);
+                }
+                log.info("Discord user {} ({}) authenticated with role {}", username, discordId, role);
             }
 
-            // 4. Generate JWT
-            String token = jwtService.generateToken(discordId, username);
-
-            log.info("Discord user {} ({}) authenticated successfully", username, discordId);
-            return new AuthResult(token, username, avatarUrl);
+            // 4. Generate JWT — role claim is a hint for the frontend; filter re-verifies on every request
+            String token = jwtService.generateToken(discordId, username, role);
+            return new AuthResult(token, username, avatarUrl, role);
 
         } catch (SecurityException e) {
             throw e;
@@ -128,5 +147,5 @@ public class DiscordOAuthService {
         return objectMapper.readTree(response.body());
     }
 
-    public record AuthResult(String token, String discordUsername, String avatarUrl) {}
+    public record AuthResult(String token, String discordUsername, String avatarUrl, Role role) {}
 }

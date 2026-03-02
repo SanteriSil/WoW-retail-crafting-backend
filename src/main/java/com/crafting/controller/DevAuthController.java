@@ -1,6 +1,7 @@
 package com.crafting.controller;
 
 import com.crafting.auth.JwtService;
+import com.crafting.auth.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -33,11 +34,12 @@ public class DevAuthController {
     @PostMapping("/login")
     public ResponseEntity<?> devLogin() {
         log.debug("Dev bypass login used");
-        String token = jwtService.generateToken(1L, "dev-user");
+        String token = jwtService.generateToken(1L, "dev-user", Role.OWNER);
         return ResponseEntity.ok(Map.of(
                 "token", token,
                 "discordUsername", "dev-user",
-                "avatarUrl", ""
+                "avatarUrl", "",
+                "role", Role.OWNER.name()
         ));
     }
 }

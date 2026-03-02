@@ -1,6 +1,8 @@
 package com.crafting.controller;
 
 import com.crafting.auth.DiscordOAuthService;
+import com.crafting.auth.Role;
+import com.crafting.cache.CachedResult;
 import com.crafting.model.AllowedUser;
 import com.crafting.repository.AllowedUserRepository;
 import org.slf4j.Logger;
@@ -27,10 +29,14 @@ public class AuthController {
     }
     private final DiscordOAuthService discordOAuthService;
     private final AllowedUserRepository allowedUserRepository;
+    private final CachedResult<Map<Long, Role>> roleLookupCache;
 
-    public AuthController(DiscordOAuthService discordOAuthService, AllowedUserRepository allowedUserRepository) {
+    public AuthController(DiscordOAuthService discordOAuthService,
+                          AllowedUserRepository allowedUserRepository,
+                          CachedResult<Map<Long, Role>> roleLookupCache) {
         this.discordOAuthService = discordOAuthService;
         this.allowedUserRepository = allowedUserRepository;
+        this.roleLookupCache = roleLookupCache;
     }
 
     /**
@@ -45,7 +51,8 @@ public class AuthController {
             return ResponseEntity.ok(Map.of(
                     "token", result.token(),
                     "discordUsername", result.discordUsername(),
-                    "avatarUrl", result.avatarUrl() != null ? result.avatarUrl() : ""
+                    "avatarUrl", result.avatarUrl() != null ? result.avatarUrl() : "",
+                    "role", result.role().name()
             ));
         } catch (SecurityException e) {
             log.warn("Unauthorized Discord login attempt: {}", e.getMessage());
@@ -81,6 +88,7 @@ public class AuthController {
         }
         AllowedUser user = new AllowedUser(discordId, body.discordUsername());
         allowedUserRepository.save(user);
+        roleLookupCache.invalidate();
         log.info("[{}] Added allowed user: {} ({})", currentUser(), body.discordUsername(), discordId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(user));
     }
@@ -92,6 +100,7 @@ public class AuthController {
                     .body(Map.of("error", "User not found"));
         }
         allowedUserRepository.deleteById(discordId);
+        roleLookupCache.invalidate();
         log.info("[{}] Removed allowed user with discord_id: {}", currentUser(), discordId);
         return ResponseEntity.noContent().build();
     }

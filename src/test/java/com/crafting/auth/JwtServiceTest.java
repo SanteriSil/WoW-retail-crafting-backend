@@ -29,7 +29,7 @@ class JwtServiceTest {
         @Test
         @DisplayName("contains correct Discord ID as subject")
         void containsCorrectSubject() {
-            String token = jwtService.generateToken(148170052171071488L, "silkku");
+            String token = jwtService.generateToken(148170052171071488L, "silkku", Role.OWNER);
             Claims claims = jwtService.validateToken(token);
 
             assertThat(claims).isNotNull();
@@ -39,17 +39,18 @@ class JwtServiceTest {
         @Test
         @DisplayName("contains username claim")
         void containsUsernameClaim() {
-            String token = jwtService.generateToken(12345L, "testuser");
+            String token = jwtService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
             Claims claims = jwtService.validateToken(token);
 
             assertThat(claims).isNotNull();
             assertThat(claims.get("username", String.class)).isEqualTo("testuser");
+            assertThat(claims.get("role", String.class)).isEqualTo("ALLOWED_USER");
         }
 
         @Test
         @DisplayName("has issuedAt and expiration dates set")
         void hasDatesSet() {
-            String token = jwtService.generateToken(12345L, "testuser");
+            String token = jwtService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
             Claims claims = jwtService.validateToken(token);
 
             assertThat(claims).isNotNull();
@@ -61,7 +62,7 @@ class JwtServiceTest {
         @Test
         @DisplayName("expiration is approximately 72 hours from issuedAt")
         void expirationIs72Hours() {
-            String token = jwtService.generateToken(12345L, "testuser");
+            String token = jwtService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
             Claims claims = jwtService.validateToken(token);
 
             assertThat(claims).isNotNull();
@@ -74,8 +75,8 @@ class JwtServiceTest {
         @Test
         @DisplayName("different users produce different tokens")
         void differentUsersProduceDifferentTokens() {
-            String token1 = jwtService.generateToken(111L, "user1");
-            String token2 = jwtService.generateToken(222L, "user2");
+            String token1 = jwtService.generateToken(111L, "user1", Role.ALLOWED_USER);
+            String token2 = jwtService.generateToken(222L, "user2", Role.ALLOWED_USER);
 
             assertThat(token1).isNotEqualTo(token2);
         }
@@ -88,7 +89,7 @@ class JwtServiceTest {
         @Test
         @DisplayName("valid token returns correct claims")
         void validTokenReturnsClaims() {
-            String token = jwtService.generateToken(99L, "validuser");
+            String token = jwtService.generateToken(99L, "validuser", Role.ALLOWED_USER);
             Claims claims = jwtService.validateToken(token);
 
             assertThat(claims).isNotNull();
@@ -114,7 +115,7 @@ class JwtServiceTest {
         @DisplayName("returns null for token signed with a different key")
         void differentKeyReturnsNull() {
             JwtService otherService = new JwtService("a-completely-different-secret-key-that-is-also-at-least-32-bytes");
-            String token = otherService.generateToken(12345L, "testuser");
+            String token = otherService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
 
             // Validate with the original service (different key) → should fail
             Claims claims = jwtService.validateToken(token);
@@ -124,7 +125,7 @@ class JwtServiceTest {
         @Test
         @DisplayName("returns null for a truncated token")
         void truncatedTokenReturnsNull() {
-            String token = jwtService.generateToken(12345L, "testuser");
+            String token = jwtService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
             // Chop the token in half
             String truncated = token.substring(0, token.length() / 2);
 
@@ -135,7 +136,7 @@ class JwtServiceTest {
         @Test
         @DisplayName("returns null for token with tampered payload")
         void tamperedPayloadReturnsNull() {
-            String token = jwtService.generateToken(12345L, "testuser");
+            String token = jwtService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
             // Flip a character in the middle (payload section) of the JWT
             char[] chars = token.toCharArray();
             int mid = chars.length / 2;
@@ -155,7 +156,7 @@ class JwtServiceTest {
         @DisplayName("short secret is padded and still works")
         void shortSecretIsPadded() {
             JwtService shortKeyService = new JwtService("short");
-            String token = shortKeyService.generateToken(42L, "shortuser");
+            String token = shortKeyService.generateToken(42L, "shortuser", Role.ALLOWED_USER);
             Claims claims = shortKeyService.validateToken(token);
 
             assertThat(claims).isNotNull();
@@ -166,7 +167,7 @@ class JwtServiceTest {
         @DisplayName("exactly 32-byte secret works without padding")
         void exact32ByteSecretWorks() {
             JwtService exactService = new JwtService("abcdefghijklmnopqrstuvwxyz123456"); // exactly 32 chars
-            String token = exactService.generateToken(7L, "exactuser");
+            String token = exactService.generateToken(7L, "exactuser", Role.ALLOWED_USER);
             Claims claims = exactService.validateToken(token);
 
             assertThat(claims).isNotNull();

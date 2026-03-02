@@ -32,12 +32,15 @@ public class JwtService {
 
     /**
      * Generates a JWT for the given Discord user.
+     * The {@code role} claim is a hint for the frontend only (§4.6).
+     * JwtAuthFilter re-verifies the actual role from DB/config on every request.
      */
-    public String generateToken(long discordId, String discordUsername) {
+    public String generateToken(long discordId, String discordUsername, Role role) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(discordId))
                 .claim("username", discordUsername)
+                .claim("role", role.name())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(EXPIRATION_HOURS, ChronoUnit.HOURS)))
                 .signWith(key)
