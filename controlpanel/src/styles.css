@@ -788,3 +788,319 @@ body {
     border: 1px solid #fecaca;
     border-radius: 8px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Recipes
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.recipe-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Recipe table ── */
+
+.recipe-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.recipe-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.recipe-table th,
+.recipe-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.recipe-table tr:last-child td { border-bottom: none; }
+
+.recipe-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.recipe-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.recipe-table th.sortable:hover {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.recipe-table tbody tr {
+    cursor: pointer;
+    transition: background 100ms;
+}
+
+.recipe-table tbody tr:hover { background: #f1f5f9; }
+
+.sort-indicator {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+    width: 12px;
+    text-align: center;
+}
+
+.sort-indicator.active { color: #2563eb; }
+
+/* ── Source badges ── */
+
+.source-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.source-badge.scraped {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.source-badge.manual {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+/* ── Profit colors ── */
+
+.profit-positive { color: #15803d; font-weight: 600; }
+.profit-negative { color: #b91c1c; font-weight: 600; }
+.profit-unknown  { color: #94a3b8; }
+
+/* ── Pagination ── */
+
+.recipe-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 0 2px;
+    font-size: 13px;
+    color: #475569;
+}
+
+/* ── Profit display (full variant) ── */
+
+.profit-breakdown {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 13px;
+}
+
+.profit-breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.profit-breakdown-row:last-child { border-bottom: none; }
+
+.profit-breakdown-row.subtotal { background: #f8fafc; }
+
+.profit-breakdown-row.total {
+    font-weight: 700;
+    font-size: 14px;
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+}
+
+.profit-missing-warning {
+    font-size: 12px;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin-top: 8px;
+}
+
+/* ── Recipe detail panel (slide-in from right) ── */
+
+.recipe-detail-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 100;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+}
+
+.recipe-detail-panel {
+    width: 520px;
+    max-width: 100vw;
+    height: 100vh;
+    overflow-y: auto;
+    background: #fff;
+    box-shadow: -8px 0 40px rgba(15, 23, 42, 0.18);
+    padding: 28px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    animation: slideInRight 180ms cubic-bezier(.2, .9, .2, 1);
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(60px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+.recipe-detail-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #64748b;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: background 120ms;
+}
+
+.recipe-detail-close:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.recipe-detail-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 40px; /* space for close button */
+}
+
+.recipe-detail-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.recipe-detail-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.expansion-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
+.recipe-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+}
+
+.output-item-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    font-size: 14px;
+}
+
+/* ── Ingredient table (used in detail panel) ── */
+
+.ingredient-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ingredient-table th,
+.ingredient-table td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ingredient-table th {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #f8fafc;
+}
+
+.ingredient-table tr:last-child td { border-bottom: none; }
+
+/* ── Optional ingredient groups ── */
+
+.optional-group {
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.optional-group-header {
+    padding: 6px 10px;
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* ── Admin action bar (bottom of detail panel) ── */
+
+.recipe-admin-actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: auto;
+}
