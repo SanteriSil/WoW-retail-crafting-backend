@@ -1,6 +1,7 @@
 package com.crafting.repository;
 
 import com.crafting.model.Recipe;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +18,10 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long>{
     Optional<Recipe> findByWowheadSpellId(Long wowheadSpellId);
 
     boolean existsByWowheadSpellId(Long wowheadSpellId);
+
+    @Query("SELECT r.wowheadSpellId FROM Recipe r WHERE r.deleted = false AND r.wowheadSpellId IS NOT NULL" +
+           " AND (:expansionId IS NULL OR r.expansion.id = :expansionId)")
+    List<Long> findActiveSpellIds(@Param("expansionId") Integer expansionId);
 
     @Query(
 	    value = """

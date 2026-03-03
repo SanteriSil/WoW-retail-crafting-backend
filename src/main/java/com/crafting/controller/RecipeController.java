@@ -35,6 +35,11 @@ public class RecipeController {
         this.recipeService = recipeService;
     }
 
+    @GetMapping("/spell-ids")
+    public ResponseEntity<List<Long>> getSpellIds(@RequestParam(required = false) Integer expansionId) {
+        return ResponseEntity.ok(recipeService.getSpellIds(expansionId));
+    }
+
     @GetMapping
     public ResponseEntity<Page<RecipeSummaryDTO>> getRecipes(
             @RequestParam(defaultValue = "0") int page,

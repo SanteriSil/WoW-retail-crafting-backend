@@ -185,7 +185,7 @@ body {
 
 
 .list {
-    max-height: 420px;
+    max-height: calc(100vh - 260px);
     overflow: auto;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -1158,9 +1158,42 @@ body {
 .scraper-panel {
     border: 1px solid var(--border, #334);
     border-radius: 8px;
-    padding: 12px 16px;
     margin-bottom: 16px;
     background: rgba(255 255 255 / 0.03);
+    overflow: hidden;
+}
+
+.scraper-collapse-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: inherit;
+    transition: background 120ms;
+}
+
+.scraper-collapse-header:hover {
+    background: rgba(0 0 0 / 0.03);
+}
+
+.scraper-body {
+    padding: 0 16px 12px;
+    max-height: 1200px;
+    overflow: hidden;
+    transition: max-height 300ms ease, padding 300ms ease, opacity 200ms ease;
+    opacity: 1;
+}
+
+.scraper-body.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
 }
 
 .scraper-panel-header {
@@ -1280,4 +1313,205 @@ body {
     padding: 0;
     color: #f87171;
     line-height: 1.6;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Scraped Recipe Table (F3)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.scraped-table-wrapper {
+    margin-top: 12px;
+}
+
+.scraped-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.scrape-status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.scrape-status-badge.new {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #bbf7d0;
+}
+
+.scrape-status-badge.exists {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Characters (F1)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.characters-page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.characters-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.character-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.character-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #f1f5f9 0%, #eef6fb 100%);
+    cursor: pointer;
+    text-align: left;
+    transition: background 100ms, box-shadow 100ms;
+}
+
+.character-card:hover {
+    background: linear-gradient(180deg, #e6eef6 0%, #eaf4fb 100%);
+}
+
+.character-card.selected {
+    background: linear-gradient(180deg, #dbeafe 0%, #d0ecff 100%);
+    box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+.character-card-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.character-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.character-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.character-icon-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.character-name {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.character-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.character-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.character-prof-slot {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+}
+
+.character-stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Dashboard (F2)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.dashboard-page {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dashboard-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dashboard-filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dashboard-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.dashboard-summary-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #f8fafc;
+    text-align: center;
+}
+
+.dashboard-summary-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.dashboard-summary-value {
+    font-size: 20px;
+    font-weight: 700;
 }

@@ -1,5 +1,6 @@
 package com.crafting.service;
 
+import com.crafting.controller.ScraperController;
 import com.crafting.model.Expansion;
 import com.crafting.model.Item;
 import com.crafting.model.Profession;
@@ -21,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +32,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class RecipeService {
+
+    private static final Logger log = LoggerFactory.getLogger(RecipeService.class);
 
     private final RecipeRepository recipeRepository;
     private final ItemRepository itemRepository;
@@ -186,6 +191,104 @@ public class RecipeService {
                 .map(this::toRecipeDTO)
                 .toList();
     }
+
+    // ── Scraper import (F3) ──────────────────────────────────────────────────
+
+    @Transactional
+    public List<Long> getSpellIds(Integer expansionId) {
+        return recipeRepository.findActiveSpellIds(expansionId);
+    }
+
+    @Transactional
+    public ImportResult importRecipes(List<ScraperController.RecipeImportCommand> commands) {
+        int added = 0;
+        int updated = 0;
+        int skipped = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (ScraperController.RecipeImportCommand cmd : commands) {
+            try {
+                if (cmd.wowheadSpellId() == null) {
+                    errors.add("Missing wowheadSpellId for recipe: " + cmd.recipeName());
+                    continue;
+                }
+
+                Profession profession = professionRepository.findById(cmd.professionId())
+                        .orElseThrow(() -> new IllegalArgumentException("Profession not found: " + cmd.professionId()));
+                Expansion expansion = expansionRepository.findById(cmd.expansionId())
+                        .orElseThrow(() -> new IllegalArgumentException("Expansion not found: " + cmd.expansionId()));
+
+                Item outputItem = ensureItem(cmd.outputItemId(), null);
+
+                List<RecipeIngredient> ingredients = new ArrayList<>();
+                if (cmd.ingredients() != null) {
+                    for (ScraperController.IngredientImport ing : cmd.ingredients()) {
+                        Item item = ensureItem(ing.itemId(), null);
+                        ingredients.add(RecipeIngredient.builder()
+                                .item(item)
+                                .quantity(ing.quantity())
+                                .build());
+                    }
+                }
+
+                Optional<Recipe> existingOpt = recipeRepository.findByWowheadSpellId(cmd.wowheadSpellId());
+                if (existingOpt.isPresent()) {
+                    Recipe existing = existingOpt.get();
+                    existing.setName(cmd.recipeName().trim());
+                    existing.setOutputItem(outputItem);
+                    existing.setOutputQuantity(cmd.outputQuantity() != null ? cmd.outputQuantity() : 1.0f);
+                    existing.setProfession(profession);
+                    existing.setExpansion(expansion);
+                    existing.setSource("SCRAPED");
+                    existing.setDeleted(false);
+                    existing.getIngredients().clear();
+                    for (RecipeIngredient ri : ingredients) {
+                        ri.setRecipe(existing);
+                        existing.getIngredients().add(ri);
+                    }
+                    recipeRepository.save(existing);
+                    updated++;
+                    log.info("Import updated recipe spellId={} name={}", cmd.wowheadSpellId(), cmd.recipeName());
+                } else {
+                    Recipe recipe = new Recipe();
+                    recipe.setName(cmd.recipeName().trim());
+                    recipe.setWowheadSpellId(cmd.wowheadSpellId());
+                    recipe.setOutputItem(outputItem);
+                    recipe.setOutputQuantity(cmd.outputQuantity() != null ? cmd.outputQuantity() : 1.0f);
+                    recipe.setProfession(profession);
+                    recipe.setExpansion(expansion);
+                    recipe.setSource("SCRAPED");
+                    recipe.setCreatedBy(null);
+                    for (RecipeIngredient ri : ingredients) {
+                        ri.setRecipe(recipe);
+                        recipe.getIngredients().add(ri);
+                    }
+                    recipeRepository.save(recipe);
+                    added++;
+                    log.info("Import added recipe spellId={} name={}", cmd.wowheadSpellId(), cmd.recipeName());
+                }
+            } catch (Exception e) {
+                errors.add("Spell " + cmd.wowheadSpellId() + ": " + e.getMessage());
+            }
+        }
+
+        return new ImportResult(added, updated, skipped, errors);
+    }
+
+    private Item ensureItem(long itemId, String itemName) {
+        return itemRepository.findById(itemId)
+                .orElseGet(() -> {
+                    Item stub = Item.builder()
+                            .id(itemId)
+                            .name((itemName == null || itemName.isBlank()) ? ("Unknown Item " + itemId) : itemName.trim())
+                            .build();
+                    Item saved = itemRepository.save(stub);
+                    log.info("Auto-created item stub from import: {} ({})", saved.getName(), saved.getId());
+                    return saved;
+                });
+    }
+
+    public record ImportResult(int added, int updated, int skipped, List<String> errors) {}
 
     private ValidationContext validateCommand(CreateOrUpdateRecipeCommand command, Long updatingRecipeId) {
         if (command.name() == null || command.name().isBlank()) {

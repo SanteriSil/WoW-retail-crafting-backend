@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getScraperStatus, triggerScrape } from "../api";
-import type { Expansion, Profession, ScraperStatus } from "../types";
+import { useEffect, useMemo, useState } from "react";
+import { fetchWowheadProxy, getExistingSpellIds, importRecipes } from "../api";
+import type { Expansion, ImportResult, Profession, RecipeImportCommand, ScrapedRecipe } from "../types";
+import { parseRecipesFromHtml } from "../wowheadParser";
+import ScrapedRecipeTable from "./ScrapedRecipeTable";
 
-/** Profession slugs supported by WowheadScraper.resolveProfessionSuffix() */
+/** Profession slugs supported by Wowhead listing URLs */
 const SCRAPER_SUPPORTED = new Set([
-    "alchemy",
-    "blacksmithing",
-    "enchanting",
-    "engineering",
-    "inscription",
-    "jewelcrafting",
-    "leatherworking",
-    "tailoring",
+    "alchemy", "blacksmithing", "enchanting", "engineering",
+    "inscription", "jewelcrafting", "leatherworking", "tailoring",
 ]);
+
+const PROFESSION_SUFFIX: Record<string, string> = {
+    alchemy: "recipes",
+    blacksmithing: "plans",
+    enchanting: "formulas",
+    engineering: "schematics",
+    inscription: "techniques",
+    jewelcrafting: "designs",
+    leatherworking: "patterns",
+    tailoring: "patterns",
+};
 
 function slugify(name: string): string {
     return name.trim().toLowerCase().replace(/\s+/g, "-");
@@ -25,6 +32,20 @@ type Props = {
 };
 
 export default function ScraperPanel({ professions, expansions, onScrapeComplete }: Props) {
+    // ── Collapsible state (F4) ──
+    const [collapsed, setCollapsed] = useState(() => {
+        return localStorage.getItem("scraperCollapsed") !== "false";
+    });
+
+    const toggleCollapsed = () => {
+        setCollapsed((prev) => {
+            const next = !prev;
+            localStorage.setItem("scraperCollapsed", String(next));
+            return next;
+        });
+    };
+
+    // ── Scraper state ──
     const supported = useMemo(
         () => professions.filter((p) => SCRAPER_SUPPORTED.has(slugify(p.name))),
         [professions],
@@ -32,17 +53,12 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
 
     const [professionSlug, setProfessionSlug] = useState("");
     const [expansionSlug, setExpansionSlug] = useState("");
-    const [status, setStatus] = useState<ScraperStatus | null>(null);
+    const [selectedExpansionId, setSelectedExpansionId] = useState<number | null>(null);
+    const [fetching, setFetching] = useState(false);
+    const [importing, setImporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [triggering, setTriggering] = useState(false);
-
-    // Stable ref for the callback to avoid re-creating the polling interval
-    const onCompleteRef = useRef(onScrapeComplete);
-    useEffect(() => { onCompleteRef.current = onScrapeComplete; }, [onScrapeComplete]);
-
-    // Track previous running state to detect when a scrape finishes
-    const wasRunning = useRef(false);
-    const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [recipes, setRecipes] = useState<ScrapedRecipe[]>([]);
+    const [importResult, setImportResult] = useState<ImportResult | null>(null);
 
     // Set default profession once the list loads
     useEffect(() => {
@@ -55,69 +71,106 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
     useEffect(() => {
         if (expansions.length > 0 && !expansionSlug) {
             setExpansionSlug(expansions[0].slug);
+            setSelectedExpansionId(expansions[0].id);
         }
     }, [expansions, expansionSlug]);
 
-    const fetchStatus = useCallback(async () => {
-        try {
-            const s = await getScraperStatus();
-            const justFinished = wasRunning.current && !s.running;
-            wasRunning.current = s.running;
-            setStatus(s);
-            if (justFinished) {
-                onCompleteRef.current();
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to get scraper status.");
-        }
-    }, []);
+    const listingUrl = useMemo(() => {
+        if (!professionSlug || !expansionSlug) return "";
+        const suffix = PROFESSION_SUFFIX[professionSlug] ?? "recipes";
+        return `https://www.wowhead.com/spells/professions/${professionSlug}/${expansionSlug}-${suffix}`;
+    }, [professionSlug, expansionSlug]);
 
-    // Fetch status on mount
-    useEffect(() => {
-        void fetchStatus();
-    }, [fetchStatus]);
+    const selectedProfessionId = useMemo(() => {
+        const prof = professions.find((p) => slugify(p.name) === professionSlug);
+        return prof?.id ?? null;
+    }, [professions, professionSlug]);
 
-    // Poll every 2 s while the scraper is running; clear interval when it stops
-    useEffect(() => {
-        if (status?.running) {
-            pollInterval.current = setInterval(() => void fetchStatus(), 2000);
-        }
-        return () => {
-            if (pollInterval.current) {
-                clearInterval(pollInterval.current);
-                pollInterval.current = null;
-            }
-        };
-    }, [status?.running, fetchStatus]);
+    const handleExpansionChange = (slug: string) => {
+        setExpansionSlug(slug);
+        const exp = expansions.find((e) => e.slug === slug);
+        setSelectedExpansionId(exp?.id ?? null);
+    };
 
-    const handleTrigger = async () => {
-        if (!professionSlug || !expansionSlug) return;
+    const handleFetch = async () => {
+        if (!listingUrl) return;
+        setFetching(true);
         setError(null);
-        setTriggering(true);
+        setRecipes([]);
+        setImportResult(null);
+
         try {
-            await triggerScrape(professionSlug, expansionSlug);
-            wasRunning.current = true;
-            await fetchStatus();
+            const html = await fetchWowheadProxy(listingUrl);
+            const parsed = parseRecipesFromHtml(html);
+
+            // Fetch existing spell IDs to determine "new" vs "exists" status
+            const existingIds = new Set(await getExistingSpellIds(selectedExpansionId ?? undefined));
+
+            const scraped: ScrapedRecipe[] = parsed.map((r) => ({
+                ...r,
+                selected: !existingIds.has(r.spellId), // auto-select new ones
+                status: existingIds.has(r.spellId) ? "exists" : "new",
+            }));
+
+            setRecipes(scraped);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to start scraper.");
+            setError(err instanceof Error ? err.message : "Failed to fetch from Wowhead.");
         } finally {
-            setTriggering(false);
+            setFetching(false);
         }
     };
 
-    const running = status?.running ?? false;
-    const result = status?.lastResult ?? null;
+    const handleImport = async () => {
+        if (selectedProfessionId == null || selectedExpansionId == null) return;
+
+        const selected = recipes.filter((r) => r.selected);
+        if (selected.length === 0) return;
+
+        setImporting(true);
+        setError(null);
+        setImportResult(null);
+
+        try {
+            const commands: RecipeImportCommand[] = selected.map((r) => ({
+                wowheadSpellId: r.spellId,
+                recipeName: r.name,
+                outputItemId: r.outputItemId,
+                outputQuantity: r.outputQuantity,
+                professionId: selectedProfessionId,
+                expansionId: selectedExpansionId,
+                ingredients: r.reagents,
+            }));
+
+            const result = await importRecipes(commands);
+            setImportResult(result);
+            setRecipes([]);
+            onScrapeComplete();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Import failed.");
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const selectedCount = recipes.filter((r) => r.selected).length;
 
     return (
         <div className="scraper-panel">
-            <div className="scraper-panel-header">
-                <span className="scraper-panel-title">🕷 Wowhead Scraper</span>
-                <div className="scraper-controls">
+            {/* ── Collapsible header ── */}
+            <button type="button" className="scraper-collapse-header" onClick={toggleCollapsed}>
+                <span className="scraper-panel-title">🔧 Scraper</span>
+                <span className={`chev${collapsed ? "" : " rotated"}`}>▶</span>
+            </button>
+
+            {/* ── Collapsible body ── */}
+            <div className={`scraper-body${collapsed ? " collapsed" : ""}`}>
+                {/* ── Trigger section ── */}
+                <div className="scraper-controls" style={{ marginTop: 10 }}>
                     <select
                         className="input"
                         value={professionSlug}
                         onChange={(e) => setProfessionSlug(e.target.value)}
-                        disabled={running}
+                        disabled={fetching}
                         aria-label="Profession"
                     >
                         {supported.map((p) => (
@@ -129,8 +182,8 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
                     <select
                         className="input"
                         value={expansionSlug}
-                        onChange={(e) => setExpansionSlug(e.target.value)}
-                        disabled={running}
+                        onChange={(e) => handleExpansionChange(e.target.value)}
+                        disabled={fetching}
                         aria-label="Expansion"
                     >
                         {expansions.map((exp) => (
@@ -142,59 +195,61 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
                     <button
                         type="button"
                         className="button"
-                        onClick={() => void handleTrigger()}
-                        disabled={running || triggering || !professionSlug || !expansionSlug}
+                        onClick={() => void handleFetch()}
+                        disabled={fetching || !listingUrl}
                     >
-                        {running ? "Running…" : "▶ Run Scrape"}
+                        {fetching ? "Fetching…" : "🌐 Fetch from Wowhead"}
                     </button>
                 </div>
-            </div>
 
-            {running && (
-                <div className="scraper-running">
-                    <span className="scraper-spinner" aria-hidden="true" />
-                    Scraping{" "}
-                    <strong>{result?.professionSlug ?? professionSlug}</strong>
-                    {" / "}
-                    <strong>{result?.expansionSlug ?? expansionSlug}</strong>
-                    …
-                </div>
-            )}
+                {listingUrl && (
+                    <div className="muted" style={{ fontSize: 11, marginTop: 4, wordBreak: "break-all" }}>
+                        {listingUrl}
+                    </div>
+                )}
 
-            {error && <div className="scraper-error">{error}</div>}
+                {error && <div className="scraper-error">{error}</div>}
 
-            {!running && result && (
-                <div className="scraper-result">
-                    <span className="scraper-result-label">
-                        Last run: <strong>{result.professionSlug}</strong> / <strong>{result.expansionSlug}</strong>
-                    </span>
-                    <div className="scraper-stats">
-                        <span className="scraper-stat stat-added">+{result.added} added</span>
-                        <span className="scraper-stat stat-updated">↻ {result.updated} updated</span>
-                        <span className="scraper-stat stat-skipped">— {result.skipped} skipped</span>
-                        <span className="scraper-stat">
-                            📄 {result.listingPagesVisited} pages · {result.listingEntriesFound} found
-                        </span>
-                        {result.autoCreatedItemIds.length > 0 && (
-                            <span className="scraper-stat">
-                                🧱 {result.autoCreatedItemIds.length} item stub{result.autoCreatedItemIds.length !== 1 ? "s" : ""} created
-                            </span>
+                {/* ── Results table ── */}
+                {recipes.length > 0 && (
+                    <>
+                        <ScrapedRecipeTable recipes={recipes} onChange={setRecipes} />
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                            <button
+                                type="button"
+                                className="button primary"
+                                onClick={() => void handleImport()}
+                                disabled={importing || selectedCount === 0}
+                            >
+                                {importing ? "Importing…" : `Import Selected (${selectedCount})`}
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {/* ── Import result ── */}
+                {importResult && (
+                    <div className="scraper-result">
+                        <div className="scraper-stats">
+                            <span className="scraper-stat stat-added">+{importResult.added} added</span>
+                            <span className="scraper-stat stat-updated">↻ {importResult.updated} updated</span>
+                            <span className="scraper-stat stat-skipped">— {importResult.skipped} skipped</span>
+                        </div>
+                        {importResult.errors.length > 0 && (
+                            <details className="scraper-errors">
+                                <summary>
+                                    ⚠️ {importResult.errors.length} error{importResult.errors.length !== 1 ? "s" : ""}
+                                </summary>
+                                <ul>
+                                    {importResult.errors.map((msg, i) => (
+                                        <li key={i}>{msg}</li>
+                                    ))}
+                                </ul>
+                            </details>
                         )}
                     </div>
-                    {result.errors.length > 0 && (
-                        <details className="scraper-errors">
-                            <summary>
-                                ⚠️ {result.errors.length} error{result.errors.length !== 1 ? "s" : ""}
-                            </summary>
-                            <ul>
-                                {result.errors.map((msg, i) => (
-                                    <li key={i}>{msg}</li>
-                                ))}
-                            </ul>
-                        </details>
-                    )}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

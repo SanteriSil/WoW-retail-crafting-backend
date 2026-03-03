@@ -1,0 +1,117 @@
+import type { ScrapedRecipe } from "../types";
+
+type Props = {
+    recipes: ScrapedRecipe[];
+    onChange: (recipes: ScrapedRecipe[]) => void;
+};
+
+export default function ScrapedRecipeTable({ recipes, onChange }: Props) {
+    const selectedCount = recipes.filter((r) => r.selected).length;
+
+    const toggleAll = (checked: boolean) => {
+        onChange(recipes.map((r) => ({ ...r, selected: checked })));
+    };
+
+    const toggleOne = (index: number) => {
+        const next = [...recipes];
+        next[index] = { ...next[index], selected: !next[index].selected };
+        onChange(next);
+    };
+
+    const updateName = (index: number, name: string) => {
+        const next = [...recipes];
+        next[index] = { ...next[index], name };
+        onChange(next);
+    };
+
+    const updateQuantity = (index: number, outputQuantity: number) => {
+        const next = [...recipes];
+        next[index] = { ...next[index], outputQuantity };
+        onChange(next);
+    };
+
+    return (
+        <div className="scraped-table-wrapper">
+            <div className="scraped-table-actions">
+                <button type="button" className="button small secondary" onClick={() => toggleAll(true)}>
+                    Select All
+                </button>
+                <button type="button" className="button small secondary" onClick={() => toggleAll(false)}>
+                    Deselect All
+                </button>
+                <span className="muted" style={{ fontSize: 12 }}>
+                    {selectedCount} of {recipes.length} selected
+                </span>
+            </div>
+            <div className="recipe-table-wrapper" style={{ maxHeight: 400, overflow: "auto" }}>
+                <table className="recipe-table">
+                    <thead>
+                        <tr>
+                            <th style={{ width: 36 }}>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedCount === recipes.length && recipes.length > 0}
+                                    onChange={(e) => toggleAll(e.target.checked)}
+                                />
+                            </th>
+                            <th>Spell ID</th>
+                            <th>Recipe Name</th>
+                            <th>Output Item</th>
+                            <th style={{ textAlign: "right" }}>Qty</th>
+                            <th style={{ textAlign: "right" }}>Reagents</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {recipes.map((r, i) => (
+                            <tr key={r.spellId}>
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        checked={r.selected}
+                                        onChange={() => toggleOne(i)}
+                                    />
+                                </td>
+                                <td>
+                                    <a
+                                        className="wowhead-link"
+                                        href={`https://www.wowhead.com/spell=${r.spellId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        {r.spellId}
+                                    </a>
+                                </td>
+                                <td>
+                                    <input
+                                        className="input"
+                                        style={{ padding: "4px 8px", fontSize: 13, width: "100%", minWidth: 160 }}
+                                        value={r.name}
+                                        onChange={(e) => updateName(i, e.target.value)}
+                                    />
+                                </td>
+                                <td>{r.outputItemId}</td>
+                                <td style={{ textAlign: "right" }}>
+                                    <input
+                                        type="number"
+                                        className="input"
+                                        style={{ padding: "4px 8px", fontSize: 13, width: 64, textAlign: "right" }}
+                                        value={r.outputQuantity}
+                                        min={1}
+                                        onChange={(e) => updateQuantity(i, parseFloat(e.target.value) || 1)}
+                                    />
+                                </td>
+                                <td style={{ textAlign: "right" }}>{r.reagents.length}</td>
+                                <td>
+                                    <span className={`scrape-status-badge ${r.status}`}>
+                                        {r.status === "new" ? "New" : "Exists"}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}

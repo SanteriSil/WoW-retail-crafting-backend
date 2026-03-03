@@ -140,25 +140,91 @@ export type RecipeFilterParams = {
   ingredientItemId?: number;
 };
 
-// ── Scraper ──────────────────────────────────────────────────────────────────
+// ── Scraper (client-side, F3) ────────────────────────────────────────────────
 
-export type ScraperResult = {
-  professionSlug: string;
-  expansionSlug: string;
+export type ScrapedRecipe = {
+  spellId: number;
+  name: string;
+  outputItemId: number;
+  outputQuantity: number;
+  reagents: { itemId: number; quantity: number }[];
+  selected: boolean;
+  status: "new" | "exists";
+};
+
+export type RecipeImportCommand = {
+  wowheadSpellId: number;
+  recipeName: string;
+  outputItemId: number;
+  outputQuantity: number;
+  professionId: number;
+  expansionId: number;
+  ingredients: { itemId: number; quantity: number }[];
+};
+
+export type ImportResult = {
   added: number;
   updated: number;
   skipped: number;
-  listingPagesVisited: number;
-  listingEntriesFound: number;
   errors: string[];
-  autoCreatedItemIds: number[];
-  startedAt: string;
-  finishedAt: string;
 };
 
-export type ScraperStatus = {
-  running: boolean;
-  lastStartedAt: string | null;
-  lastFinishedAt: string | null;
-  lastResult: ScraperResult | null;
+// ── Characters (F1) ─────────────────────────────────────────────────────────
+
+export type Character = {
+  id: number;
+  name: string;
+  realm: string;
+  iconUrl: string | null;
+  professions: CharacterProfessionView[];
+  assignedRecipeCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CharacterProfessionView = {
+  id: number;
+  professionId: number;
+  professionName: string;
+  multicraftPercent: number;
+  resourcefulnessPercent: number;
+};
+
+export type CreateCharacterRequest = {
+  name: string;
+  realm: string;
+  professions: {
+    professionId: number;
+    multicraftPercent: number;
+    resourcefulnessPercent: number;
+  }[];
+};
+
+export type UpdateCharacterRequest = CreateCharacterRequest;
+
+// ── Dashboard (F2) ──────────────────────────────────────────────────────────
+
+export type DashboardCraft = {
+  characterId: number;
+  characterName: string;
+  characterIconUrl: string | null;
+  recipeId: number;
+  recipeName: string;
+  professionId: number;
+  professionName: string;
+  outputItemId: number;
+  outputItemName: string;
+  outputQuantity: number;
+  baseProfit: ProfitEstimate;
+  adjustedProfit: ProfitEstimate;
+  multicraftPercent: number;
+  resourcefulnessPercent: number;
+  missingPriceItemIds: number[];
+};
+
+export type DashboardResponse = {
+  crafts: DashboardCraft[];
+  totalBaseProfit: number;
+  totalAdjustedProfit: number;
+  totalCrafts: number;
 };

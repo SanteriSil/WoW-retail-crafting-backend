@@ -1,4 +1,4 @@
-import type { AllowedUser, AuthResponse, Expansion, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeSummary, ScraperStatus } from "./types";
+import type { AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeSummary, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -223,17 +223,90 @@ export async function deleteRecipe(id: number): Promise<void> {
  * Triggers an Excel download of matching recipes. Handles the binary response
  * by creating a temporary <a> element to initiate the browser's file-save dialog.
  */
-// ── Scraper ──────────────────────────────────────────────────────────────────
+// ── Scraper (client-side, F3) ────────────────────────────────────────────────
 
-export async function triggerScrape(professionSlug: string, expansionSlug: string): Promise<void> {
-    await request<void>("/scraper/trigger", {
-        method: "POST",
-        body: JSON.stringify({ professionSlug, expansionSlug })
+export async function fetchWowheadProxy(url: string): Promise<string> {
+    return request<string>(`/scraper/proxy?url=${encodeURIComponent(url)}`, {
+        method: "GET",
+        headers: { Accept: "text/html" },
     });
 }
 
-export async function getScraperStatus(): Promise<ScraperStatus> {
-    return request<ScraperStatus>("/scraper/status");
+export async function importRecipes(commands: RecipeImportCommand[]): Promise<ImportResult> {
+    return request<ImportResult>("/scraper/import", {
+        method: "POST",
+        body: JSON.stringify(commands),
+    });
+}
+
+export async function getExistingSpellIds(expansionId?: number): Promise<number[]> {
+    const params = expansionId != null ? `?expansionId=${expansionId}` : "";
+    return request<number[]>(`/recipes/spell-ids${params}`);
+}
+
+// ── Characters (F1) ─────────────────────────────────────────────────────────
+
+export async function getCharacters(): Promise<Character[]> {
+    return request<Character[]>("/characters");
+}
+
+export async function createCharacter(req: CreateCharacterRequest): Promise<Character> {
+    return request<Character>("/characters", {
+        method: "POST",
+        body: JSON.stringify(req),
+    });
+}
+
+export async function updateCharacter(id: number, req: UpdateCharacterRequest): Promise<Character> {
+    return request<Character>(`/characters/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(req),
+    });
+}
+
+export async function deleteCharacter(id: number): Promise<void> {
+    await request<void>(`/characters/${id}`, { method: "DELETE" });
+}
+
+export async function refreshCharacterIcon(id: number): Promise<Character> {
+    return request<Character>(`/characters/${id}/icon`, { method: "POST" });
+}
+
+// ── Character recipe assignments ────────────────────────────────────────────
+
+export async function getCharacterRecipes(characterId: number): Promise<RecipeSummary[]> {
+    return request<RecipeSummary[]>(`/characters/${characterId}/recipes`);
+}
+
+export async function assignRecipes(characterId: number, recipeIds: number[]): Promise<void> {
+    await request<void>(`/characters/${characterId}/recipes`, {
+        method: "POST",
+        body: JSON.stringify({ recipeIds }),
+    });
+}
+
+export async function unassignRecipe(characterId: number, recipeId: number): Promise<void> {
+    await request<void>(`/characters/${characterId}/recipes/${recipeId}`, {
+        method: "DELETE",
+    });
+}
+
+// ── Dashboard (F2) ──────────────────────────────────────────────────────────
+
+export async function getDashboardCrafts(params: {
+    characterId?: number;
+    professionId?: number;
+    search?: string;
+    sort?: string;
+    direction?: string;
+}): Promise<DashboardResponse> {
+    const query = new URLSearchParams();
+    if (params.characterId != null) query.set("characterId", String(params.characterId));
+    if (params.professionId != null) query.set("professionId", String(params.professionId));
+    if (params.search) query.set("search", params.search);
+    if (params.sort) query.set("sort", params.sort);
+    if (params.direction) query.set("direction", params.direction);
+    return request<DashboardResponse>(`/dashboard/crafts?${query.toString()}`);
 }
 
 export async function exportRecipesExcel(params: RecipeFilterParams): Promise<void> {

@@ -11,6 +11,8 @@ import SheetBuilder from "./components/SheetBuilder";
 import LoginPage from "./components/LoginPage";
 import UserManagement from "./components/UserManagement";
 import RecipesPage from "./components/RecipesPage";
+import CharactersPage from "./components/CharactersPage";
+import DashboardPage from "./components/DashboardPage";
 
 export default function App() {
     // ── Auth state ──
@@ -87,7 +89,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
     const [showMissingIcons, setShowMissingIcons] = useState(false);
     const [showNoProfession, setShowNoProfession] = useState(false);
     const [showVendorItems, setShowVendorItems] = useState(false);
-    const [activeTab, setActiveTab] = useState<"items" | "recipes">("items");
+    const [activeTab, setActiveTab] = useState<"items" | "recipes" | "characters" | "dashboard">("items");
 
     const role = user?.role ?? null;
     // Frontend hides UI elements for UX only; backend enforces auth on every request.
@@ -266,6 +268,25 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                 >
                     Recipes
                 </button>
+                {/* Characters + Dashboard visible to ALLOWED_USER+ */}
+                {(role === "ALLOWED_USER" || isAdmin) && (
+                    <button
+                        type="button"
+                        className={`app-tab${activeTab === "characters" ? " active" : ""}`}
+                        onClick={() => setActiveTab("characters")}
+                    >
+                        Characters
+                    </button>
+                )}
+                {(role === "ALLOWED_USER" || isAdmin) && (
+                    <button
+                        type="button"
+                        className={`app-tab${activeTab === "dashboard" ? " active" : ""}`}
+                        onClick={() => setActiveTab("dashboard")}
+                    >
+                        Dashboard
+                    </button>
+                )}
             </div>
 
             {error && <div className="card">{error}</div>}
@@ -273,6 +294,18 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
             {activeTab === "recipes" && (
                 <div className="card" style={{ marginTop: 16 }}>
                     <RecipesPage professions={professions} role={role} />
+                </div>
+            )}
+
+            {activeTab === "characters" && (
+                <div className="card" style={{ marginTop: 16 }}>
+                    <CharactersPage professions={professions} />
+                </div>
+            )}
+
+            {activeTab === "dashboard" && (
+                <div className="card" style={{ marginTop: 16 }}>
+                    <DashboardPage professions={professions} />
                 </div>
             )}
 
