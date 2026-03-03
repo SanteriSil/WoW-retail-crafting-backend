@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import type { Region } from "../data/realms";
 import type { Character, CreateCharacterRequest, Profession } from "../types";
+import RealmAutocomplete from "./RealmAutocomplete";
 
 type Props = {
     professions: Profession[];
@@ -19,6 +21,7 @@ const emptySlot = (): ProfSlot => ({ professionId: "", multicraftPercent: 0, res
 export default function CharacterForm({ professions, character, onSubmit, onCancel }: Props) {
     const [name, setName] = useState("");
     const [realm, setRealm] = useState("");
+    const [region, setRegion] = useState<Region>("EU");
     const [prof1, setProf1] = useState<ProfSlot>(emptySlot());
     const [prof2, setProf2] = useState<ProfSlot>(emptySlot());
     const [busy, setBusy] = useState(false);
@@ -127,7 +130,12 @@ export default function CharacterForm({ professions, character, onSubmit, onCanc
             </div>
             <div className="field">
                 <label className="label">Realm</label>
-                <input className="input" value={realm} onChange={(e) => setRealm(e.target.value)} placeholder="Realm name" />
+                <RealmAutocomplete
+                    value={realm}
+                    onChange={setRealm}
+                    region={region}
+                    onRegionChange={setRegion}
+                />
             </div>
 
             {renderProfSlot(prof1, setProf1, "Profession 1")}

@@ -1709,3 +1709,68 @@ body {
     opacity: 0.5;
     cursor: default;
 }
+
+/* ── Realm autocomplete (U5) ───────────────────────────────────────────────── */
+
+.realm-autocomplete {
+    position: relative;
+}
+
+.realm-region-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.realm-region-btn {
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 120ms;
+}
+
+.realm-region-btn:hover {
+    background: #eef6ff;
+    border-color: #bfdbfe;
+}
+
+.realm-region-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.realm-dropdown {
+    position: absolute;
+    z-index: 60;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 2px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    list-style: none;
+    padding: 4px 0;
+}
+
+.realm-dropdown-item {
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 60ms;
+}
+
+.realm-dropdown-item:hover,
+.realm-dropdown-item.highlighted {
+    background: #eef6ff;
+}
