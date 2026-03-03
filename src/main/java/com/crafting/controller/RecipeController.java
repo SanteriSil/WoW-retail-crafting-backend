@@ -167,7 +167,10 @@ public class RecipeController {
                 request.expansionId(),
                 request.source(),
                 ingredients,
-                optionalGroups
+                optionalGroups,
+                request.multicraftable(),
+                request.multicraftMultiplier(),
+                request.resourcefulnessFactor()
         );
     }
 
@@ -191,7 +194,10 @@ public class RecipeController {
             Integer expansionId,
             String source,
             List<IngredientRequest> ingredients,
-            List<OptionalIngredientGroupRequest> optionalIngredientGroups
+            List<OptionalIngredientGroupRequest> optionalIngredientGroups,
+            Boolean multicraftable,
+            Float multicraftMultiplier,
+            Float resourcefulnessFactor
     ) {
     }
 

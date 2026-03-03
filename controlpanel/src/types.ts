@@ -112,6 +112,9 @@ export type RecipeDetail = {
   ingredients: IngredientView[];
   optionalIngredientGroups: OptionalIngredientGroup[];
   profitEstimate: ProfitEstimate | null;
+  multicraftable: boolean;
+  multicraftMultiplier: number;
+  resourcefulnessFactor: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -218,6 +221,9 @@ export type RecipeWritePayload = {
     label: string;
     options: { itemId: number; quantity: number }[];
   }[];
+  multicraftable: boolean;
+  multicraftMultiplier: number;
+  resourcefulnessFactor: number;
 };
 
 // ── Dashboard (F2) ──────────────────────────────────────────────────────────
@@ -235,9 +241,19 @@ export type DashboardCraft = {
   outputQuantity: number;
   baseProfit: ProfitEstimate;
   adjustedProfit: ProfitEstimate;
+  isMulticraftable: boolean;
+  multicraftMultiplier: number;
+  resourcefulnessFactor: number;
   multicraftPercent: number;
   resourcefulnessPercent: number;
   missingPriceItemIds: number[];
+};
+
+export type CraftOverrides = {
+  [key: string]: {
+    multicraftMultiplier?: number;
+    resourcefulnessFactor?: number;
+  };
 };
 
 export type DashboardResponse = {

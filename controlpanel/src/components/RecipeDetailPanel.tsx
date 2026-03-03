@@ -88,6 +88,22 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                     </div>
                 </div>
 
+                {/* ── Crafting Modifiers ── */}
+                <div>
+                    <div className="recipe-section-label">Crafting Modifiers</div>
+                    <div style={{ fontSize: 13, display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div>
+                            Multicraft: {recipe.multicraftable
+                                ? <span style={{ color: "#16a34a" }}>✅ Yes (×{recipe.multicraftMultiplier})</span>
+                                : <span className="muted">❌ No</span>
+                            }
+                        </div>
+                        <div>
+                            Resourcefulness Factor: <span className="muted">{recipe.resourcefulnessFactor}</span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* ── Required ingredients ── */}
                 {recipe.ingredients.length > 0 && (
                     <div>

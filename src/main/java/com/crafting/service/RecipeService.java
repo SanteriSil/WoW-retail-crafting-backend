@@ -360,6 +360,9 @@ public class RecipeService {
         recipe.setOutputQuantity(command.outputQuantity());
         recipe.setProfession(validation.profession());
         recipe.setExpansion(validation.expansion());
+        recipe.setMulticraftable(command.multicraftable() != null ? command.multicraftable() : false);
+        recipe.setMulticraftMultiplier(command.multicraftMultiplier() != null ? command.multicraftMultiplier() : 1.2f);
+        recipe.setResourcefulnessFactor(command.resourcefulnessFactor() != null ? command.resourcefulnessFactor() : 0.3f);
 
         recipe.getIngredients().clear();
         if (command.ingredients() != null) {
@@ -475,6 +478,9 @@ public class RecipeService {
                 ingredients,
                 optionalGroups,
                 profit,
+                recipe.isMulticraftable(),
+                recipe.getMulticraftMultiplier(),
+                recipe.getResourcefulnessFactor(),
                 recipe.getCreatedAt(),
                 recipe.getUpdatedAt()
         );
@@ -506,7 +512,10 @@ public class RecipeService {
             Integer expansionId,
             String source,
             List<IngredientCommand> ingredients,
-            List<OptionalIngredientGroupCommand> optionalIngredientGroups
+            List<OptionalIngredientGroupCommand> optionalIngredientGroups,
+            Boolean multicraftable,
+            Float multicraftMultiplier,
+            Float resourcefulnessFactor
     ) {
     }
 

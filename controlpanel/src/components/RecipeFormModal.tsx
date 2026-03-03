@@ -48,6 +48,9 @@ export default function RecipeFormModal(props: Props) {
     const [source, setSource] = useState<string>(SOURCES[0]);
     const [ingredients, setIngredients] = useState<IngredientRow[]>([{ itemId: "", quantity: 1 }]);
     const [optGroups, setOptGroups] = useState<OptGroupRow[]>([]);
+    const [multicraftable, setMulticraftable] = useState(false);
+    const [multicraftMultiplier, setMulticraftMultiplier] = useState(1.2);
+    const [resourcefulnessFactor, setResourcefulnessFactor] = useState(0.3);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +74,9 @@ export default function RecipeFormModal(props: Props) {
                 options: g.options.map((o) => ({ itemId: o.item.id.toString(), quantity: o.quantity })),
             }))
         );
+        setMulticraftable(recipe.multicraftable ?? false);
+        setMulticraftMultiplier(recipe.multicraftMultiplier ?? 1.2);
+        setResourcefulnessFactor(recipe.resourcefulnessFactor ?? 0.3);
     }, [recipe]);
 
     // Close on Escape
@@ -114,6 +120,9 @@ export default function RecipeFormModal(props: Props) {
                         .filter((o) => parseInt(o.itemId, 10) > 0)
                         .map((o) => ({ itemId: parseInt(o.itemId, 10), quantity: o.quantity })),
                 })),
+            multicraftable,
+            multicraftMultiplier,
+            resourcefulnessFactor,
         };
 
         setSaving(true);
@@ -229,6 +238,46 @@ export default function RecipeFormModal(props: Props) {
                         <select className="input" value={source} onChange={(e) => setSource(e.target.value)}>
                             {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
+                    </div>
+
+                    {/* ── Crafting Modifiers ── */}
+                    <div className="recipe-form-section">
+                        <div className="recipe-section-label">Crafting Modifiers</div>
+                        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
+                            <input
+                                type="checkbox"
+                                checked={multicraftable}
+                                onChange={(e) => setMulticraftable(e.target.checked)}
+                            />
+                            Affected by Multicraft
+                        </label>
+                        {multicraftable && (
+                            <div className="field" style={{ marginTop: 8 }}>
+                                <label className="label">Multicraft Multiplier (M)</label>
+                                <input
+                                    type="number"
+                                    className="input"
+                                    style={{ width: 120 }}
+                                    value={multicraftMultiplier}
+                                    min={0}
+                                    step={0.1}
+                                    onChange={(e) => setMulticraftMultiplier(parseFloat(e.target.value) || 1.2)}
+                                />
+                            </div>
+                        )}
+                        <div className="field" style={{ marginTop: 8 }}>
+                            <label className="label">Resourcefulness Factor (R)</label>
+                            <input
+                                type="number"
+                                className="input"
+                                style={{ width: 120 }}
+                                value={resourcefulnessFactor}
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                onChange={(e) => setResourcefulnessFactor(Math.min(1, Math.max(0, parseFloat(e.target.value) || 0.3)))}
+                            />
+                        </div>
                     </div>
 
                     {/* ── Ingredients ── */}

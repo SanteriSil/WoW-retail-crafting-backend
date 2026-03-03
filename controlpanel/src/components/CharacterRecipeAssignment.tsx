@@ -5,17 +5,24 @@ import type { Page, Profession, RecipeFilterParams, RecipeSummary } from "../typ
 type Props = {
     characterId: number;
     professions: Profession[];
+    characterProfessionIds: number[];
     onAssignmentChange: () => void;
 };
 
-export default function CharacterRecipeAssignment({ characterId, professions, onAssignmentChange }: Props) {
+export default function CharacterRecipeAssignment({ characterId, professions, characterProfessionIds, onAssignmentChange }: Props) {
     // ── Assigned recipes ──
     const [assigned, setAssigned] = useState<RecipeSummary[]>([]);
     const [assignedLoading, setAssignedLoading] = useState(false);
 
+    // Professions available in the dropdown: character's professions (if any) or all
+    const charProfs = professions.filter((p) => characterProfessionIds.includes(p.id));
+    const hasCharProfs = charProfs.length > 0;
+
     // ── Browser state ──
     const [search, setSearch] = useState("");
-    const [profFilter, setProfFilter] = useState<number | "">("");
+    const [profFilter, setProfFilter] = useState<number | "" | "char">(
+        hasCharProfs ? (charProfs.length === 1 ? charProfs[0].id : "char") : ""
+    );
     const [browserPage, setBrowserPage] = useState<Page<RecipeSummary> | null>(null);
     const [browserLoading, setBrowserLoading] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -41,20 +48,38 @@ export default function CharacterRecipeAssignment({ characterId, professions, on
     }, [loadAssigned]);
 
     // ── Fetch browseable recipes (debounced search) ──
-    const fetchBrowser = useCallback(async (s: string, prof: number | "") => {
+    const fetchBrowser = useCallback(async (s: string, prof: number | "" | "char") => {
         setBrowserLoading(true);
         try {
-            const params: RecipeFilterParams = { size: 10, sort: "name,asc" };
-            if (s.trim()) params.search = s.trim();
-            if (prof) params.professionId = prof as number;
-            const page = await getRecipes(params);
-            setBrowserPage(page);
+            if (prof === "char" && characterProfessionIds.length > 0) {
+                // Fetch for each of the character's professions and merge
+                const pages = await Promise.all(
+                    characterProfessionIds.map((pid) => {
+                        const params: RecipeFilterParams = { size: 10, sort: "name,asc", professionId: pid };
+                        if (s.trim()) params.search = s.trim();
+                        return getRecipes(params);
+                    })
+                );
+                const seen = new Set<number>();
+                const merged = pages.flatMap((p) => p.content).filter((r) => {
+                    if (seen.has(r.id)) return false;
+                    seen.add(r.id);
+                    return true;
+                }).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20);
+                setBrowserPage({ content: merged, totalElements: merged.length, totalPages: 1, number: 0, size: 20 });
+            } else {
+                const params: RecipeFilterParams = { size: 10, sort: "name,asc" };
+                if (s.trim()) params.search = s.trim();
+                if (typeof prof === "number" && prof) params.professionId = prof;
+                const page = await getRecipes(params);
+                setBrowserPage(page);
+            }
         } catch {
             // ignore
         } finally {
             setBrowserLoading(false);
         }
-    }, []);
+    }, [characterProfessionIds]);
 
     // Debounce search input
     useEffect(() => {
@@ -162,11 +187,22 @@ export default function CharacterRecipeAssignment({ characterId, professions, on
                     <select
                         className="input"
                         value={profFilter}
-                        onChange={(e) => setProfFilter(e.target.value ? Number(e.target.value) : "")}
-                        style={{ width: 160 }}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            setProfFilter(v === "char" ? "char" : v ? Number(v) : "");
+                        }}
+                        style={{ width: 200 }}
                     >
+                        {hasCharProfs && (
+                            <option value="char">
+                                Character&apos;s Professions ({charProfs.map((p) => p.name).join(", ")})
+                            </option>
+                        )}
+                        {hasCharProfs && charProfs.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
                         <option value="">All Professions</option>
-                        {professions.map((p) => (
+                        {!hasCharProfs && professions.map((p) => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                     </select>

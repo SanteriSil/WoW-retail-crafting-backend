@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCharacters, getDashboardCrafts } from "../api";
-import type { Character, DashboardResponse, Profession } from "../types";
+import type { Character, CraftOverrides, DashboardResponse, Profession } from "../types";
 import DashboardFilters from "./DashboardFilters";
 import DashboardSummary from "./DashboardSummary";
 import CraftTable from "./CraftTable";
@@ -8,6 +8,14 @@ import CraftTable from "./CraftTable";
 type Props = {
     professions: Profession[];
 };
+
+function loadOverrides(): CraftOverrides {
+    try {
+        return JSON.parse(localStorage.getItem("craft-overrides") || "{}");
+    } catch {
+        return {};
+    }
+}
 
 export default function DashboardPage({ professions }: Props) {
     const [characters, setCharacters] = useState<Character[]>([]);
@@ -21,6 +29,14 @@ export default function DashboardPage({ professions }: Props) {
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState("adjustedProfit");
     const [direction, setDirection] = useState("desc");
+
+    // U8: Override state
+    const [overrides, setOverrides] = useState<CraftOverrides>(loadOverrides);
+
+    const handleOverrideChange = (next: CraftOverrides) => {
+        setOverrides(next);
+        localStorage.setItem("craft-overrides", JSON.stringify(next));
+    };
 
     useEffect(() => {
         getCharacters().then(setCharacters).catch(() => setCharacters([]));
@@ -96,6 +112,8 @@ export default function DashboardPage({ professions }: Props) {
                         direction={direction}
                         onSortChange={handleSortChange}
                         loading={loading}
+                        overrides={overrides}
+                        onOverrideChange={handleOverrideChange}
                     />
                 </>
             )}

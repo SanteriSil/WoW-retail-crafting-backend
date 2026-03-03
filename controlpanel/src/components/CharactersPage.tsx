@@ -132,6 +132,7 @@ export default function CharactersPage({ professions }: Props) {
                         <CharacterRecipeAssignment
                             characterId={selected.id}
                             professions={professions}
+                            characterProfessionIds={selected.professions.map((p) => p.professionId)}
                             onAssignmentChange={() => void refresh()}
                         />
                     )}

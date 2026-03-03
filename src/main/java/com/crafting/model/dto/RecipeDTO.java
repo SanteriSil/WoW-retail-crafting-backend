@@ -15,6 +15,9 @@ public record RecipeDTO(
         List<IngredientView> ingredients,
         List<OptionalIngredientGroupView> optionalIngredientGroups,
         ProfitEstimateDTO profitEstimate,
+        boolean multicraftable,
+        Float multicraftMultiplier,
+        Float resourcefulnessFactor,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
