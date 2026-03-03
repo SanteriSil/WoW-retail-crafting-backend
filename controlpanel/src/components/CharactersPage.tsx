@@ -9,6 +9,7 @@ import {
 import type { Character, CreateCharacterRequest, Profession, UpdateCharacterRequest } from "../types";
 import CharacterForm from "./CharacterForm";
 import CharacterList from "./CharacterList";
+import CharacterRecipeAssignment from "./CharacterRecipeAssignment";
 
 type Props = {
     professions: Profession[];
@@ -127,6 +128,13 @@ export default function CharactersPage({ professions }: Props) {
                         }}
                         onCancel={() => setSelected(null)}
                     />
+                    {selected && (
+                        <CharacterRecipeAssignment
+                            characterId={selected.id}
+                            professions={professions}
+                            onAssignmentChange={() => void refresh()}
+                        />
+                    )}
                 </div>
             </div>
         </div>

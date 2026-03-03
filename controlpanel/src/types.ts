@@ -202,6 +202,24 @@ export type CreateCharacterRequest = {
 
 export type UpdateCharacterRequest = CreateCharacterRequest;
 
+// ── Recipe write payload (U4+U6) ─────────────────────────────────────────────
+
+export type RecipeWritePayload = {
+  name: string;
+  wowheadSpellId: number | null;
+  outputItemId: number;
+  outputQuantity: number;
+  professionId: number;
+  expansionId: number;
+  source: string;
+  ingredients: { itemId: number; quantity: number }[];
+  optionalIngredientGroups: {
+    slotIndex: number;
+    label: string;
+    options: { itemId: number; quantity: number }[];
+  }[];
+};
+
 // ── Dashboard (F2) ──────────────────────────────────────────────────────────
 
 export type DashboardCraft = {

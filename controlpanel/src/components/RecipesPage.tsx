@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+    createRecipe,
     deleteRecipe as apiDeleteRecipe,
     duplicateRecipe as apiDuplicateRecipe,
     exportRecipesExcel,
     getExpansions,
+    getItems,
     getRecipe,
     getRecipes,
+    updateRecipe,
 } from "../api";
 import type {
     Expansion,
+    Item,
     Page,
     Profession,
     RecipeDetail,
     RecipeFilterParams,
+    RecipeWritePayload,
     RecipeSummary,
 } from "../types";
 import RecipeDetailPanel from "./RecipeDetailPanel";
 import RecipeFilters from "./RecipeFilters";
+import RecipeFormModal from "./RecipeFormModal";
 import RecipeList from "./RecipeList";
 import ScraperPanel from "./ScraperPanel";
 
@@ -34,6 +40,12 @@ export default function RecipesPage({ professions, role }: Props) {
     const [expansions, setExpansions] = useState<Expansion[]>([]);
     const [recipePage, setRecipePage] = useState<Page<RecipeSummary> | null>(null);
     const [selectedRecipe, setSelectedRecipe] = useState<RecipeDetail | null>(null);
+    const [itemMap, setItemMap] = useState<Map<number, Item>>(new Map());
+    const [formModal, setFormModal] = useState<
+        | { mode: "create" }
+        | { mode: "edit"; recipe: RecipeDetail }
+        | null
+    >(null);
 
     // ── UI state ──
     const [filters, setFilters] = useState<RecipeFilterParams>(DEFAULT_FILTERS);
@@ -50,6 +62,9 @@ export default function RecipesPage({ professions, role }: Props) {
         getExpansions()
             .then(setExpansions)
             .catch(() => setExpansions([]));
+        getItems()
+            .then((items) => setItemMap(new Map(items.map((it) => [it.id, it]))))
+            .catch(() => { /* non-critical */ });
     }, []);
 
     // ── Load recipe list whenever filters change ──
@@ -149,11 +164,10 @@ export default function RecipesPage({ professions, role }: Props) {
         [filters, fetchRecipes],
     );
 
-    // ── Admin: edit — stub that opens the detail as read-only for now ──
-    // Full recipe-edit form is scoped to a later step.
-    const handleEdit = useCallback((_recipe: RecipeDetail) => {
-        setActionStatus({ msg: "Recipe editing form coming soon.", ok: true });
-        setTimeout(() => setActionStatus(null), 3000);
+    // ── Admin: edit — open recipe form modal in edit mode ──
+    const handleEdit = useCallback((recipe: RecipeDetail) => {
+        setSelectedRecipe(null);
+        setFormModal({ mode: "edit", recipe });
     }, []);
 
     // ── Scraper: re-fetch recipe list after a scrape finishes ──
@@ -194,9 +208,7 @@ export default function RecipesPage({ professions, role }: Props) {
                         <button
                             type="button"
                             className="button"
-                            onClick={() =>
-                                setActionStatus({ msg: "Recipe creation form coming soon.", ok: true })
-                            }
+                            onClick={() => setFormModal({ mode: "create" })}
                         >
                             + Create Recipe
                         </button>
@@ -246,6 +258,29 @@ export default function RecipesPage({ professions, role }: Props) {
                     onDuplicate={handleDuplicate}
                     onDelete={handleDelete}
                     onClose={() => setSelectedRecipe(null)}
+                />
+            )}
+
+            {/* ── Recipe create/edit modal (U4+U6) ── */}
+            {formModal && (
+                <RecipeFormModal
+                    {...(formModal.mode === "edit" ? { mode: "edit", recipe: formModal.recipe } : { mode: "create" })}
+                    professions={professions}
+                    expansions={expansions}
+                    itemMap={itemMap}
+                    onSave={async (payload: RecipeWritePayload) => {
+                        if (formModal.mode === "create") {
+                            await createRecipe(payload);
+                            setActionStatus({ msg: "Recipe created.", ok: true });
+                        } else {
+                            await updateRecipe(formModal.recipe.id, payload);
+                            setActionStatus({ msg: "Recipe updated.", ok: true });
+                        }
+                        setFormModal(null);
+                        void fetchRecipes(filters);
+                        setTimeout(() => setActionStatus(null), 3000);
+                    }}
+                    onClose={() => setFormModal(null)}
                 />
             )}
         </div>

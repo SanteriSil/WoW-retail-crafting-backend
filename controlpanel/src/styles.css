@@ -1593,3 +1593,119 @@ body {
     border-top: 1px dashed #e2e8f0;
     padding-top: 6px;
 }
+
+/* ── Recipe form modal (U4+U6) ───────────────────────────────────────────── */
+
+.recipe-form-panel {
+    width: 600px;
+    max-width: 100vw;
+    height: 100vh;
+    overflow-y: auto;
+    background: #fff;
+    box-shadow: -8px 0 40px rgba(15, 23, 42, 0.18);
+    padding: 28px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    animation: slideInRight 180ms cubic-bezier(.2, .9, .2, 1);
+}
+
+.recipe-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.recipe-form-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    background: #f8fafc;
+}
+
+.recipe-form-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.recipe-form-ingredient-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.recipe-form-opt-group {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #ffffff;
+}
+
+/* ── Character recipe assignment (U3) ────────────────────────────────────── */
+
+.assignment-panel {
+    margin-top: 16px;
+}
+
+.assignment-section {
+    /* just a logical grouping */
+}
+
+.assignment-browser-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.assigned-recipe-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.assigned-recipe-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    font-size: 13px;
+}
+
+.browser-recipe-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.browser-recipe-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 80ms;
+}
+
+.browser-recipe-row:hover {
+    background: #f1f5f9;
+}
+
+.browser-recipe-row.assigned {
+    opacity: 0.5;
+    cursor: default;
+}

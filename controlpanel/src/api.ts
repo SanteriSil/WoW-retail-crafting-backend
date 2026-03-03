@@ -1,4 +1,4 @@
-import type { AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeSummary, UpdateCharacterRequest } from "./types";
+import type { AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -215,6 +215,20 @@ export async function duplicateRecipe(id: number): Promise<RecipeDetail> {
 
 export async function deleteRecipe(id: number): Promise<void> {
     await request<void>(`/recipes/${id}`, { method: "DELETE" });
+}
+
+export async function createRecipe(payload: RecipeWritePayload): Promise<RecipeDetail> {
+    return request<RecipeDetail>("/recipes", {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+}
+
+export async function updateRecipe(id: number, payload: RecipeWritePayload): Promise<RecipeDetail> {
+    return request<RecipeDetail>(`/recipes/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+    });
 }
 
 // ── Export ──────────────────────────────────────────────────────────────────────
