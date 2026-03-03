@@ -364,10 +364,10 @@ class AuthControllerTest {
         }
 
         @Test
-        @DisplayName("unauthenticated → 403")
-        void unauthenticatedForbidden() throws Exception {
+        @DisplayName("unauthenticated → 401")
+        void unauthenticatedUnauthorized() throws Exception {
             mockMvc.perform(get("/auth/me"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
     }
 }

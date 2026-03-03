@@ -139,3 +139,26 @@ export type RecipeFilterParams = {
   outputItemId?: number;
   ingredientItemId?: number;
 };
+
+// ── Scraper ──────────────────────────────────────────────────────────────────
+
+export type ScraperResult = {
+  professionSlug: string;
+  expansionSlug: string;
+  added: number;
+  updated: number;
+  skipped: number;
+  listingPagesVisited: number;
+  listingEntriesFound: number;
+  errors: string[];
+  autoCreatedItemIds: number[];
+  startedAt: string;
+  finishedAt: string;
+};
+
+export type ScraperStatus = {
+  running: boolean;
+  lastStartedAt: string | null;
+  lastFinishedAt: string | null;
+  lastResult: ScraperResult | null;
+};

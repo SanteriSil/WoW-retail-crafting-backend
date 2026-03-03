@@ -1,4 +1,4 @@
-import type { AllowedUser, AuthResponse, Expansion, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeSummary } from "./types";
+import type { AllowedUser, AuthResponse, Expansion, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeSummary, ScraperStatus } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -223,6 +223,19 @@ export async function deleteRecipe(id: number): Promise<void> {
  * Triggers an Excel download of matching recipes. Handles the binary response
  * by creating a temporary <a> element to initiate the browser's file-save dialog.
  */
+// ── Scraper ──────────────────────────────────────────────────────────────────
+
+export async function triggerScrape(professionSlug: string, expansionSlug: string): Promise<void> {
+    await request<void>("/scraper/trigger", {
+        method: "POST",
+        body: JSON.stringify({ professionSlug, expansionSlug })
+    });
+}
+
+export async function getScraperStatus(): Promise<ScraperStatus> {
+    return request<ScraperStatus>("/scraper/status");
+}
+
 export async function exportRecipesExcel(params: RecipeFilterParams): Promise<void> {
     const token = getToken();
     const response = await fetch(`${BASE_URL}/export/recipes/excel?${buildRecipeQuery(params)}`, {

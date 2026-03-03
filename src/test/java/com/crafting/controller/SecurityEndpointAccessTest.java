@@ -107,94 +107,94 @@ class SecurityEndpointAccessTest {
         // ── Items (write operations) ──
 
         @Test
-        @DisplayName("POST /items → 403 without auth")
+        @DisplayName("POST /items → 401 without auth")
         void createItemNoAuth() throws Exception {
             mockMvc.perform(post("/items")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"id\":1,\"name\":\"Test\"}"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("PUT /items/1 → 403 without auth")
+        @DisplayName("PUT /items/1 → 401 without auth")
         void updateItemNoAuth() throws Exception {
             mockMvc.perform(put("/items/1")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"id\":1,\"name\":\"Test\"}"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("DELETE /items/1 → 403 without auth")
+        @DisplayName("DELETE /items/1 → 401 without auth")
         void deleteItemNoAuth() throws Exception {
             mockMvc.perform(delete("/items/1"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         // ── User management ──
 
         @Test
-        @DisplayName("GET /auth/users → 403 without auth")
+        @DisplayName("GET /auth/users → 401 without auth")
         void getUsersNoAuth() throws Exception {
             mockMvc.perform(get("/auth/users"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("POST /auth/users → 403 without auth")
+        @DisplayName("POST /auth/users → 401 without auth")
         void addUserNoAuth() throws Exception {
             mockMvc.perform(post("/auth/users")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"discordId\":\"123\",\"discordUsername\":\"test\"}"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("DELETE /auth/users/123 → 403 without auth")
+        @DisplayName("DELETE /auth/users/123 → 401 without auth")
         void removeUserNoAuth() throws Exception {
             mockMvc.perform(delete("/auth/users/123"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         // ── Logs ──
 
         @Test
-        @DisplayName("GET /logs/current → 403 without auth")
+        @DisplayName("GET /logs/current → 401 without auth")
         void getLogsNoAuth() throws Exception {
             mockMvc.perform(get("/logs/current"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("POST /logs/archive → 403 without auth")
+        @DisplayName("POST /logs/archive → 401 without auth")
         void archiveLogsNoAuth() throws Exception {
             mockMvc.perform(post("/logs/archive"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("POST /logs/clear → 403 without auth")
+        @DisplayName("POST /logs/clear → 401 without auth")
         void clearLogsNoAuth() throws Exception {
             mockMvc.perform(post("/logs/clear"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         // ── AH fetch ──
 
         @Test
-        @DisplayName("GET /craftingAH/fetch → 403 without auth")
+        @DisplayName("GET /craftingAH/fetch → 401 without auth")
         void ahFetchNoAuth() throws Exception {
             mockMvc.perform(get("/craftingAH/fetch"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("POST /craftingAH/submit → 403 without auth")
+        @DisplayName("POST /craftingAH/submit → 401 without auth")
         void ahSubmitNoAuth() throws Exception {
             mockMvc.perform(post("/craftingAH/submit")
                             .contentType(MediaType.TEXT_PLAIN)
                             .content("100,50000,10"))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isUnauthorized());
         }
     }
 

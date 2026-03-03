@@ -150,12 +150,16 @@ public class RecipeService {
                                              Long ingredientItemId,
                                              String search,
                                              Pageable pageable) {
+        // Normalize null/blank search to "" so the JPQL `:search = ''` check works correctly.
+        // Passing null as a String parameter causes Hibernate 7 + PostgreSQL to infer bytea type,
+        // breaking LOWER(CONCAT('%', :search, '%')) with "function lower(bytea) does not exist".
+        String normalizedSearch = (search == null || search.isBlank()) ? "" : search;
         return recipeRepository.findActiveRecipes(
                         professionId,
                         expansionId,
                         outputItemId,
                         ingredientItemId,
-                        search,
+                        normalizedSearch,
                         pageable
                 )
                 .map(this::toRecipeSummaryDTO);
@@ -174,8 +178,9 @@ public class RecipeService {
             Long ingredientItemId,
             String search) {
         Pageable pageable = PageRequest.of(0, 500, Sort.by("name").ascending());
+        String normalizedSearch = (search == null || search.isBlank()) ? "" : search;
         return recipeRepository.findActiveRecipes(
-                        professionId, expansionId, outputItemId, ingredientItemId, search, pageable)
+                        professionId, expansionId, outputItemId, ingredientItemId, normalizedSearch, pageable)
                 .getContent()
                 .stream()
                 .map(this::toRecipeDTO)

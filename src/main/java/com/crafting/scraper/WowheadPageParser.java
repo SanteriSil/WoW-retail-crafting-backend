@@ -1,212 +1,176 @@
 package com.crafting.scraper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Extracts recipe data from Wowhead listing pages.
+ * <p>
+ * Wowhead renders its spell tables client-side via JavaScript, so the data
+ * is <b>not</b> available in the server-rendered DOM.  Instead, the raw HTML
+ * contains a JavaScript variable {@code listviewspells = [&#x2026;]} that
+ * holds every recipe entry as a JSON-like object with fields such as
+ * {@code id}, {@code name}, {@code creates}, {@code reagents}, etc.
+ * <p>
+ * This parser extracts that JS array, normalises it into valid JSON, and
+ * returns fully populated {@link RecipeDetailData} records — no detail-page
+ * fetch required.
+ */
 @Component
 public class WowheadPageParser {
 
-    private static final Pattern SPELL_ID_PATTERN = Pattern.compile("/spell=(\\d+)");
-    private static final Pattern ITEM_ID_PATTERN = Pattern.compile("/item=(\\d+)");
-    private static final Pattern QUANTITY_PATTERN = Pattern.compile("(?:x|×)\\s*(\\d+)");
+    private static final Logger log = LoggerFactory.getLogger(WowheadPageParser.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public List<ListingRecipeData> parseListingPage(String html, String pageUrl) {
-        Document document = Jsoup.parse(html, pageUrl);
-        Elements links = document.select("table a[href*=/spell=], .listview a[href*=/spell=], a[href*=/spell=]");
-
-        Map<Long, ListingRecipeData> uniqueBySpellId = new LinkedHashMap<>();
-        for (Element link : links) {
-            Long spellId = extractSpellId(link.attr("href"));
-            if (spellId == null) {
-                continue;
-            }
-            String name = link.text() == null ? "" : link.text().trim();
-            if (name.isBlank()) {
-                continue;
-            }
-            String detailUrl = normalizeUrl(link);
-            uniqueBySpellId.putIfAbsent(spellId, new ListingRecipeData(spellId, name, detailUrl));
+    /**
+     * Parses all craftable recipes from a Wowhead profession listing page.
+     *
+     * @param html    the full HTML of the listing page
+     * @param pageUrl the URL the page was fetched from (for error messages / source links)
+     * @return a list of {@link RecipeDetailData} for every recipe that has an output item
+     */
+    public List<RecipeDetailData> parseRecipesFromListingPage(String html, String pageUrl) {
+        String jsonArray = extractJsonArray(html, "listviewspells");
+        if (jsonArray == null) {
+            throw new IllegalStateException(
+                    "Listing parse failed: no listviewspells data found in " + pageUrl);
         }
 
-        if (uniqueBySpellId.isEmpty()) {
-            throw new IllegalStateException("Listing parse failed: no spell links found in " + pageUrl);
+        // Wowhead may emit bare (unquoted) object keys — normalise to strict JSON.
+        jsonArray = fixJavaScriptObjectNotation(jsonArray);
+
+        JsonNode entries;
+        try {
+            entries = MAPPER.readTree(jsonArray);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                    "Listing parse failed: could not parse listviewspells JSON in " + pageUrl, e);
         }
 
-        return List.copyOf(uniqueBySpellId.values());
-    }
+        String baseUrl = extractBaseUrl(pageUrl);
+        List<RecipeDetailData> results = new ArrayList<>();
 
-    public Optional<String> parseNextPageUrl(String html, String pageUrl) {
-        Document document = Jsoup.parse(html, pageUrl);
-
-        Element relNext = document.selectFirst("a[rel=next]");
-        if (relNext != null) {
-            return Optional.of(normalizeUrl(relNext));
-        }
-
-        Element labelNext = document.selectFirst("a[aria-label*=Next], a:matchesOwn((?i)^next$)");
-        if (labelNext != null) {
-            return Optional.of(normalizeUrl(labelNext));
-        }
-
-        return Optional.empty();
-    }
-
-    public RecipeDetailData parseRecipeDetailPage(String html, String pageUrl, long spellId) {
-        Document document = Jsoup.parse(html, pageUrl);
-
-        String recipeName = extractRecipeName(document);
-        Element outputLink = findOutputItemLink(document)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Detail parse failed: output item missing for spell " + spellId + " in " + pageUrl));
-
-        Long outputItemId = extractItemId(outputLink.attr("href"));
-        if (outputItemId == null) {
-            throw new IllegalStateException("Detail parse failed: output item ID missing for spell " + spellId + " in " + pageUrl);
-        }
-
-        String outputItemName = outputLink.text() != null ? outputLink.text().trim() : "";
-        float outputQuantity = 1.0f;
-
-        List<IngredientData> ingredients = extractRequiredIngredients(document);
-        List<OptionalIngredientGroupData> optionalGroups = extractOptionalIngredientGroups(document);
-
-        return new RecipeDetailData(
-                spellId,
-                recipeName,
-                outputItemId,
-                outputItemName,
-                outputQuantity,
-                ingredients,
-                optionalGroups,
-                pageUrl
-        );
-    }
-
-    private String extractRecipeName(Document document) {
-        Element h1 = document.selectFirst("h1");
-        if (h1 != null && !h1.text().isBlank()) {
-            return h1.text().trim();
-        }
-
-        String title = document.title();
-        if (title == null || title.isBlank()) {
-            throw new IllegalStateException("Detail parse failed: recipe title missing");
-        }
-
-        int separator = title.indexOf(" - ");
-        if (separator > 0) {
-            return title.substring(0, separator).trim();
-        }
-        return title.trim();
-    }
-
-    private Optional<Element> findOutputItemLink(Document document) {
-        Element specific = document.selectFirst("#spelldetails a[href*=/item=], #tab-created-by-spell a[href*=/item=]");
-        if (specific != null) {
-            return Optional.of(specific);
-        }
-
-        Element fallback = document.selectFirst("a[href*=/item=]");
-        return Optional.ofNullable(fallback);
-    }
-
-    private List<IngredientData> extractRequiredIngredients(Document document) {
-        Elements links = document.select("#reagents a[href*=/item=], .reagents a[href*=/item=], .spell-reagents a[href*=/item=], .listview-mode-default a[href*=/item=]");
-
-        Map<Long, IngredientData> unique = new LinkedHashMap<>();
-        for (Element link : links) {
-            Long itemId = extractItemId(link.attr("href"));
-            if (itemId == null) {
+        for (JsonNode entry : entries) {
+            // Skip non-crafting spells (no output item)
+            if (!entry.has("creates") || entry.get("creates").isNull()) {
                 continue;
             }
 
-            String name = link.text() == null ? "" : link.text().trim();
-            int quantity = inferQuantity(link);
-            unique.putIfAbsent(itemId, new IngredientData(itemId, name, quantity));
-        }
+            long spellId = entry.get("id").asLong();
+            String name = entry.has("name") ? entry.get("name").asText() : "Unknown Recipe";
 
-        return new ArrayList<>(unique.values());
-    }
+            JsonNode creates = entry.get("creates");
+            long outputItemId = creates.get(0).asLong();
+            // creates = [itemId, minQty, maxQty] — use minQty as the base output quantity
+            float outputQuantity = creates.size() > 1 ? creates.get(1).floatValue() : 1.0f;
 
-    private List<OptionalIngredientGroupData> extractOptionalIngredientGroups(Document document) {
-        Elements groupContainers = document.select(
-                "section:has(h2:matchesOwn((?i)optional)), "
-                + "div:has(> h3:matchesOwn((?i)optional)), "
-                + "div:has(> h4:matchesOwn((?i)optional))"
-        );
-
-        List<OptionalIngredientGroupData> groups = new ArrayList<>();
-        short slotIndex = 0;
-        for (Element container : groupContainers) {
-            String label = container.select("h2, h3, h4").stream()
-                    .map(Element::text)
-                    .filter(text -> text != null && !text.isBlank())
-                    .findFirst()
-                    .orElse("Optional Reagent");
-
-            Map<Long, IngredientData> options = new LinkedHashMap<>();
-            for (Element link : container.select("a[href*=/item=]")) {
-                Long itemId = extractItemId(link.attr("href"));
-                if (itemId == null) {
-                    continue;
+            List<IngredientData> reagents = new ArrayList<>();
+            if (entry.has("reagents") && entry.get("reagents").isArray()) {
+                for (JsonNode reagent : entry.get("reagents")) {
+                    long itemId = reagent.get(0).asLong();
+                    int qty = reagent.size() > 1 ? reagent.get(1).asInt() : 1;
+                    reagents.add(new IngredientData(itemId, "", qty));
                 }
-                String name = link.text() == null ? "" : link.text().trim();
-                int quantity = inferQuantity(link);
-                options.putIfAbsent(itemId, new IngredientData(itemId, name, quantity));
             }
 
-            if (!options.isEmpty()) {
-                groups.add(new OptionalIngredientGroupData(slotIndex++, label, new ArrayList<>(options.values())));
+            String detailUrl = baseUrl + "/spell=" + spellId;
+
+            results.add(new RecipeDetailData(
+                    spellId, name, outputItemId, "", outputQuantity,
+                    reagents, List.of(), detailUrl));
+        }
+
+        if (results.isEmpty()) {
+            throw new IllegalStateException(
+                    "Listing parse failed: no craftable recipes found in " + pageUrl);
+        }
+
+        log.info("Extracted {} craftable recipes from listing page: {}", results.size(), pageUrl);
+        return results;
+    }
+
+    // ---- helpers -----------------------------------------------------------
+
+    /**
+     * Finds a top-level JSON array assigned to the named JavaScript variable
+     * by bracket-counting (handles nested arrays / objects safely).
+     */
+    private String extractJsonArray(String html, String variableName) {
+        int marker = html.indexOf(variableName);
+        if (marker < 0) {
+            return null;
+        }
+
+        int bracketStart = html.indexOf('[', marker);
+        if (bracketStart < 0) {
+            return null;
+        }
+
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+
+        for (int i = bracketStart; i < html.length(); i++) {
+            char c = html.charAt(i);
+
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (c == '\\' && inString) {
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                inString = !inString;
+                continue;
+            }
+            if (inString) {
+                continue;
+            }
+
+            if (c == '[') {
+                depth++;
+            } else if (c == ']') {
+                depth--;
+                if (depth == 0) {
+                    return html.substring(bracketStart, i + 1);
+                }
             }
         }
 
-        return groups;
+        return null; // unbalanced brackets
     }
 
-    private int inferQuantity(Element link) {
-        Element row = link.closest("tr, li, div");
-        String source = row != null ? row.text() : link.text();
+    /**
+     * Ensures every object key in a JavaScript expression is double-quoted so
+     * it becomes valid JSON.  Already-quoted keys are left as-is because the
+     * regex only matches bare identifiers.
+     */
+    private String fixJavaScriptObjectNotation(String js) {
+        return js.replaceAll("(?<=[{,])\\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*:", "\"$1\":");
+    }
 
-        Matcher matcher = QUANTITY_PATTERN.matcher(source);
-        if (matcher.find()) {
-            return Integer.parseInt(matcher.group(1));
+    /**
+     * Extracts the scheme + host from a full URL.
+     * e.g. {@code https://www.wowhead.com/spells/...} → {@code https://www.wowhead.com}
+     */
+    private String extractBaseUrl(String pageUrl) {
+        int schemeEnd = pageUrl.indexOf("//");
+        if (schemeEnd < 0) {
+            return pageUrl;
         }
-        return 1;
+        int pathStart = pageUrl.indexOf('/', schemeEnd + 2);
+        return pathStart > 0 ? pageUrl.substring(0, pathStart) : pageUrl;
     }
 
-    private String normalizeUrl(Element link) {
-        String abs = link.absUrl("href");
-        if (abs != null && !abs.isBlank()) {
-            return abs;
-        }
-        return link.attr("href");
-    }
-
-    private Long extractSpellId(String href) {
-        Matcher matcher = SPELL_ID_PATTERN.matcher(href);
-        if (!matcher.find()) {
-            return null;
-        }
-        return Long.parseLong(matcher.group(1));
-    }
-
-    private Long extractItemId(String href) {
-        Matcher matcher = ITEM_ID_PATTERN.matcher(href);
-        if (!matcher.find()) {
-            return null;
-        }
-        return Long.parseLong(matcher.group(1));
-    }
+    // ---- data records -----------------------------------------------------
 
     public record ListingRecipeData(
             long spellId,

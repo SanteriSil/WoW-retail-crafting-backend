@@ -1,6 +1,7 @@
 package com.crafting.config;
 
 import com.crafting.auth.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -67,6 +68,11 @@ public class SecurityConfig {
 
                 .anyRequest().authenticated()
             )
+            // Return 401 (not 403) for missing/invalid authentication so the
+            // frontend's auto-logout handler in api.ts fires correctly.
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, authEx) ->
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -20,11 +20,8 @@ import java.net.http.HttpResponse;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReentrantLock;
@@ -32,6 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @EnableConfigurationProperties(ScraperConfig.class)
@@ -45,6 +44,8 @@ public class WowheadScraper {
     private final ExpansionRepository expansionRepository;
     private final ItemRepository itemRepository;
     private final RecipeRepository recipeRepository;
+
+    private final TransactionTemplate transactionTemplate;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ReentrantLock scrapeLock = new ReentrantLock();
@@ -60,13 +61,15 @@ public class WowheadScraper {
                           ProfessionRepository professionRepository,
                           ExpansionRepository expansionRepository,
                           ItemRepository itemRepository,
-                          RecipeRepository recipeRepository) {
+                          RecipeRepository recipeRepository,
+                          PlatformTransactionManager transactionManager) {
         this.scraperConfig = scraperConfig;
         this.pageParser = pageParser;
         this.professionRepository = professionRepository;
         this.expansionRepository = expansionRepository;
         this.itemRepository = itemRepository;
         this.recipeRepository = recipeRepository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     public boolean triggerScrape(Integer professionId, Integer expansionId) {
@@ -138,34 +141,19 @@ public class WowheadScraper {
         int updated = 0;
         int skipped = 0;
 
-        int pagesVisited = 0;
-        List<WowheadPageParser.ListingRecipeData> listingEntries = new ArrayList<>();
-        Set<String> visitedUrls = new java.util.HashSet<>();
+        // Fetch listing page and extract all recipe data from embedded JavaScript.
+        // Wowhead renders tables client-side; the raw HTML contains a JS variable
+        // `listviewspells = [{...}, ...]` with every recipe entry.
+        String html = fetchHtml(listingUrl);
+        List<WowheadPageParser.RecipeDetailData> recipes =
+                pageParser.parseRecipesFromListingPage(html, listingUrl);
 
-        String nextUrl = listingUrl;
-        while (nextUrl != null && !visitedUrls.contains(nextUrl)) {
-            visitedUrls.add(nextUrl);
-            pagesVisited++;
-            String html = fetchHtml(nextUrl);
-            listingEntries.addAll(pageParser.parseListingPage(html, nextUrl));
-            nextUrl = pageParser.parseNextPageUrl(html, nextUrl).orElse(null);
-            sleepRequestDelay();
-        }
+        log.info("Parsed {} craftable recipes from {}", recipes.size(), listingUrl);
 
-        Map<Long, WowheadPageParser.ListingRecipeData> uniqueBySpellId = new LinkedHashMap<>();
-        for (WowheadPageParser.ListingRecipeData entry : listingEntries) {
-            uniqueBySpellId.putIfAbsent(entry.spellId(), entry);
-        }
-
-        for (WowheadPageParser.ListingRecipeData listing : uniqueBySpellId.values()) {
+        for (WowheadPageParser.RecipeDetailData detail : recipes) {
             try {
-                String detailHtml = fetchHtml(listing.detailUrl());
-                WowheadPageParser.RecipeDetailData detail = pageParser.parseRecipeDetailPage(
-                        detailHtml,
-                        listing.detailUrl(),
-                        listing.spellId()
-                );
-                UpsertOutcome outcome = upsertScrapedRecipe(detail, profession, expansion, autoCreatedItemIds);
+                UpsertOutcome outcome = transactionTemplate.execute(status ->
+                        upsertScrapedRecipe(detail, profession, expansion, autoCreatedItemIds));
                 if (outcome == UpsertOutcome.ADDED) {
                     added++;
                 } else if (outcome == UpsertOutcome.UPDATED) {
@@ -174,9 +162,8 @@ public class WowheadScraper {
                     skipped++;
                 }
             } catch (Exception e) {
-                errors.add("Spell " + listing.spellId() + ": " + e.getMessage());
+                errors.add("Spell " + detail.spellId() + ": " + e.getMessage());
             }
-            sleepRequestDelay();
         }
 
         return new ScraperResult(
@@ -185,8 +172,8 @@ public class WowheadScraper {
                 added,
                 updated,
                 skipped,
-                pagesVisited,
-                uniqueBySpellId.size(),
+                1,
+                recipes.size(),
                 List.copyOf(errors),
                 List.copyOf(autoCreatedItemIds),
                 startedAt,

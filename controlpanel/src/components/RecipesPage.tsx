@@ -18,6 +18,7 @@ import type {
 import RecipeDetailPanel from "./RecipeDetailPanel";
 import RecipeFilters from "./RecipeFilters";
 import RecipeList from "./RecipeList";
+import ScraperPanel from "./ScraperPanel";
 
 type Props = {
     professions: Profession[];
@@ -155,6 +156,11 @@ export default function RecipesPage({ professions, role }: Props) {
         setTimeout(() => setActionStatus(null), 3000);
     }, []);
 
+    // ── Scraper: re-fetch recipe list after a scrape finishes ──
+    const handleScrapeComplete = useCallback(() => {
+        void fetchRecipes(filters);
+    }, [fetchRecipes, filters]);
+
     return (
         <div className="recipes-page">
             {/* ── Header bar ── */}
@@ -197,6 +203,15 @@ export default function RecipesPage({ professions, role }: Props) {
                     )}
                 </div>
             </div>
+
+            {/* ── Scraper (admin only) ── */}
+            {isAdmin && (
+                <ScraperPanel
+                    professions={professions}
+                    expansions={expansions}
+                    onScrapeComplete={handleScrapeComplete}
+                />
+            )}
 
             {/* ── Filters ── */}
             <RecipeFilters
