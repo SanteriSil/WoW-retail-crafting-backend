@@ -1,8 +1,8 @@
 package com.crafting.model;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -52,11 +52,11 @@ public class WowCharacter {
 
     @Builder.Default
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CharacterProfession> professions = new ArrayList<>();
+    private Set<CharacterProfession> professions = new HashSet<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "character", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CharacterRecipe> assignedRecipes = new ArrayList<>();
+    private Set<CharacterRecipe> assignedRecipes = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
