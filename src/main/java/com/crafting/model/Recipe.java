@@ -91,6 +91,18 @@ public class Recipe {
     @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RecipeOptionalIngredientGroup> optionalIngredientGroups = new ArrayList<>();
 
+    @Builder.Default
+    @Column(name = "multicraftable", nullable = false)
+    private boolean multicraftable = false;
+
+    @Builder.Default
+    @Column(name = "multicraft_multiplier", nullable = false)
+    private Float multicraftMultiplier = 1.2f;
+
+    @Builder.Default
+    @Column(name = "resourcefulness_factor", nullable = false)
+    private Float resourcefulnessFactor = 0.3f;
+
 
     public Recipe(String name, Item outputItem) {
         this.name = name;
@@ -98,6 +110,9 @@ public class Recipe {
         this.outputQuantity = 1.0f;
         this.source = "MANUAL";
         this.deleted = false;
+        this.multicraftable = false;
+        this.multicraftMultiplier = 1.2f;
+        this.resourcefulnessFactor = 0.3f;
     }
 
 }

@@ -1,0 +1,3 @@
+ALTER TABLE recipes ADD COLUMN multicraftable BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE recipes ADD COLUMN multicraft_multiplier REAL NOT NULL DEFAULT 1.2;
+ALTER TABLE recipes ADD COLUMN resourcefulness_factor REAL NOT NULL DEFAULT 0.3;

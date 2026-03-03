@@ -4,11 +4,16 @@ import com.crafting.blizz.BlizzApiClient;
 import com.crafting.blizz.BlizzConfig;
 import com.crafting.blizz.TokenService;
 import com.crafting.model.CharacterProfession;
+import com.crafting.model.CharacterRecipe;
 import com.crafting.model.Profession;
+import com.crafting.model.Recipe;
 import com.crafting.model.WowCharacter;
 import com.crafting.model.dto.CharacterDTO;
+import com.crafting.model.dto.RecipeSummaryDTO;
 import com.crafting.repository.CharacterRepository;
+import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.ProfessionRepository;
+import com.crafting.repository.RecipeRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,18 +34,27 @@ public class CharacterService {
     private static final int MAX_PROFESSIONS = 2;
 
     private final CharacterRepository characterRepository;
+    private final CharacterRecipeRepository characterRecipeRepository;
     private final ProfessionRepository professionRepository;
+    private final RecipeRepository recipeRepository;
+    private final ProfitCalculationService profitCalculationService;
     private final BlizzApiClient blizzApiClient;
     private final TokenService tokenService;
     private final BlizzConfig blizzConfig;
 
     public CharacterService(CharacterRepository characterRepository,
+                            CharacterRecipeRepository characterRecipeRepository,
                             ProfessionRepository professionRepository,
+                            RecipeRepository recipeRepository,
+                            ProfitCalculationService profitCalculationService,
                             BlizzApiClient blizzApiClient,
                             TokenService tokenService,
                             BlizzConfig blizzConfig) {
         this.characterRepository = characterRepository;
+        this.characterRecipeRepository = characterRecipeRepository;
         this.professionRepository = professionRepository;
+        this.recipeRepository = recipeRepository;
+        this.profitCalculationService = profitCalculationService;
         this.blizzApiClient = blizzApiClient;
         this.tokenService = tokenService;
         this.blizzConfig = blizzConfig;
@@ -122,6 +136,63 @@ public class CharacterService {
         character.setIconUrl(iconUrl);
         WowCharacter saved = characterRepository.save(character);
         return toDTO(saved);
+    }
+
+    // ── Recipe Assignments ──────────────────────────────────────────────────
+
+    public List<RecipeSummaryDTO> getAssignedRecipes(Long discordId, Long characterId) {
+        WowCharacter character = findOwnedCharacter(discordId, characterId);
+        return characterRecipeRepository.findByCharacterId(character.getId()).stream()
+                .map(cr -> {
+                    Recipe r = cr.getRecipe();
+                    var profit = profitCalculationService.calculate(r);
+                    return new RecipeSummaryDTO(
+                            r.getId(), r.getName(), r.getWowheadSpellId(),
+                            r.getOutputItem().getId(), r.getOutputItem().getName(),
+                            r.getOutputQuantity(),
+                            r.getProfession() != null ? r.getProfession().getId() : null,
+                            r.getProfession() != null ? r.getProfession().getName() : null,
+                            r.getExpansion().getId(), r.getExpansion().getName(),
+                            r.getSource(), profit.profit(), profit.calculable(),
+                            r.getUpdatedAt()
+                    );
+                })
+                .toList();
+    }
+
+    @Transactional
+    public void assignRecipes(Long discordId, Long characterId, List<Long> recipeIds) {
+        WowCharacter character = findOwnedCharacter(discordId, characterId);
+        Set<Integer> charProfessionIds = character.getProfessions().stream()
+                .map(cp -> cp.getProfession().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
+        for (Long recipeId : recipeIds) {
+            if (characterRecipeRepository.existsByCharacterIdAndRecipeId(character.getId(), recipeId)) {
+                continue; // already assigned, skip silently
+            }
+            Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
+
+            if (recipe.getProfession() != null && !charProfessionIds.contains(recipe.getProfession().getId())) {
+                throw new IllegalArgumentException(
+                        "Recipe '" + recipe.getName() + "' requires profession "
+                                + recipe.getProfession().getName()
+                                + " which character '" + character.getName() + "' does not have");
+            }
+
+            CharacterRecipe cr = CharacterRecipe.builder()
+                    .character(character)
+                    .recipe(recipe)
+                    .build();
+            characterRecipeRepository.save(cr);
+        }
+    }
+
+    @Transactional
+    public void unassignRecipe(Long discordId, Long characterId, Long recipeId) {
+        WowCharacter character = findOwnedCharacter(discordId, characterId);
+        characterRecipeRepository.deleteByCharacterIdAndRecipeId(character.getId(), recipeId);
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────

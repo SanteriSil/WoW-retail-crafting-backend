@@ -1,6 +1,7 @@
 package com.crafting.controller;
 
 import com.crafting.model.dto.CharacterDTO;
+import com.crafting.model.dto.RecipeSummaryDTO;
 import com.crafting.service.CharacterService;
 import com.crafting.service.ConflictException;
 import com.crafting.service.ResourceNotFoundException;
@@ -91,6 +92,47 @@ public class CharacterController {
         }
     }
 
+    // ── Recipe Assignment Endpoints ─────────────────────────────────────────
+
+    @GetMapping("/{id}/recipes")
+    public ResponseEntity<?> getAssignedRecipes(@PathVariable Long id, Authentication authentication) {
+        try {
+            Long discordId = parseDiscordId(authentication);
+            List<RecipeSummaryDTO> recipes = characterService.getAssignedRecipes(discordId, id);
+            return ResponseEntity.ok(recipes);
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/recipes")
+    public ResponseEntity<?> assignRecipes(@PathVariable Long id,
+                                           @RequestBody AssignRecipesRequest request,
+                                           Authentication authentication) {
+        try {
+            Long discordId = parseDiscordId(authentication);
+            characterService.assignRecipes(discordId, id, request.recipeIds());
+            return ResponseEntity.ok(Map.of("assigned", request.recipeIds().size()));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}/recipes/{recipeId}")
+    public ResponseEntity<?> unassignRecipe(@PathVariable Long id,
+                                            @PathVariable Long recipeId,
+                                            Authentication authentication) {
+        try {
+            Long discordId = parseDiscordId(authentication);
+            characterService.unassignRecipe(discordId, id, recipeId);
+            return ResponseEntity.noContent().build();
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     // ── Private helpers ─────────────────────────────────────────────────────
 
     private Long parseDiscordId(Authentication authentication) {
@@ -119,5 +161,9 @@ public class CharacterController {
             Integer professionId,
             Float multicraftPercent,
             Float resourcefulnessPercent
+    ) {}
+
+    private record AssignRecipesRequest(
+            List<Long> recipeIds
     ) {}
 }

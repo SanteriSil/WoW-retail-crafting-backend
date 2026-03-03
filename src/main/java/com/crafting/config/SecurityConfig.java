@@ -53,6 +53,9 @@ public class SecurityConfig {
                 // ── ALLOWED_USER or higher: character management ──────────
                 .requestMatchers("/characters", "/characters/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
 
+                // ── ALLOWED_USER or higher: dashboard ─────────────────────
+                .requestMatchers("/dashboard", "/dashboard/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
+
                 // ── OWNER only: promote / demote admins ───────────────────
                 .requestMatchers("/auth/users/*/promote", "/auth/users/*/demote").hasRole("OWNER")
 
