@@ -18,6 +18,7 @@ public record RecipeDTO(
         boolean multicraftable,
         Float multicraftMultiplier,
         Float resourcefulnessFactor,
+        String notes,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

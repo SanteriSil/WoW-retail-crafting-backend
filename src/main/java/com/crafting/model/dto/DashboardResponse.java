@@ -27,7 +27,8 @@ public record DashboardResponse(
             Float resourcefulnessFactor,
             Float multicraftPercent,
             Float resourcefulnessPercent,
-            List<Long> missingPriceItemIds
+            List<Long> missingPriceItemIds,
+            boolean hasNotes
     ) {
     }
 }

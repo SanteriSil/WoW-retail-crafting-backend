@@ -16,6 +16,7 @@ public record RecipeSummaryDTO(
         String source,
         Long estimatedProfit,
         boolean profitCalculable,
+        boolean hasNotes,
         OffsetDateTime updatedAt
 ) {
 }

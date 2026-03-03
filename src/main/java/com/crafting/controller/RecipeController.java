@@ -170,7 +170,8 @@ public class RecipeController {
                 optionalGroups,
                 request.multicraftable(),
                 request.multicraftMultiplier(),
-                request.resourcefulnessFactor()
+                request.resourcefulnessFactor(),
+                request.notes()
         );
     }
 
@@ -197,7 +198,8 @@ public class RecipeController {
             List<OptionalIngredientGroupRequest> optionalIngredientGroups,
             Boolean multicraftable,
             Float multicraftMultiplier,
-            Float resourcefulnessFactor
+            Float resourcefulnessFactor,
+            String notes
     ) {
     }
 

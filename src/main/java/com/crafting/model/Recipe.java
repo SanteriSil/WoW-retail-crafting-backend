@@ -103,6 +103,9 @@ public class Recipe {
     @Column(name = "resourcefulness_factor", nullable = false)
     private Float resourcefulnessFactor = 0.3f;
 
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
 
     public Recipe(String name, Item outputItem) {
         this.name = name;

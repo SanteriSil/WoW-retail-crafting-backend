@@ -83,7 +83,8 @@ public class CraftDashboardService {
                     recipe.getResourcefulnessFactor(),
                     multicraftPct,
                     resourcefulnessPct,
-                    adjustedProfit.missingPrices()
+                    adjustedProfit.missingPrices(),
+                    recipe.getNotes() != null && !recipe.getNotes().isBlank()
             ));
         }
 

@@ -42,6 +42,7 @@ public class SecurityConfig {
                 // ── Public (no auth required) ──────────────────────────────
                 .requestMatchers("/auth/discord/**", "/auth/dev/**",
                                  "/health", "/actuator/**", "/h2-console/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/access-requests").permitAll()
                 .requestMatchers(HttpMethod.GET, "/items", "/items/ids", "/items/ordered").permitAll()
                 .requestMatchers(HttpMethod.GET, "/professions").permitAll()
                 .requestMatchers(HttpMethod.GET, "/expansions").permitAll()
@@ -62,6 +63,8 @@ public class SecurityConfig {
 
                 // ── ADMIN or higher: everything else that requires login ───
                 .requestMatchers(HttpMethod.GET, "/auth/me").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.GET, "/auth/access-requests").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers("/auth/access-requests/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers("/auth/users/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.POST, "/items/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.PUT,  "/items/**").hasAnyRole("ADMIN", "OWNER")

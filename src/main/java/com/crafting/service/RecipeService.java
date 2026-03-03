@@ -363,6 +363,7 @@ public class RecipeService {
         recipe.setMulticraftable(command.multicraftable() != null ? command.multicraftable() : false);
         recipe.setMulticraftMultiplier(command.multicraftMultiplier() != null ? command.multicraftMultiplier() : 1.2f);
         recipe.setResourcefulnessFactor(command.resourcefulnessFactor() != null ? command.resourcefulnessFactor() : 0.3f);
+        recipe.setNotes(command.notes());
 
         recipe.getIngredients().clear();
         if (command.ingredients() != null) {
@@ -426,6 +427,7 @@ public class RecipeService {
                 recipe.getSource(),
                 profit.profit(),
                 profit.calculable(),
+                recipe.getNotes() != null && !recipe.getNotes().isBlank(),
                 recipe.getUpdatedAt()
         );
     }
@@ -481,6 +483,7 @@ public class RecipeService {
                 recipe.isMulticraftable(),
                 recipe.getMulticraftMultiplier(),
                 recipe.getResourcefulnessFactor(),
+                recipe.getNotes(),
                 recipe.getCreatedAt(),
                 recipe.getUpdatedAt()
         );
@@ -515,7 +518,8 @@ public class RecipeService {
             List<OptionalIngredientGroupCommand> optionalIngredientGroups,
             Boolean multicraftable,
             Float multicraftMultiplier,
-            Float resourcefulnessFactor
+            Float resourcefulnessFactor,
+            String notes
     ) {
     }
 

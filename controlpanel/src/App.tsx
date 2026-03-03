@@ -5,14 +5,12 @@ import CreateItemForm from "./components/CreateItemForm";
 import UpdateItemForm from "./components/UpdateItemForm";
 import DeleteItemForm from "./components/DeleteItemForm";
 import ItemList from "./components/ItemList";
-import LogsPanel from "./components/LogsPanel";
-import AuctionSubmitPanel from "./components/AuctionSubmitPanel";
 import SheetBuilder from "./components/SheetBuilder";
 import LoginPage from "./components/LoginPage";
-import UserManagement from "./components/UserManagement";
 import RecipesPage from "./components/RecipesPage";
 import CharactersPage from "./components/CharactersPage";
 import DashboardPage from "./components/DashboardPage";
+import AdminPage from "./components/AdminPage";
 
 export default function App() {
     // ── Auth state ──
@@ -89,7 +87,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
     const [showMissingIcons, setShowMissingIcons] = useState(false);
     const [showNoProfession, setShowNoProfession] = useState(false);
     const [showVendorItems, setShowVendorItems] = useState(false);
-    const [activeTab, setActiveTab] = useState<"items" | "recipes" | "characters" | "dashboard">("items");
+    const [activeTab, setActiveTab] = useState<"items" | "recipes" | "characters" | "dashboard" | "admin">("dashboard");
 
     const role = user?.role ?? null;
     // Frontend hides UI elements for UX only; backend enforces auth on every request.
@@ -234,57 +232,58 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                     <button className="button secondary" type="button" onClick={onLogout}>
                         Logout
                     </button>
-                    <span className="separator" />
-                    <button className="button secondary" type="button" onClick={refreshItems} disabled={activeTab !== "items"}>
-                        Refresh
-                    </button>
-                    <span className="separator" />
-                    {isAdmin && (
-                        <button className="button" type="button" onClick={handleAhRefresh} disabled={ahBusy}>
-                            {ahBusy ? "Refreshing..." : "AH Refresh"}
-                        </button>
-                    )}
-                    {(ahMessage || ahError) && (
-                        <span className={`status-inline ${ahError ? "status-error" : "status-success"}`}>
-                            {ahError ?? ahMessage}
-                        </span>
+                    {isAdmin && activeTab === "items" && (
+                        <>
+                            <span className="separator" />
+                            <button className="button secondary" type="button" onClick={refreshItems}>
+                                Refresh
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
 
             {/* ── Top-level tab navigation ── */}
             <div className="app-tabs">
-                <button
-                    type="button"
-                    className={`app-tab${activeTab === "items" ? " active" : ""}`}
-                    onClick={() => setActiveTab("items")}
-                >
-                    Items
-                </button>
-                <button
-                    type="button"
-                    className={`app-tab${activeTab === "recipes" ? " active" : ""}`}
-                    onClick={() => setActiveTab("recipes")}
-                >
-                    Recipes
-                </button>
-                {/* Characters + Dashboard visible to ALLOWED_USER+ */}
-                {(role === "ALLOWED_USER" || isAdmin) && (
+                {isAdmin && (
                     <button
                         type="button"
-                        className={`app-tab${activeTab === "characters" ? " active" : ""}`}
-                        onClick={() => setActiveTab("characters")}
+                        className={`app-tab${activeTab === "items" ? " active" : ""}`}
+                        onClick={() => setActiveTab("items")}
                     >
-                        Characters
+                        Items
                     </button>
                 )}
-                {(role === "ALLOWED_USER" || isAdmin) && (
+                {isAdmin && (
                     <button
                         type="button"
-                        className={`app-tab${activeTab === "dashboard" ? " active" : ""}`}
-                        onClick={() => setActiveTab("dashboard")}
+                        className={`app-tab${activeTab === "recipes" ? " active" : ""}`}
+                        onClick={() => setActiveTab("recipes")}
                     >
-                        Dashboard
+                        Recipes
+                    </button>
+                )}
+                <button
+                    type="button"
+                    className={`app-tab${activeTab === "characters" ? " active" : ""}`}
+                    onClick={() => setActiveTab("characters")}
+                >
+                    Characters
+                </button>
+                <button
+                    type="button"
+                    className={`app-tab${activeTab === "dashboard" ? " active" : ""}`}
+                    onClick={() => setActiveTab("dashboard")}
+                >
+                    Dashboard
+                </button>
+                {isAdmin && (
+                    <button
+                        type="button"
+                        className={`app-tab${activeTab === "admin" ? " active" : ""}`}
+                        onClick={() => setActiveTab("admin")}
+                    >
+                        Admin
                     </button>
                 )}
             </div>
@@ -307,6 +306,21 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                 <div className="card" style={{ marginTop: 16 }}>
                     <DashboardPage professions={professions} />
                 </div>
+            )}
+
+            {activeTab === "admin" && isAdmin && (
+                <AdminPage
+                    items={items}
+                    professions={professions}
+                    onAhRefresh={handleAhRefresh}
+                    ahBusy={ahBusy}
+                    ahMessage={ahMessage}
+                    ahError={ahError}
+                    onArchiveLogs={handleArchiveLogs}
+                    onClearLogs={handleClearLogs}
+                    logsMessage={logsMessage}
+                    logsBusy={logsBusy}
+                />
             )}
 
             {activeTab === "items" && (
@@ -414,11 +428,6 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                                 />
                             ) : null}
                         </div>
-                    </div>
-                    <AuctionSubmitPanel items={items} professions={professions} />
-                    <LogsPanel onArchive={handleArchiveLogs} onClear={handleClearLogs} message={logsMessage} busy={logsBusy} />
-                    <div className="card">
-                        <UserManagement />
                     </div>
                 </div>
             </div>
