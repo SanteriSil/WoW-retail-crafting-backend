@@ -262,3 +262,11 @@ export type DashboardResponse = {
   totalAdjustedProfit: number;
   totalCrafts: number;
 };
+
+// ── Calculator (U10) ────────────────────────────────────────────────────────
+
+export type CalculatorEntry = {
+  characterId: number;
+  recipeId: number;
+  quantity: number;
+};

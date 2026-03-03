@@ -1836,3 +1836,113 @@ body {
     margin-left: 6px;
     font-size: 12px;
 }
+
+/* ── Crafting Calculator (U10) ───────────────────────────────────────────────── */
+
+.calculator-panel {
+    margin-top: 16px;
+}
+
+.calculator-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 15px;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.calc-qty-input {
+    width: 48px;
+    padding: 3px 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.calc-qty-input:focus {
+    outline: none;
+    border-color: #7c93ff;
+}
+
+.calc-totals-row {
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+}
+
+.calc-totals-row td {
+    padding: 10px 12px;
+}
+
+.calc-row-unavailable td {
+    background: #fff7ed;
+}
+
+.calc-add-btn {
+    padding: 2px 6px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    transition: background 80ms, border-color 80ms;
+}
+
+.calc-add-btn:hover {
+    background: #eff6ff !important;
+    border-color: #93c5fd !important;
+}
+
+/* ── Shopping List (U10) ─────────────────────────────────────────────────────── */
+
+.shopping-list {
+    margin-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 12px;
+}
+
+.shopping-list-header {
+    font-weight: 700;
+    font-size: 14px;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+.shopping-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.shopping-list-table th,
+.shopping-list-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.shopping-list-table th {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #f8fafc;
+}
+
+.shopping-list-table tr:last-child td {
+    border-bottom: none;
+}
+
+.shopping-list-total {
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+}
+
+.shopping-list-total td {
+    padding: 8px;
+    font-size: 13px;
+}

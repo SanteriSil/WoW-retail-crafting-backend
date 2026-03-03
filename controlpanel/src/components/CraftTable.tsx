@@ -11,6 +11,7 @@ type Props = {
     loading: boolean;
     overrides: CraftOverrides;
     onOverrideChange: (overrides: CraftOverrides) => void;
+    onAddToCalculator?: (craft: DashboardCraft) => void;
 };
 
 const COLUMNS: { key: string; label: string; sortable: boolean; align?: "right" }[] = [
@@ -20,9 +21,10 @@ const COLUMNS: { key: string; label: string; sortable: boolean; align?: "right" 
     { key: "outputItemName", label: "Output", sortable: false },
     { key: "adjustedProfit", label: "Adj. Profit", sortable: true, align: "right" },
     { key: "baseProfit", label: "Base Profit", sortable: true, align: "right" },
+    { key: "_calc", label: "", sortable: false },
 ];
 
-export default function CraftTable({ crafts, sort, direction, onSortChange, loading, overrides, onOverrideChange }: Props) {
+export default function CraftTable({ crafts, sort, direction, onSortChange, loading, overrides, onOverrideChange, onAddToCalculator }: Props) {
     const [popoverKey, setPopoverKey] = useState<string | null>(null);
 
     if (crafts.length === 0 && !loading) {
@@ -124,6 +126,20 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                                     <span className={`muted ${profitClass(c.baseProfit.calculable, c.baseProfit.profit)}`} style={{ opacity: 0.6 }}>
                                         {formatGold(c.baseProfit.profit)}
                                     </span>
+                                </td>
+                                <td style={{ textAlign: "center", width: 36 }}>
+                                    {onAddToCalculator && (
+                                        <button
+                                            className="button small ghost calc-add-btn"
+                                            title="Add to calculator"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAddToCalculator(c);
+                                            }}
+                                        >
+                                            🧮
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         );

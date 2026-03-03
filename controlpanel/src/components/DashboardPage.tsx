@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
-import { getCharacters, getDashboardCrafts } from "../api";
-import type { Character, CraftOverrides, DashboardResponse, Profession } from "../types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCharacters, getDashboardCrafts, getRecipe } from "../api";
+import type { CalculatorEntry, Character, CraftOverrides, DashboardCraft, DashboardResponse, Profession, RecipeDetail } from "../types";
 import DashboardFilters from "./DashboardFilters";
 import DashboardSummary from "./DashboardSummary";
 import CraftTable from "./CraftTable";
+import CraftingCalculator from "./CraftingCalculator";
 
 type Props = {
     professions: Profession[];
@@ -14,6 +15,14 @@ function loadOverrides(): CraftOverrides {
         return JSON.parse(localStorage.getItem("craft-overrides") || "{}");
     } catch {
         return {};
+    }
+}
+
+function loadCalcEntries(): CalculatorEntry[] {
+    try {
+        return JSON.parse(localStorage.getItem("craft-calculator") || "[]");
+    } catch {
+        return [];
     }
 }
 
@@ -33,9 +42,83 @@ export default function DashboardPage({ professions }: Props) {
     // U8: Override state
     const [overrides, setOverrides] = useState<CraftOverrides>(loadOverrides);
 
+    // U10: Calculator state
+    const [calcEntries, setCalcEntries] = useState<CalculatorEntry[]>(loadCalcEntries);
+    const [recipeCache, setRecipeCache] = useState<Map<number, RecipeDetail>>(new Map());
+    const fetchingRef = useRef<Set<number>>(new Set());
+
     const handleOverrideChange = (next: CraftOverrides) => {
         setOverrides(next);
         localStorage.setItem("craft-overrides", JSON.stringify(next));
+    };
+
+    const persistCalc = (entries: CalculatorEntry[]) => {
+        setCalcEntries(entries);
+        localStorage.setItem("craft-calculator", JSON.stringify(entries));
+    };
+
+    // Fetch recipe details for calculator entries that aren't cached
+    useEffect(() => {
+        const missing = calcEntries
+            .map((e) => e.recipeId)
+            .filter((id) => !recipeCache.has(id) && !fetchingRef.current.has(id));
+
+        const unique = [...new Set(missing)];
+        if (unique.length === 0) return;
+
+        for (const id of unique) fetchingRef.current.add(id);
+
+        Promise.all(
+            unique.map((id) =>
+                getRecipe(id)
+                    .then((detail) => ({ id, detail }))
+                    .catch(() => ({ id, detail: null }))
+            )
+        ).then((results) => {
+            setRecipeCache((prev) => {
+                const next = new Map(prev);
+                for (const { id, detail } of results) {
+                    if (detail) next.set(id, detail);
+                    fetchingRef.current.delete(id);
+                }
+                return next;
+            });
+        });
+    }, [calcEntries, recipeCache]);
+
+    const handleAddToCalculator = (craft: DashboardCraft) => {
+        setCalcEntries((prev) => {
+            const idx = prev.findIndex(
+                (e) => e.characterId === craft.characterId && e.recipeId === craft.recipeId
+            );
+            let next: CalculatorEntry[];
+            if (idx >= 0) {
+                next = [...prev];
+                next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+            } else {
+                next = [...prev, { characterId: craft.characterId, recipeId: craft.recipeId, quantity: 1 }];
+            }
+            localStorage.setItem("craft-calculator", JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const handleCalcUpdateQty = (characterId: number, recipeId: number, quantity: number) => {
+        const next = calcEntries.map((e) =>
+            e.characterId === characterId && e.recipeId === recipeId ? { ...e, quantity } : e
+        );
+        persistCalc(next);
+    };
+
+    const handleCalcRemove = (characterId: number, recipeId: number) => {
+        const next = calcEntries.filter(
+            (e) => !(e.characterId === characterId && e.recipeId === recipeId)
+        );
+        persistCalc(next);
+    };
+
+    const handleCalcClear = () => {
+        persistCalc([]);
     };
 
     useEffect(() => {
@@ -114,6 +197,17 @@ export default function DashboardPage({ professions }: Props) {
                         loading={loading}
                         overrides={overrides}
                         onOverrideChange={handleOverrideChange}
+                        onAddToCalculator={handleAddToCalculator}
+                    />
+
+                    <CraftingCalculator
+                        entries={calcEntries}
+                        crafts={dashboard.crafts}
+                        overrides={overrides}
+                        recipeCache={recipeCache}
+                        onUpdateQuantity={handleCalcUpdateQty}
+                        onRemove={handleCalcRemove}
+                        onClear={handleCalcClear}
                     />
                 </>
             )}
