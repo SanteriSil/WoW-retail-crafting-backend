@@ -50,6 +50,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/recipes", "/recipes/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.GET, "/export/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
 
+                // ── ALLOWED_USER or higher: character management ──────────
+                .requestMatchers("/characters", "/characters/**").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
+
                 // ── OWNER only: promote / demote admins ───────────────────
                 .requestMatchers("/auth/users/*/promote", "/auth/users/*/demote").hasRole("OWNER")
 

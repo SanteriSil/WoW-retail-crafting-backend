@@ -2,6 +2,8 @@ package com.crafting.blizz;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -12,8 +14,10 @@ import java.util.Optional;
 
 @Service
 public class BlizzApiClient {
+    private static final Logger log = LoggerFactory.getLogger(BlizzApiClient.class);
     private static final String BASE_URL = "https://eu.api.blizzard.com/data/wow/auctions/commodities";
     private static final String ITEM_MEDIA_URL = "https://eu.api.blizzard.com/data/wow/media/item/";
+    private static final String CHARACTER_MEDIA_URL = "https://eu.api.blizzard.com/profile/wow/character/%s/%s/character-media?namespace=profile-eu&locale=en_GB";
     private final RestTemplate rest = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -98,6 +102,45 @@ public class BlizzApiClient {
             return Optional.empty();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse item media response for " + itemId, e);
+        }
+    }
+
+    /**
+     * Fetches the avatar URL for a WoW character from the Blizzard Character Media API.
+     * Best-effort: returns {@code Optional.empty()} if the character is not found, the
+     * profile is private, or the API is unavailable.
+     *
+     * @param realmSlug     lowercase, hyphen-separated realm name (e.g. "argent-dawn")
+     * @param characterName lowercase character name
+     * @param accessToken   Blizzard OAuth client-credentials token
+     */
+    public Optional<String> fetchCharacterAvatar(String realmSlug, String characterName, String accessToken) {
+        String url = String.format(CHARACTER_MEDIA_URL, realmSlug, characterName);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        HttpEntity<Void> req = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> resp = rest.exchange(url, HttpMethod.GET, req, String.class);
+            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+                return Optional.empty();
+            }
+            JsonNode root = objectMapper.readTree(resp.getBody());
+            JsonNode assets = root.path("assets");
+            if (assets.isArray()) {
+                for (JsonNode asset : assets) {
+                    if ("avatar".equalsIgnoreCase(asset.path("key").asText(""))) {
+                        String value = asset.path("value").asText("");
+                        if (!value.isBlank()) {
+                            return Optional.of(value);
+                        }
+                    }
+                }
+            }
+            return Optional.empty();
+        } catch (Exception e) {
+            log.warn("Failed to fetch character avatar for {}/{}: {}", realmSlug, characterName, e.getMessage());
+            return Optional.empty();
         }
     }
 }
