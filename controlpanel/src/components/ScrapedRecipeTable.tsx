@@ -1,12 +1,35 @@
-import type { ScrapedRecipe } from "../types";
+import { useState } from "react";
+import type { Item, ScrapedRecipe } from "../types";
+import ReagentEditor from "./ReagentEditor";
 
 type Props = {
     recipes: ScrapedRecipe[];
     onChange: (recipes: ScrapedRecipe[]) => void;
+    itemMap: Map<number, Item>;
 };
 
-export default function ScrapedRecipeTable({ recipes, onChange }: Props) {
+export default function ScrapedRecipeTable({ recipes, onChange, itemMap }: Props) {
     const selectedCount = recipes.filter((r) => r.selected).length;
+    const [openReagentIdx, setOpenReagentIdx] = useState<number | null>(null);
+
+    const updateReagents = (index: number, reagents: { itemId: number; quantity: number }[]) => {
+        const next = [...recipes];
+        next[index] = { ...next[index], reagents };
+        onChange(next);
+    };
+
+    const renderItemCell = (itemId: number) => {
+        const item = itemMap.get(itemId);
+        if (!item) return <span className="muted">#{itemId}</span>;
+        return (
+            <span className="item-with-icon">
+                {item.iconUrl && (
+                    <img src={item.iconUrl} alt={item.name} width={18} height={18} loading="lazy" />
+                )}
+                {item.name}
+            </span>
+        );
+    };
 
     const toggleAll = (checked: boolean) => {
         onChange(recipes.map((r) => ({ ...r, selected: checked })));
@@ -90,7 +113,7 @@ export default function ScrapedRecipeTable({ recipes, onChange }: Props) {
                                         onChange={(e) => updateName(i, e.target.value)}
                                     />
                                 </td>
-                                <td>{r.outputItemId}</td>
+                                <td>{renderItemCell(r.outputItemId)}</td>
                                 <td style={{ textAlign: "right" }}>
                                     <input
                                         type="number"
@@ -101,7 +124,23 @@ export default function ScrapedRecipeTable({ recipes, onChange }: Props) {
                                         onChange={(e) => updateQuantity(i, parseFloat(e.target.value) || 1)}
                                     />
                                 </td>
-                                <td style={{ textAlign: "right" }}>{r.reagents.length}</td>
+                                <td style={{ textAlign: "right", position: "relative" }}>
+                                    <button
+                                        type="button"
+                                        className="reagent-badge"
+                                        onClick={() => setOpenReagentIdx(openReagentIdx === i ? null : i)}
+                                    >
+                                        🧪 {r.reagents.length} reagent{r.reagents.length !== 1 ? "s" : ""}
+                                    </button>
+                                    {openReagentIdx === i && (
+                                        <ReagentEditor
+                                            reagents={r.reagents}
+                                            itemMap={itemMap}
+                                            onChange={(reagents) => updateReagents(i, reagents)}
+                                            onClose={() => setOpenReagentIdx(null)}
+                                        />
+                                    )}
+                                </td>
                                 <td>
                                     <span className={`scrape-status-badge ${r.status}`}>
                                         {r.status === "new" ? "New" : "Exists"}

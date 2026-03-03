@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchWowheadProxy, getExistingSpellIds, importRecipes } from "../api";
-import type { Expansion, ImportResult, Profession, RecipeImportCommand, ScrapedRecipe } from "../types";
+import { fetchWowheadProxy, getExistingSpellIds, getItems, importRecipes } from "../api";
+import type { Expansion, ImportResult, Item, Profession, RecipeImportCommand, ScrapedRecipe } from "../types";
 import { parseRecipesFromHtml } from "../wowheadParser";
 import ScrapedRecipeTable from "./ScrapedRecipeTable";
 
@@ -44,6 +44,15 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
             return next;
         });
     };
+
+    // ── Item lookup for U1 ──
+    const [itemMap, setItemMap] = useState<Map<number, Item>>(new Map());
+
+    useEffect(() => {
+        getItems()
+            .then((items) => setItemMap(new Map(items.map((it) => [it.id, it]))))
+            .catch(() => { /* non-critical — table falls back to raw IDs */ });
+    }, []);
 
     // ── Scraper state ──
     const supported = useMemo(
@@ -213,7 +222,7 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
                 {/* ── Results table ── */}
                 {recipes.length > 0 && (
                     <>
-                        <ScrapedRecipeTable recipes={recipes} onChange={setRecipes} />
+                        <ScrapedRecipeTable recipes={recipes} onChange={setRecipes} itemMap={itemMap} />
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
                             <button
                                 type="button"

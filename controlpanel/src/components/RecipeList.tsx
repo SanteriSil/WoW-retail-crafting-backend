@@ -1,7 +1,6 @@
 import type { Page, RecipeSummary } from "../types";
-import ProfitDisplay from "./ProfitDisplay";
 
-type SortableField = "name" | "estimatedProfit";
+type SortableField = "name";
 
 type Props = {
     page: Page<RecipeSummary> | null;
@@ -54,13 +53,6 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
                             <th>Expansion</th>
                             <th>Source</th>
                             <th>Output Item</th>
-                            <th
-                                className="sortable"
-                                onClick={() => handleSortClick("estimatedProfit")}
-                                title="Sort by estimated profit"
-                            >
-                                Profit <SortIcon field="estimatedProfit" />
-                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -83,13 +75,6 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
                                     </span>
                                 </td>
                                 <td className="muted">{recipe.outputItemName}</td>
-                                <td>
-                                    <ProfitDisplay
-                                        variant="compact"
-                                        profit={recipe.estimatedProfit}
-                                        calculable={recipe.profitCalculable}
-                                    />
-                                </td>
                             </tr>
                         ))}
                     </tbody>

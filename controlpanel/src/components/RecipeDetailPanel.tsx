@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import type { RecipeDetail } from "../types";
 import { formatGold } from "../utils";
-import ProfitDisplay from "./ProfitDisplay";
 
 type Props = {
     recipe: RecipeDetail;
@@ -183,12 +182,6 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                         ))}
                     </div>
                 )}
-
-                {/* ── Profit estimate ── */}
-                <div>
-                    <div className="recipe-section-label">Profit Estimate</div>
-                    <ProfitDisplay variant="full" estimate={recipe.profitEstimate} />
-                </div>
 
                 {/* ── Admin actions ── */}
                 {isAdmin && (
