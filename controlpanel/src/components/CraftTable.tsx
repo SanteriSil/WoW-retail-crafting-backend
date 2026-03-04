@@ -3,6 +3,13 @@ import type { CraftOverrides, DashboardCraft } from "../types";
 import { formatGold, profitClass, recalculateAdjustedProfit } from "../utils";
 import CraftOverridePopover from "./CraftOverridePopover";
 
+function qualityStars(quality?: number | null): string | null {
+    if (quality == null) return null;
+    if (quality === 1) return "★";
+    if (quality === 2) return "★★";
+    return null;
+}
+
 type Props = {
     crafts: DashboardCraft[];
     sort: string;
@@ -26,6 +33,7 @@ const COLUMNS: { key: string; label: string; sortable: boolean; align?: "right" 
 
 export default function CraftTable({ crafts, sort, direction, onSortChange, loading, overrides, onOverrideChange, onAddToCalculator }: Props) {
     const [popoverKey, setPopoverKey] = useState<string | null>(null);
+    const [notesKey, setNotesKey] = useState<string | null>(null);
 
     if (crafts.length === 0 && !loading) {
         return <div className="muted" style={{ padding: 12, textAlign: "center" }}>No crafts to display.</div>;
@@ -108,12 +116,25 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                                 </td>
                                 <td>
                                     {c.recipeName}
-                                    {c.hasNotes && <span className="notes-indicator" title="This recipe has notes">📝</span>}
+                                    {c.hasNotes && (
+                                        <button
+                                            className="notes-indicator-btn"
+                                            title="View notes"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setNotesKey((prev) => (prev === key ? null : key));
+                                            }}
+                                        >📝</button>
+                                    )}
                                     {hasOverride && <span className="craft-override-badge" title="Custom M/R override active">⚙️</span>}
                                 </td>
                                 <td>{c.professionName}</td>
                                 <td>
                                     {c.outputItemName}
+                                    {(() => {
+                                        const stars = qualityStars(c.outputItemQuality);
+                                        return stars ? <span className={`quality-stars q${c.outputItemQuality}`}> {stars}</span> : null;
+                                    })()}
                                     {c.outputQuantity !== 1 && (
                                         <span className="muted"> ×{c.outputQuantity}</span>
                                     )}
@@ -162,6 +183,23 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                         onReset={() => handleReset(popoverKey)}
                         onClose={() => setPopoverKey(null)}
                     />
+                );
+            })()}
+
+            {/* Notes popover */}
+            {notesKey && (() => {
+                const craft = crafts.find((c) => `${c.characterId}-${c.recipeId}` === notesKey);
+                if (!craft || !craft.notes) return null;
+                return (
+                    <div className="notes-popover-overlay" onClick={() => setNotesKey(null)}>
+                        <div className="notes-popover" onClick={(e) => e.stopPropagation()}>
+                            <div className="notes-popover-header">
+                                <strong>Notes — {craft.recipeName}</strong>
+                                <button className="button small ghost" onClick={() => setNotesKey(null)}>✕</button>
+                            </div>
+                            <div className="notes-popover-body">{craft.notes}</div>
+                        </div>
+                    </div>
                 );
             })()}
         </div>

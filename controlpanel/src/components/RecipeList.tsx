@@ -2,6 +2,13 @@ import type { Page, RecipeSummary } from "../types";
 
 type SortableField = "name";
 
+function qualityStars(quality?: number | null): string | null {
+    if (quality == null) return null;
+    if (quality === 1) return "★";
+    if (quality === 2) return "★★";
+    return null;
+}
+
 type Props = {
     page: Page<RecipeSummary> | null;
     loading: boolean;
@@ -74,7 +81,13 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
                                         {recipe.source}
                                     </span>
                                 </td>
-                                <td className="muted">{recipe.outputItemName}</td>
+                                <td className="muted">
+                                    {recipe.outputItemName}
+                                    {(() => {
+                                        const stars = qualityStars(recipe.outputItemQuality);
+                                        return stars ? <span className={`quality-stars q${recipe.outputItemQuality}`}> {stars}</span> : null;
+                                    })()}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

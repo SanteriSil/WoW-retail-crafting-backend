@@ -150,6 +150,7 @@ public class CharacterService {
                             r.getId(), r.getName(), r.getWowheadSpellId(),
                             r.getOutputItem().getId(), r.getOutputItem().getName(),
                             r.getOutputQuantity(),
+                            r.getOutputItem().getQuality(),
                             r.getProfession() != null ? r.getProfession().getId() : null,
                             r.getProfession() != null ? r.getProfession().getName() : null,
                             r.getExpansion().getId(), r.getExpansion().getName(),

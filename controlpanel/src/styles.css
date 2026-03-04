@@ -1054,6 +1054,58 @@ body {
     font-size: 13px;
 }
 
+.notes-indicator-btn {
+    margin-left: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    background: none;
+    border: none;
+    padding: 0 2px;
+    border-radius: 4px;
+    transition: background 120ms;
+}
+.notes-indicator-btn:hover {
+    background: #e0e7ff;
+}
+
+/* Notes popover (overlay) */
+.notes-popover-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+.notes-popover {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.18);
+    min-width: 320px;
+    max-width: 520px;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+}
+.notes-popover-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+.notes-popover-body {
+    padding: 16px;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-y: auto;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Recipes
    ══════════════════════════════════════════════════════════════════════════ */

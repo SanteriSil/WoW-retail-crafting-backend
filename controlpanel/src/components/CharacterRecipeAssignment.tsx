@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { assignRecipes, getCharacterRecipes, getRecipes, unassignRecipe } from "../api";
 import type { Page, Profession, RecipeFilterParams, RecipeSummary } from "../types";
 
+function qualityStars(quality?: number | null): string | null {
+    if (quality == null) return null;
+    if (quality === 1) return "★";
+    if (quality === 2) return "★★";
+    return null;
+}
+
 type Props = {
     characterId: number;
     professions: Profession[];
@@ -157,6 +164,11 @@ export default function CharacterRecipeAssignment({ characterId, professions, ch
                             <div key={r.id} className="assigned-recipe-row">
                                 <div>
                                     <span style={{ fontWeight: 500 }}>{r.name}</span>
+                                    {r.hasNotes && <span className="notes-indicator" title="This recipe has notes">📝</span>}
+                                    {(() => {
+                                        const stars = qualityStars(r.outputItemQuality);
+                                        return stars ? <span className={`quality-stars q${r.outputItemQuality}`}> {stars}</span> : null;
+                                    })()}
                                     <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>
                                         {r.professionName ?? ""} · {r.expansionName}
                                     </span>
@@ -226,7 +238,14 @@ export default function CharacterRecipeAssignment({ characterId, professions, ch
                                         disabled={alreadyAssigned}
                                         onChange={() => toggleSelected(r.id)}
                                     />
-                                    <span style={{ fontWeight: 500 }}>{r.name}</span>
+                                    <span style={{ fontWeight: 500 }}>
+                                        {r.name}
+                                        {r.hasNotes && <span className="notes-indicator" title="This recipe has notes">📝</span>}
+                                    </span>
+                                    {(() => {
+                                        const stars = qualityStars(r.outputItemQuality);
+                                        return stars ? <span className={`quality-stars q${r.outputItemQuality}`}> {stars}</span> : null;
+                                    })()}
                                     <span className="muted" style={{ fontSize: 12 }}>
                                         {r.professionName ?? ""} · {r.expansionName}
                                     </span>

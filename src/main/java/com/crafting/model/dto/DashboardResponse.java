@@ -20,6 +20,7 @@ public record DashboardResponse(
             Long outputItemId,
             String outputItemName,
             Float outputQuantity,
+            Short outputItemQuality,
             ProfitEstimateDTO baseProfit,
             ProfitEstimateDTO adjustedProfit,
             boolean isMulticraftable,
@@ -28,7 +29,8 @@ public record DashboardResponse(
             Float multicraftPercent,
             Float resourcefulnessPercent,
             List<Long> missingPriceItemIds,
-            boolean hasNotes
+            boolean hasNotes,
+            String notes
     ) {
     }
 }

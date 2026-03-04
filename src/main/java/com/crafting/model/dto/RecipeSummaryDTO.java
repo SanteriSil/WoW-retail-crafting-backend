@@ -9,6 +9,7 @@ public record RecipeSummaryDTO(
         Long outputItemId,
         String outputItemName,
         Float outputQuantity,
+        Short outputItemQuality,
         Integer professionId,
         String professionName,
         Integer expansionId,

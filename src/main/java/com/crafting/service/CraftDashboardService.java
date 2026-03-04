@@ -76,6 +76,7 @@ public class CraftDashboardService {
                     recipe.getOutputItem().getId(),
                     recipe.getOutputItem().getName(),
                     recipe.getOutputQuantity(),
+                    recipe.getOutputItem().getQuality(),
                     baseProfit,
                     adjustedProfit,
                     recipe.isMulticraftable(),
@@ -84,7 +85,8 @@ public class CraftDashboardService {
                     multicraftPct,
                     resourcefulnessPct,
                     adjustedProfit.missingPrices(),
-                    recipe.getNotes() != null && !recipe.getNotes().isBlank()
+                    recipe.getNotes() != null && !recipe.getNotes().isBlank(),
+                    recipe.getNotes()
             ));
         }
 

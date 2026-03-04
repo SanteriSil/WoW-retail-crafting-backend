@@ -426,6 +426,7 @@ public class RecipeService {
                 recipe.getOutputItem().getId(),
                 recipe.getOutputItem().getName(),
                 recipe.getOutputQuantity(),
+                recipe.getOutputItem().getQuality(),
                 recipe.getProfession() != null ? recipe.getProfession().getId() : null,
                 recipe.getProfession() != null ? recipe.getProfession().getName() : null,
                 recipe.getExpansion().getId(),

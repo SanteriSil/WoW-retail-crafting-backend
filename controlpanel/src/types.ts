@@ -98,6 +98,7 @@ export type RecipeSummary = {
   outputItemId: number;
   outputItemName: string;
   outputQuantity: number;
+  outputItemQuality: number | null;
   professionId: number | null;
   professionName: string | null;
   expansionId: number;
@@ -252,6 +253,7 @@ export type DashboardCraft = {
   outputItemId: number;
   outputItemName: string;
   outputQuantity: number;
+  outputItemQuality: number | null;
   baseProfit: ProfitEstimate;
   adjustedProfit: ProfitEstimate;
   isMulticraftable: boolean;
@@ -261,6 +263,7 @@ export type DashboardCraft = {
   resourcefulnessPercent: number;
   missingPriceItemIds: number[];
   hasNotes: boolean;
+  notes: string | null;
 };
 
 export type CraftOverrides = {
