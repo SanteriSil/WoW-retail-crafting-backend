@@ -104,18 +104,20 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "Cannot remove the Owner"));
         }
-        if (!allowedUserRepository.existsById(discordId)) {
+        AllowedUser target = allowedUserRepository.findById(discordId).orElse(null);
+        if (target == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "User not found"));
         }
         // Privilege-escalation guard: only Owner can remove an Admin;
         // Admin callers reaching here have ROLE_ADMIN but not ROLE_OWNER.
-        // We re-check the target's role to enforce this.
-        allowedUserRepository.findById(discordId).ifPresent(target -> {
-            if (target.getRole() == Role.ADMIN) {
-                throw new SecurityException("Only the Owner can remove an Admin");
-            }
-        });
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean callerIsOwner = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_OWNER".equals(a.getAuthority()));
+        if (target.getRole() == Role.ADMIN && !callerIsOwner) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Only the Owner can remove an Admin"));
+        }
         allowedUserRepository.deleteById(discordId);
         roleLookupCache.invalidate();
         log.info("[{}] Removed allowed user with discord_id: {}", currentUser(), discordId);

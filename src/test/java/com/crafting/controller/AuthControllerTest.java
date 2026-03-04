@@ -230,6 +230,46 @@ class AuthControllerTest {
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.error", containsString("Owner")));
         }
+
+        @Test
+        @DisplayName("ADMIN cannot remove another ADMIN → 403")
+        void adminCannotRemoveAdmin() throws Exception {
+            AllowedUser admin = new AllowedUser(777L, "other-admin");
+            admin.setRole(Role.ADMIN);
+            allowedUserRepository.save(admin);
+
+            mockMvc.perform(delete("/auth/users/777")
+                            .with(user("admin").roles("ADMIN")))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.error", containsString("Owner")));
+
+            // User should still exist
+            assertThat(allowedUserRepository.existsById(777L)).isTrue();
+        }
+
+        @Test
+        @DisplayName("OWNER can remove an ADMIN → 204")
+        void ownerCanRemoveAdmin() throws Exception {
+            AllowedUser admin = new AllowedUser(888L, "demoted-admin");
+            admin.setRole(Role.ADMIN);
+            allowedUserRepository.save(admin);
+
+            mockMvc.perform(delete("/auth/users/888")
+                            .with(user("owner").roles("OWNER")))
+                    .andExpect(status().isNoContent());
+
+            assertThat(allowedUserRepository.existsById(888L)).isFalse();
+        }
+
+        @Test
+        @DisplayName("ALLOWED_USER cannot remove users → 403")
+        void allowedUserCannotRemove() throws Exception {
+            allowedUserRepository.save(new AllowedUser(111L, "target"));
+
+            mockMvc.perform(delete("/auth/users/111")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(status().isForbidden());
+        }
     }
 
     // ── Promote / Demote ───────────────────────────────────────────────

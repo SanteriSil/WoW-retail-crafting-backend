@@ -85,6 +85,24 @@ class SecurityEndpointAccessTest {
         }
 
         @Test
+        @DisplayName("GET /expansions → 200")
+        void getExpansions() throws Exception {
+            mockMvc.perform(get("/expansions"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("POST /auth/access-requests → not 401 (public endpoint, may be 400)")
+        void accessRequestPublic() throws Exception {
+            mockMvc.perform(post("/auth/access-requests")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"discordId\":\"12345\",\"discordUsername\":\"testuser\"}"))
+                    .andExpect(result ->
+                            org.assertj.core.api.Assertions.assertThat(result.getResponse().getStatus())
+                                    .isNotEqualTo(401));
+        }
+
+        @Test
         @DisplayName("POST /auth/discord/callback → not 401 (400 expected for missing body)")
         void discordCallback() throws Exception {
             mockMvc.perform(post("/auth/discord/callback")
@@ -194,6 +212,92 @@ class SecurityEndpointAccessTest {
             mockMvc.perform(post("/craftingAH/submit")
                             .contentType(MediaType.TEXT_PLAIN)
                             .content("100,50000,10"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // ── Recipes (read = ALLOWED_USER+, write = ADMIN+) ──
+
+        @Test
+        @DisplayName("GET /recipes → 401 without auth")
+        void getRecipesNoAuth() throws Exception {
+            mockMvc.perform(get("/recipes"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("GET /recipes/spell-ids → 401 without auth")
+        void getSpellIdsNoAuth() throws Exception {
+            mockMvc.perform(get("/recipes/spell-ids"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("POST /recipes → 401 without auth")
+        void createRecipeNoAuth() throws Exception {
+            mockMvc.perform(post("/recipes")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"Test\"}"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("PUT /recipes/1 → 401 without auth")
+        void updateRecipeNoAuth() throws Exception {
+            mockMvc.perform(put("/recipes/1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"Test\"}"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("DELETE /recipes/1 → 401 without auth")
+        void deleteRecipeNoAuth() throws Exception {
+            mockMvc.perform(delete("/recipes/1"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // ── Characters (ALLOWED_USER+) ──
+
+        @Test
+        @DisplayName("GET /characters → 401 without auth")
+        void getCharactersNoAuth() throws Exception {
+            mockMvc.perform(get("/characters"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // ── Dashboard (ALLOWED_USER+) ──
+
+        @Test
+        @DisplayName("GET /dashboard → 401 without auth")
+        void getDashboardNoAuth() throws Exception {
+            mockMvc.perform(get("/dashboard"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // ── Export (ALLOWED_USER+) ──
+
+        @Test
+        @DisplayName("GET /export/excel → 401 without auth")
+        void getExportNoAuth() throws Exception {
+            mockMvc.perform(get("/export/excel"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // ── Access requests (GET = ADMIN+) ──
+
+        @Test
+        @DisplayName("GET /auth/access-requests → 401 without auth")
+        void getAccessRequestsNoAuth() throws Exception {
+            mockMvc.perform(get("/auth/access-requests"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // ── Scraper (ADMIN+) ──
+
+        @Test
+        @DisplayName("POST /scraper/items → 401 without auth")
+        void scraperNoAuth() throws Exception {
+            mockMvc.perform(post("/scraper/items"))
                     .andExpect(status().isUnauthorized());
         }
     }
@@ -322,6 +426,134 @@ class SecurityEndpointAccessTest {
                             .with(user("99999").roles("ALLOWED_USER"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"id\":1,\"name\":\"Test\"}"))
+                    .andExpect(status().isForbidden());
+        }
+
+        // ── Recipes: ALLOWED_USER can read, but not write ──
+
+        @Test
+        @DisplayName("GET /recipes → not 401/403 with ALLOWED_USER")
+        void getRecipesAllowedUser() throws Exception {
+            mockMvc.perform(get("/recipes")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        @Test
+        @DisplayName("GET /recipes/spell-ids → not 401/403 with ALLOWED_USER")
+        void getSpellIdsAllowedUser() throws Exception {
+            mockMvc.perform(get("/recipes/spell-ids")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        @Test
+        @DisplayName("POST /recipes → 403 with ALLOWED_USER (requires ADMIN)")
+        void createRecipeForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(post("/recipes")
+                            .with(user("99999").roles("ALLOWED_USER"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"Test\"}"))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("DELETE /recipes/1 → 403 with ALLOWED_USER (requires ADMIN)")
+        void deleteRecipeForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(delete("/recipes/1")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(status().isForbidden());
+        }
+
+        // ── Characters: ALLOWED_USER+ can access ──
+
+        @Test
+        @DisplayName("GET /characters → not 401/403 with ALLOWED_USER")
+        void getCharactersAllowedUser() throws Exception {
+            mockMvc.perform(get("/characters")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        // ── Dashboard: ALLOWED_USER+ can access ──
+
+        @Test
+        @DisplayName("GET /dashboard → not 401/403 with ALLOWED_USER")
+        void getDashboardAllowedUser() throws Exception {
+            mockMvc.perform(get("/dashboard")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        // ── Export: ALLOWED_USER+ can access ──
+
+        @Test
+        @DisplayName("GET /export/excel → not 401/403 with ALLOWED_USER")
+        void getExportAllowedUser() throws Exception {
+            mockMvc.perform(get("/export/excel")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        // ── Access requests: ALLOWED_USER cannot list, ADMIN can ──
+
+        @Test
+        @DisplayName("GET /auth/access-requests → 403 with ALLOWED_USER (requires ADMIN)")
+        void getAccessRequestsForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(get("/auth/access-requests")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("GET /auth/access-requests → not 401/403 with ADMIN")
+        void getAccessRequestsForAdmin() throws Exception {
+            mockMvc.perform(get("/auth/access-requests")
+                            .with(user("99999").roles("ADMIN")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        // ── Logs: ALLOWED_USER cannot access ──
+
+        @Test
+        @DisplayName("GET /logs/current → 403 with ALLOWED_USER (requires ADMIN)")
+        void getLogsForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(get("/logs/current")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(status().isForbidden());
+        }
+
+        // ── craftingAH: ALLOWED_USER cannot access ──
+
+        @Test
+        @DisplayName("GET /craftingAH/fetch → 403 with ALLOWED_USER (requires ADMIN)")
+        void ahFetchForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(get("/craftingAH/fetch")
+                            .with(user("99999").roles("ALLOWED_USER")))
                     .andExpect(status().isForbidden());
         }
     }
