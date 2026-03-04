@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Item, ScrapedRecipe } from "../types";
 import ReagentEditor from "./ReagentEditor";
+import { qualityStars } from "./ItemList";
 
 type Props = {
     recipes: ScrapedRecipe[];
@@ -21,12 +22,14 @@ export default function ScrapedRecipeTable({ recipes, onChange, itemMap }: Props
     const renderItemCell = (itemId: number) => {
         const item = itemMap.get(itemId);
         if (!item) return <span className="muted">#{itemId}</span>;
+        const stars = qualityStars(item.quality);
         return (
             <span className="item-with-icon">
                 {item.iconUrl && (
                     <img src={item.iconUrl} alt={item.name} width={18} height={18} loading="lazy" />
                 )}
                 {item.name}
+                {stars && <span className={`quality-stars q${item.quality}`}> {stars}</span>}
             </span>
         );
     };

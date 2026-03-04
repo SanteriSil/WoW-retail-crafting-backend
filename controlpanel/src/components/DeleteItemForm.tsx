@@ -47,8 +47,9 @@ export default function DeleteItemForm({
         setError(null);
 
         if (!bypassConfirm) {
+            const selectedLabel = formatItemLabel(selectedItem);
             const confirmed = window.confirm(
-                `Are you sure you want to delete "${selectedItem.name}" (#${selectedItem.id})? This action cannot be undone.`
+                `Are you sure you want to delete "${selectedLabel}"? This action cannot be undone.`
             );
             if (!confirmed) return;
         }

@@ -25,6 +25,16 @@ export default function UpdateItemForm({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const formatQuality = (q?: number | null) => {
+        if (q == null) return "";
+        if (q === 1) return " ★";
+        if (q === 2) return " ★★";
+        if (q === 3) return " ★★★";
+        if (q === 4) return " ★★★★";
+        if (q === 5) return " ★★★★★";
+        return ` Q${q}`;
+    };
+
     useEffect(() => {
         setName(selectedItem?.name ?? "");
         setProfessionId(selectedItem?.profession?.id?.toString() ?? "");
@@ -106,7 +116,7 @@ export default function UpdateItemForm({
                     </option>
                     {items.map((item) => (
                         <option key={item.id} value={item.id}>
-                            {item.name} (#{item.id})
+                            {item.name}{formatQuality(item.quality)} (#{item.id})
                         </option>
                     ))}
                 </select>

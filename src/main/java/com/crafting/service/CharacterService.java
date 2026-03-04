@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -111,9 +112,8 @@ public class CharacterService {
         character.setName(command.name().trim());
         character.setRealm(command.realm().trim());
 
-        // Replace professions entirely
-        character.getProfessions().clear();
-        applyProfessions(character, command.professions());
+        // Synchronize professions in-place to avoid transient duplicate inserts
+        syncProfessions(character, command.professions());
 
         WowCharacter saved = characterRepository.save(character);
         return toDTO(saved);
@@ -254,6 +254,39 @@ public class CharacterService {
                     .build();
             character.getProfessions().add(cp);
         }
+    }
+
+    private void syncProfessions(WowCharacter character, List<ProfessionCommand> professionCommands) {
+        List<ProfessionCommand> commands = professionCommands == null ? List.of() : professionCommands;
+
+        Map<Integer, CharacterProfession> existingByProfessionId = character.getProfessions().stream()
+                .collect(java.util.stream.Collectors.toMap(cp -> cp.getProfession().getId(), cp -> cp));
+
+        Set<Integer> requestedProfessionIds = new HashSet<>();
+
+        for (ProfessionCommand pc : commands) {
+            Profession profession = professionRepository.findById(pc.professionId())
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown profession ID: " + pc.professionId()));
+
+            Integer professionId = profession.getId();
+            requestedProfessionIds.add(professionId);
+
+            CharacterProfession existing = existingByProfessionId.get(professionId);
+            if (existing != null) {
+                existing.setMulticraftPercent(pc.multicraftPercent());
+                existing.setResourcefulnessPercent(pc.resourcefulnessPercent());
+            } else {
+                CharacterProfession cp = CharacterProfession.builder()
+                        .character(character)
+                        .profession(profession)
+                        .multicraftPercent(pc.multicraftPercent())
+                        .resourcefulnessPercent(pc.resourcefulnessPercent())
+                        .build();
+                character.getProfessions().add(cp);
+            }
+        }
+
+        character.getProfessions().removeIf(cp -> !requestedProfessionIds.contains(cp.getProfession().getId()));
     }
 
     private String fetchIconBestEffort(String realm, String characterName) {

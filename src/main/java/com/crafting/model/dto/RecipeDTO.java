@@ -27,7 +27,8 @@ public record RecipeDTO(
             Long id,
             String name,
             Long currentPrice,
-            String iconUrl
+            String iconUrl,
+            Short quality
     ) {
     }
 

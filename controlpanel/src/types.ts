@@ -69,6 +69,7 @@ export type RecipeItemView = {
   name: string;
   currentPrice: number | null;
   iconUrl: string | null;
+  quality: number | null;
 };
 
 export type IngredientView = {

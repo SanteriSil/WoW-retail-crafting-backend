@@ -1,9 +1,11 @@
 import type { CalculatorEntry, RecipeDetail } from "../types";
 import { formatGold } from "../utils";
+import { qualityStars } from "./ItemList";
 
 type ShoppingItem = {
     itemId: number;
     itemName: string;
+    quality: number | null;
     iconUrl: string | null;
     totalQuantity: number;
     unitPrice: number | null;
@@ -35,6 +37,7 @@ function buildShoppingItems(entries: Props["entries"], cache: Props["recipeCache
                 map.set(ing.item.id, {
                     itemId: ing.item.id,
                     itemName: ing.item.name,
+                    quality: ing.item.quality,
                     iconUrl: ing.item.iconUrl,
                     totalQuantity: qty,
                     unitPrice,
@@ -78,12 +81,18 @@ export default function ShoppingList({ entries, recipeCache }: Props) {
                     {items.map((item) => (
                         <tr key={item.itemId}>
                             <td>
+                                {(() => {
+                                    const stars = qualityStars(item.quality);
+                                    return (
                                 <span className="item-with-icon">
                                     {item.iconUrl && (
                                         <img src={item.iconUrl} alt="" width={18} height={18} />
                                     )}
                                     {item.itemName}
+                                    {stars && <span className={`quality-stars q${item.quality}`}> {stars}</span>}
                                 </span>
+                                    );
+                                })()}
                             </td>
                             <td style={{ textAlign: "right" }}>×{item.totalQuantity}</td>
                             <td style={{ textAlign: "right" }}>

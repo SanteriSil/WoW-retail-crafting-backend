@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Expansion, Item, Profession, RecipeDetail, RecipeWritePayload } from "../types";
+import ItemAutocomplete from "./ItemAutocomplete";
+import { qualityStars } from "./ItemList";
 
 const SOURCES = ["TRAINER", "DISCOVERY", "VENDOR", "DROP", "QUEST"] as const;
 
@@ -26,10 +28,12 @@ function ItemPreview({ itemId, itemMap }: { itemId: string; itemMap: Map<number,
     if (!id) return null;
     const item = itemMap.get(id);
     if (!item) return <span className="muted" style={{ fontSize: 12 }}>Unknown item</span>;
+    const stars = qualityStars(item.quality);
     return (
         <span className="item-with-icon" style={{ fontSize: 12 }}>
             {item.iconUrl && <img src={item.iconUrl} alt={item.name} width={18} height={18} loading="lazy" />}
             {item.name}
+            {stars && <span className={`quality-stars q${item.quality}`} style={{ marginLeft: 4 }}> {stars}</span>}
         </span>
     );
 }
@@ -94,7 +98,7 @@ export default function RecipeFormModal(props: Props) {
 
         const outId = parseInt(outputItemId, 10);
         if (!name.trim()) { setError("Name is required."); return; }
-        if (!outId) { setError("Output Item ID is required."); return; }
+        if (!outId) { setError("Output Item is required."); return; }
         if (!professionId) { setError("Profession is required."); return; }
         if (!expansionId) { setError("Expansion is required."); return; }
 
@@ -204,9 +208,15 @@ export default function RecipeFormModal(props: Props) {
 
                     {/* Output Item */}
                     <div className="field">
-                        <label className="label">Output Item ID *</label>
+                        <label className="label">Output Item *</label>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <input type="number" className="input" style={{ width: 140 }} value={outputItemId} onChange={(e) => setOutputItemId(e.target.value)} placeholder="Item ID" />
+                            <ItemAutocomplete
+                                value={outputItemId}
+                                onChange={setOutputItemId}
+                                itemMap={itemMap}
+                                placeholder="Item name…"
+                                inputStyle={{ width: 140 }}
+                            />
                             <ItemPreview itemId={outputItemId} itemMap={itemMap} />
                         </div>
                     </div>
@@ -303,13 +313,12 @@ export default function RecipeFormModal(props: Props) {
                         </div>
                         {ingredients.map((ing, idx) => (
                             <div key={idx} className="recipe-form-ingredient-row">
-                                <input
-                                    type="number"
-                                    className="input"
-                                    placeholder="Item ID"
-                                    style={{ width: 120 }}
+                                <ItemAutocomplete
                                     value={ing.itemId}
-                                    onChange={(e) => updateIngredient(idx, { itemId: e.target.value })}
+                                    onChange={(val) => updateIngredient(idx, { itemId: val })}
+                                    itemMap={itemMap}
+                                    placeholder="Item name…"
+                                    inputStyle={{ width: 120 }}
                                 />
                                 <input
                                     type="number"
@@ -347,13 +356,12 @@ export default function RecipeFormModal(props: Props) {
                                 </div>
                                 {group.options.map((opt, oIdx) => (
                                     <div key={oIdx} className="recipe-form-ingredient-row">
-                                        <input
-                                            type="number"
-                                            className="input"
-                                            placeholder="Item ID"
-                                            style={{ width: 120 }}
+                                        <ItemAutocomplete
                                             value={opt.itemId}
-                                            onChange={(e) => updateOptGroupOption(gIdx, oIdx, { itemId: e.target.value })}
+                                            onChange={(val) => updateOptGroupOption(gIdx, oIdx, { itemId: val })}
+                                            itemMap={itemMap}
+                                            placeholder="Item name…"
+                                            inputStyle={{ width: 120 }}
                                         />
                                         <input
                                             type="number"

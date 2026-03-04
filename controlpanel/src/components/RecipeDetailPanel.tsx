@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { RecipeDetail } from "../types";
 import { formatGold } from "../utils";
+import { qualityStars } from "./ItemList";
 
 type Props = {
     recipe: RecipeDetail;
@@ -13,6 +14,7 @@ type Props = {
 
 export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, onDelete, onClose }: Props) {
     const isAdmin = role === "ADMIN" || role === "OWNER";
+    const outputStars = qualityStars(recipe.outputItem.quality);
 
     // Close on Escape key
     useEffect(() => {
@@ -73,6 +75,7 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                         <div>
                             <div style={{ fontWeight: 600 }}>
                                 {recipe.outputItem.name}
+                                {outputStars && <span className={`quality-stars q${recipe.outputItem.quality}`}> {outputStars}</span>}
                                 {recipe.outputQuantity !== 1 && (
                                     <span className="muted" style={{ fontWeight: 400, marginLeft: 6 }}>
                                         ×{recipe.outputQuantity}
@@ -129,6 +132,7 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                                 {recipe.ingredients.map((ing) => {
                                     const unitPrice = ing.item.currentPrice;
                                     const totalCost = unitPrice != null ? unitPrice * ing.quantity : null;
+                                    const stars = qualityStars(ing.item.quality);
                                     return (
                                         <tr key={ing.id}>
                                             <td>
@@ -144,6 +148,7 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                                                         />
                                                     )}
                                                     {ing.item.name}
+                                                    {stars && <span className={`quality-stars q${ing.item.quality}`}> {stars}</span>}
                                                 </span>
                                             </td>
                                             <td style={{ textAlign: "right" }}>{ing.quantity}</td>
@@ -175,7 +180,9 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                                 </div>
                                 <table className="ingredient-table">
                                     <tbody>
-                                        {group.options.map((opt) => (
+                                        {group.options.map((opt) => {
+                                            const stars = qualityStars(opt.item.quality);
+                                            return (
                                             <tr key={opt.id}>
                                                 <td>
                                                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -190,6 +197,7 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                                                             />
                                                         )}
                                                         {opt.item.name}
+                                                        {stars && <span className={`quality-stars q${opt.item.quality}`}> {stars}</span>}
                                                     </span>
                                                 </td>
                                                 <td style={{ textAlign: "right" }}>×{opt.quantity}</td>
@@ -199,7 +207,8 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                                                         : "—"}
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

@@ -16,7 +16,7 @@ function qualityStars(quality?: number | null): string | null {
 
 export default function SheetBuilder({ items }: SheetBuilderProps) {
     const [expanded, setExpanded] = useState(false);
-    const [outputItem, setOutputItem] = useState<{ id: number; name: string; iconUrl?: string | null } | null>(null);
+    const [outputItem, setOutputItem] = useState<{ id: number; name: string; quality?: number | null; iconUrl?: string | null } | null>(null);
     const [searchOutput, setSearchOutput] = useState("");
     const [ingredients, setIngredients] = useState<SheetEntry[]>([]);
     const [searchIngredients, setSearchIngredients] = useState("");
@@ -116,6 +116,10 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                                             <img src={outputItem.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 4 }} />
                                         )}
                                         {outputItem.name}
+                                        {(() => {
+                                            const stars = qualityStars(outputItem.quality);
+                                            return stars ? <span className={`quality-stars q${outputItem.quality}`}> {stars}</span> : null;
+                                        })()}
                                     </span>
                                     <button
                                         type="button"
@@ -145,7 +149,7 @@ export default function SheetBuilder({ items }: SheetBuilderProps) {
                                                     key={item.id}
                                                     type="button"
                                                     className="sheet-suggestion-item"
-                                                    onClick={() => { setOutputItem({ id: item.id, name: item.name, iconUrl: item.iconUrl }); setSearchOutput(""); }}
+                                                    onClick={() => { setOutputItem({ id: item.id, name: item.name, quality: item.quality, iconUrl: item.iconUrl }); setSearchOutput(""); }}
                                                 >
                                                     {item.iconUrl && (
                                                         <img src={item.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3 }} />

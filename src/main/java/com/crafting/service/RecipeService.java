@@ -501,7 +501,8 @@ public class RecipeService {
                 item.getId(),
                 item.getName(),
                 item.getCurrentPrice(),
-                item.getIconUrl()
+                item.getIconUrl(),
+                item.getQuality()
         );
     }
 

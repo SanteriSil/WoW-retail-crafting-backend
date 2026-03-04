@@ -49,7 +49,7 @@ function formatUpdatedAt(value?: string | null): { label: string; title?: string
     };
 }
 
-function qualityStars(quality?: number | null): string | null {
+export function qualityStars(quality?: number | null): string | null {
     if (quality == null) return null;
     if (quality === 1) return "★";
     if (quality === 2) return "★★";
