@@ -98,9 +98,10 @@ public class CraftDashboardService {
         crafts.sort(comparator);
 
         long totalBase = crafts.stream().mapToLong(c -> c.baseProfit().profit()).sum();
+        long totalBaseCost = crafts.stream().mapToLong(c -> c.baseProfit().ingredientCost()).sum();
         long totalAdjusted = crafts.stream().mapToLong(c -> c.adjustedProfit().profit()).sum();
 
-        return new DashboardResponse(crafts, totalBase, totalAdjusted, crafts.size());
+        return new DashboardResponse(crafts, totalBaseCost, totalBase, totalAdjusted, crafts.size());
     }
 
     private Comparator<DashboardCraft> sortComparator(String sort) {

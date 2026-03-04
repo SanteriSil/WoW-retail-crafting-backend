@@ -162,26 +162,22 @@ export default function CraftingCalculator({
                             );
                         })}
                     </tbody>
-                    <tfoot>
-                        <tr className="calc-totals-row">
-                            <td colSpan={2}>
-                                <strong>Totals</strong>
-                                <span className="muted" style={{ marginLeft: 8, fontSize: 12 }}>
-                                    Cost: {formatGold(totalCost, false)} · Revenue: {formatGold(totalRevenue, false)}
-                                </span>
-                            </td>
-                            <td style={{ textAlign: "center" }}>
-                                <strong>{entries.reduce((s, e) => s + e.quantity, 0)}</strong>
-                            </td>
-                            <td style={{ textAlign: "right" }}>
-                                <strong className={profitClass(true, totalProfit)}>
-                                    {formatGold(totalProfit)}
-                                </strong>
-                            </td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
                 </table>
+            </div>
+
+            <div className="calc-estimate-summary">
+                <div className="calc-estimate-row">
+                    <span>Total Materials cost</span>
+                    <strong>{formatGold(totalCost, false)}</strong>
+                </div>
+                <div className="calc-estimate-row">
+                    <span>Expected Revenue</span>
+                    <strong>{formatGold(totalRevenue, false)}</strong>
+                </div>
+                <div className={`calc-estimate-row ${profitClass(true, totalProfit)}`}>
+                    <span>Expected Profit</span>
+                    <strong>{formatGold(totalProfit)}</strong>
+                </div>
             </div>
 
             {hasUnavailable && (

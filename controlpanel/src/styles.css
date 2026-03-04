@@ -1807,7 +1807,7 @@ body {
 
 .dashboard-summary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 12px;
 }
 
@@ -2225,6 +2225,28 @@ body {
 
 .calc-totals-row td {
     padding: 10px 12px;
+}
+
+.calc-estimate-summary {
+    margin-top: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.calc-estimate-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+}
+
+.calc-estimate-row:last-child {
+    border-bottom: none;
+    font-size: 14px;
 }
 
 .calc-row-unavailable td {

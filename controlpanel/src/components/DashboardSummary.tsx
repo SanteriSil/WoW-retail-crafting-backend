@@ -1,17 +1,22 @@
 import { formatGold } from "../utils";
 
 type Props = {
+    totalBaseCost: number;
     totalBaseProfit: number;
     totalAdjustedProfit: number;
     totalCrafts: number;
 };
 
-export default function DashboardSummary({ totalBaseProfit, totalAdjustedProfit, totalCrafts }: Props) {
+export default function DashboardSummary({ totalBaseCost, totalBaseProfit, totalAdjustedProfit, totalCrafts }: Props) {
     return (
         <div className="dashboard-summary">
             <div className="dashboard-summary-card">
                 <div className="dashboard-summary-label">Total Crafts</div>
                 <div className="dashboard-summary-value">{totalCrafts}</div>
+            </div>
+            <div className="dashboard-summary-card">
+                <div className="dashboard-summary-label">Base Cost</div>
+                <div className="dashboard-summary-value">{formatGold(totalBaseCost, false)}</div>
             </div>
             <div className="dashboard-summary-card">
                 <div className="dashboard-summary-label">Base Profit</div>

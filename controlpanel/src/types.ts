@@ -276,6 +276,7 @@ export type CraftOverrides = {
 
 export type DashboardResponse = {
   crafts: DashboardCraft[];
+  totalBaseCost: number;
   totalBaseProfit: number;
   totalAdjustedProfit: number;
   totalCrafts: number;

@@ -16,24 +16,30 @@ type Props = {
     direction: string;
     onSortChange: (field: string) => void;
     loading: boolean;
+    showBaseMetrics: boolean;
     overrides: CraftOverrides;
     onOverrideChange: (overrides: CraftOverrides) => void;
     onAddToCalculator?: (craft: DashboardCraft) => void;
 };
 
-const COLUMNS: { key: string; label: string; sortable: boolean; align?: "right" }[] = [
-    { key: "characterName", label: "Character", sortable: true },
-    { key: "recipeName", label: "Recipe", sortable: true },
-    { key: "professionName", label: "Profession", sortable: true },
-    { key: "outputItemName", label: "Output", sortable: false },
-    { key: "adjustedProfit", label: "Adj. Profit", sortable: true, align: "right" },
-    { key: "baseProfit", label: "Base Profit", sortable: true, align: "right" },
-    { key: "_calc", label: "", sortable: false },
-];
-
-export default function CraftTable({ crafts, sort, direction, onSortChange, loading, overrides, onOverrideChange, onAddToCalculator }: Props) {
+export default function CraftTable({ crafts, sort, direction, onSortChange, loading, showBaseMetrics, overrides, onOverrideChange, onAddToCalculator }: Props) {
     const [popoverKey, setPopoverKey] = useState<string | null>(null);
     const [notesKey, setNotesKey] = useState<string | null>(null);
+
+    const columns: { key: string; label: string; sortable: boolean; align?: "right" }[] = [
+        { key: "characterName", label: "Character", sortable: true },
+        { key: "recipeName", label: "Recipe", sortable: true },
+        { key: "professionName", label: "Profession", sortable: true },
+        { key: "outputItemName", label: "Output", sortable: false },
+        { key: "adjustedProfit", label: "Adj. Profit", sortable: true, align: "right" },
+        ...(showBaseMetrics
+            ? [
+                { key: "baseCost", label: "Base Cost", sortable: false, align: "right" as const },
+                { key: "baseProfit", label: "Base Profit", sortable: true, align: "right" as const },
+            ]
+            : []),
+        { key: "_calc", label: "", sortable: false },
+    ];
 
     if (crafts.length === 0 && !loading) {
         return <div className="muted" style={{ padding: 12, textAlign: "center" }}>No crafts to display.</div>;
@@ -61,7 +67,7 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
             <table className="recipe-table">
                 <thead>
                     <tr>
-                        {COLUMNS.map((col) => (
+                        {columns.map((col) => (
                             <th
                                 key={col.key}
                                 className={col.sortable ? "sortable" : ""}
@@ -144,11 +150,18 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                                         {formatGold(adjProfit)}
                                     </span>
                                 </td>
-                                <td style={{ textAlign: "right" }}>
-                                    <span className={`muted ${profitClass(c.baseProfit.calculable, c.baseProfit.profit)}`} style={{ opacity: 0.6 }}>
-                                        {formatGold(c.baseProfit.profit)}
-                                    </span>
-                                </td>
+                                {showBaseMetrics && (
+                                    <>
+                                        <td style={{ textAlign: "right" }}>
+                                            <span className="muted">{formatGold(c.baseProfit.ingredientCost, false)}</span>
+                                        </td>
+                                        <td style={{ textAlign: "right" }}>
+                                            <span className={profitClass(c.baseProfit.calculable, c.baseProfit.profit)}>
+                                                {formatGold(c.baseProfit.profit)}
+                                            </span>
+                                        </td>
+                                    </>
+                                )}
                                 <td style={{ textAlign: "center", width: 36 }}>
                                     {onAddToCalculator && (
                                         <button

@@ -38,6 +38,7 @@ export default function DashboardPage({ professions }: Props) {
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState("adjustedProfit");
     const [direction, setDirection] = useState("desc");
+    const [showBaseMetrics, setShowBaseMetrics] = useState(true);
 
     // U8: Override state
     const [overrides, setOverrides] = useState<CraftOverrides>(loadOverrides);
@@ -175,9 +176,11 @@ export default function DashboardPage({ professions }: Props) {
                 characterId={characterId}
                 professionId={professionId}
                 search={search}
+                showBaseMetrics={showBaseMetrics}
                 onCharacterChange={setCharacterId}
                 onProfessionChange={setProfessionId}
                 onSearchChange={setSearch}
+                onShowBaseMetricsChange={setShowBaseMetrics}
             />
 
             {error && <div className="error">{error}</div>}
@@ -185,6 +188,7 @@ export default function DashboardPage({ professions }: Props) {
             {dashboard && (
                 <>
                     <DashboardSummary
+                        totalBaseCost={dashboard.totalBaseCost}
                         totalBaseProfit={dashboard.totalBaseProfit}
                         totalAdjustedProfit={dashboard.totalAdjustedProfit}
                         totalCrafts={dashboard.totalCrafts}
@@ -195,6 +199,7 @@ export default function DashboardPage({ professions }: Props) {
                         direction={direction}
                         onSortChange={handleSortChange}
                         loading={loading}
+                        showBaseMetrics={showBaseMetrics}
                         overrides={overrides}
                         onOverrideChange={handleOverrideChange}
                         onAddToCalculator={handleAddToCalculator}

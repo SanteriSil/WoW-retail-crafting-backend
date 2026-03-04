@@ -4,6 +4,7 @@ import java.util.List;
 
 public record DashboardResponse(
         List<DashboardCraft> crafts,
+        long totalBaseCost,
         long totalBaseProfit,
         long totalAdjustedProfit,
         int totalCrafts

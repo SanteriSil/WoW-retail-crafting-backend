@@ -99,12 +99,15 @@ public class ProfitCalculationService {
         if (item == null) {
             return null;
         }
-        if (item.getCurrentPrice() != null) {
-            return item.getCurrentPrice();
+        Long ahPrice = item.getCurrentPrice();
+        Long vendorPrice = Boolean.TRUE.equals(item.getVendorItem()) ? item.getVendorPrice() : null;
+
+        if (ahPrice != null && vendorPrice != null) {
+            return Math.min(ahPrice, vendorPrice);
         }
-        if (Boolean.TRUE.equals(item.getVendorItem()) && item.getVendorPrice() != null) {
-            return item.getVendorPrice();
+        if (ahPrice != null) {
+            return ahPrice;
         }
-        return null;
+        return vendorPrice;
     }
 }

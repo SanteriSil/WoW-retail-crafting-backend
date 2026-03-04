@@ -6,14 +6,16 @@ type Props = {
     characterId: number | undefined;
     professionId: number | undefined;
     search: string;
+    showBaseMetrics: boolean;
     onCharacterChange: (id: number | undefined) => void;
     onProfessionChange: (id: number | undefined) => void;
     onSearchChange: (s: string) => void;
+    onShowBaseMetricsChange: (value: boolean) => void;
 };
 
 export default function DashboardFilters({
     characters, professions, characterId, professionId, search,
-    onCharacterChange, onProfessionChange, onSearchChange,
+    showBaseMetrics, onCharacterChange, onProfessionChange, onSearchChange, onShowBaseMetricsChange,
 }: Props) {
     return (
         <div className="dashboard-filters">
@@ -64,6 +66,14 @@ export default function DashboardFilters({
                 onChange={(e) => onSearchChange(e.target.value)}
                 style={{ maxWidth: 300 }}
             />
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
+                <input
+                    type="checkbox"
+                    checked={showBaseMetrics}
+                    onChange={(e) => onShowBaseMetricsChange(e.target.checked)}
+                />
+                Show base cost / base profit columns
+            </label>
         </div>
     );
 }
