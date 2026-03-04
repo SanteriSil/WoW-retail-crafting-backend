@@ -33,6 +33,16 @@ export type AllowedUser = {
   createdAt: string;
 };
 
+// ── Access requests ──────────────────────────────────────────────────────────
+
+export type AccessRequest = {
+  id: number;
+  discordId: string;
+  discordUsername: string;
+  status: "PENDING" | "APPROVED" | "DENIED";
+  createdAt: string;
+};
+
 // ── Expansions ────────────────────────────────────────────────────────────────
 
 export type Expansion = {

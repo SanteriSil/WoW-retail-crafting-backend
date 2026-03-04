@@ -312,6 +312,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
                 <AdminPage
                     items={items}
                     professions={professions}
+                    currentUserRole={role}
                     onAhRefresh={handleAhRefresh}
                     ahBusy={ahBusy}
                     ahMessage={ahMessage}

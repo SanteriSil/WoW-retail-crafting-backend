@@ -1,11 +1,13 @@
 import type { Item, Profession } from "../types";
 import UserManagement from "./UserManagement";
+import AccessRequestPanel from "./AccessRequestPanel";
 import AuctionSubmitPanel from "./AuctionSubmitPanel";
 import LogsPanel from "./LogsPanel";
 
 interface AdminPageProps {
     items: Item[];
     professions: Profession[];
+    currentUserRole: string | null;
     onAhRefresh: () => void;
     ahBusy: boolean;
     ahMessage: string | null;
@@ -19,6 +21,7 @@ interface AdminPageProps {
 export default function AdminPage({
     items,
     professions,
+    currentUserRole,
     onAhRefresh,
     ahBusy,
     ahMessage,
@@ -34,7 +37,12 @@ export default function AdminPage({
             <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
                 {/* ── User Management ── */}
                 <div className="card">
-                    <UserManagement />
+                    <UserManagement currentUserRole={currentUserRole} />
+                </div>
+
+                {/* ── Access Requests ── */}
+                <div className="card">
+                    <AccessRequestPanel />
                 </div>
 
                 {/* ── AH Refresh ── */}

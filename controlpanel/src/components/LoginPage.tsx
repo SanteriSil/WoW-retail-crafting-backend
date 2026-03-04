@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { requestAccess } from "../api";
+
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID ?? "";
 const IS_DEV_MODE = import.meta.env.VITE_DEV_MODE === "true";
 
@@ -16,6 +19,37 @@ function handleLogin() {
 }
 
 export default function LoginPage({ onDevLogin }: { onDevLogin?: () => void }) {
+    const [showRequestForm, setShowRequestForm] = useState(false);
+    const [reqDiscordId, setReqDiscordId] = useState("");
+    const [reqDisplayName, setReqDisplayName] = useState("");
+    const [reqBusy, setReqBusy] = useState(false);
+    const [reqMessage, setReqMessage] = useState<string | null>(null);
+    const [reqError, setReqError] = useState<string | null>(null);
+
+    const handleRequestAccess = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const id = reqDiscordId.trim();
+        const name = reqDisplayName.trim();
+        if (!id || !name || !/^\d+$/.test(id)) {
+            setReqError("Please enter a valid numeric Discord ID and display name.");
+            return;
+        }
+
+        setReqBusy(true);
+        setReqError(null);
+        setReqMessage(null);
+        try {
+            await requestAccess(id, name);
+            setReqMessage("Your request has been submitted. An admin will review it.");
+            setReqDiscordId("");
+            setReqDisplayName("");
+        } catch (err) {
+            setReqError(err instanceof Error ? err.message : "Failed to submit request.");
+        } finally {
+            setReqBusy(false);
+        }
+    };
+
     return (
         <div className="login-page">
             <div className="login-card">
@@ -36,6 +70,43 @@ export default function LoginPage({ onDevLogin }: { onDevLogin?: () => void }) {
                     <div className="login-warning">
                         ⚠ VITE_DISCORD_CLIENT_ID is not set. Discord login will not work.
                     </div>
+                )}
+
+                {/* ── Request Access ── */}
+                <div className="login-divider">
+                    <span>or</span>
+                </div>
+
+                <button
+                    type="button"
+                    className="login-request-toggle"
+                    onClick={() => setShowRequestForm((v) => !v)}
+                >
+                    {showRequestForm ? "▾" : "▸"} Request Access
+                </button>
+
+                {showRequestForm && (
+                    <form className="login-request-form" onSubmit={handleRequestAccess}>
+                        <input
+                            className="input"
+                            placeholder="Discord ID (numeric)"
+                            value={reqDiscordId}
+                            onChange={(e) => setReqDiscordId(e.target.value)}
+                            required
+                        />
+                        <input
+                            className="input"
+                            placeholder="Display Name"
+                            value={reqDisplayName}
+                            onChange={(e) => setReqDisplayName(e.target.value)}
+                            required
+                        />
+                        <button type="submit" className="button primary" disabled={reqBusy}>
+                            {reqBusy ? "Submitting…" : "📩 Request Access"}
+                        </button>
+                        {reqMessage && <div className="login-request-success">{reqMessage}</div>}
+                        {reqError && <div className="login-request-error">{reqError}</div>}
+                    </form>
                 )}
             </div>
         </div>

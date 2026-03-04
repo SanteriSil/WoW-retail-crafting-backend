@@ -1,4 +1,4 @@
-import type { AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -178,6 +178,35 @@ export async function addAllowedUser(discordId: string, discordUsername: string)
 
 export async function removeAllowedUser(discordId: string): Promise<void> {
     await request<void>(`/auth/users/${discordId}`, { method: "DELETE" });
+}
+
+export async function promoteUser(discordId: string): Promise<AllowedUser> {
+    return request<AllowedUser>(`/auth/users/${discordId}/promote`, { method: "POST" });
+}
+
+export async function demoteUser(discordId: string): Promise<AllowedUser> {
+    return request<AllowedUser>(`/auth/users/${discordId}/demote`, { method: "POST" });
+}
+
+// ── Access requests ──────────────────────────────────────────────────────────
+
+export async function requestAccess(discordId: string, discordUsername: string): Promise<void> {
+    await request<void>("/auth/access-requests", {
+        method: "POST",
+        body: JSON.stringify({ discordId, discordUsername }),
+    });
+}
+
+export async function getAccessRequests(): Promise<AccessRequest[]> {
+    return request<AccessRequest[]>("/auth/access-requests");
+}
+
+export async function approveAccessRequest(id: number): Promise<void> {
+    await request<void>(`/auth/access-requests/${id}/approve`, { method: "POST" });
+}
+
+export async function denyAccessRequest(id: number): Promise<void> {
+    await request<void>(`/auth/access-requests/${id}/deny`, { method: "POST" });
 }
 
 // ── Expansions ────────────────────────────────────────────────────────────────
