@@ -108,6 +108,7 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                                 </td>
                                 <td>
                                     {c.recipeName}
+                                    {c.hasNotes && <span className="notes-indicator" title="This recipe has notes">📝</span>}
                                     {hasOverride && <span className="craft-override-badge" title="Custom M/R override active">⚙️</span>}
                                 </td>
                                 <td>{c.professionName}</td>

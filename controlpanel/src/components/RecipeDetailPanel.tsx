@@ -104,6 +104,14 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                     </div>
                 </div>
 
+                {/* ── Notes ── */}
+                {recipe.notes && (
+                    <div className="recipe-notes-block">
+                        <div className="recipe-section-label">📝 Notes</div>
+                        <p className="recipe-notes-text">{recipe.notes}</p>
+                    </div>
+                )}
+
                 {/* ── Required ingredients ── */}
                 {recipe.ingredients.length > 0 && (
                     <div>

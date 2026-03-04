@@ -1024,6 +1024,36 @@ body {
     border-radius: 8px;
 }
 
+/* ── Recipe notes ── */
+
+.recipe-notes-textarea {
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+.recipe-notes-block {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.recipe-notes-text {
+    margin: 0;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.notes-indicator {
+    margin-left: 4px;
+    cursor: help;
+    font-size: 13px;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    Recipes
    ══════════════════════════════════════════════════════════════════════════ */

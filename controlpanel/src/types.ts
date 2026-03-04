@@ -106,6 +106,7 @@ export type RecipeSummary = {
   /** Pre-calculated profit in copper; null when not calculable */
   estimatedProfit: number | null;
   profitCalculable: boolean;
+  hasNotes: boolean;
   updatedAt: string;
 };
 
@@ -125,6 +126,7 @@ export type RecipeDetail = {
   multicraftable: boolean;
   multicraftMultiplier: number;
   resourcefulnessFactor: number;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -234,6 +236,7 @@ export type RecipeWritePayload = {
   multicraftable: boolean;
   multicraftMultiplier: number;
   resourcefulnessFactor: number;
+  notes: string | null;
 };
 
 // ── Dashboard (F2) ──────────────────────────────────────────────────────────
@@ -257,6 +260,7 @@ export type DashboardCraft = {
   multicraftPercent: number;
   resourcefulnessPercent: number;
   missingPriceItemIds: number[];
+  hasNotes: boolean;
 };
 
 export type CraftOverrides = {

@@ -41,7 +41,7 @@ public class SecurityConfig {
 
                 // ── Public (no auth required) ──────────────────────────────
                 .requestMatchers("/auth/discord/**", "/auth/dev/**",
-                                 "/health", "/actuator/**", "/h2-console/**").permitAll()
+                                 "/health", "/actuator/**", "/h2-console/**", "/error").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/access-requests").permitAll()
                 .requestMatchers(HttpMethod.GET, "/items", "/items/ids", "/items/ordered").permitAll()
                 .requestMatchers(HttpMethod.GET, "/professions").permitAll()

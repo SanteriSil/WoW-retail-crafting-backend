@@ -51,6 +51,7 @@ export default function RecipeFormModal(props: Props) {
     const [multicraftable, setMulticraftable] = useState(false);
     const [multicraftMultiplier, setMulticraftMultiplier] = useState(1.2);
     const [resourcefulnessFactor, setResourcefulnessFactor] = useState(0.3);
+    const [notes, setNotes] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +78,7 @@ export default function RecipeFormModal(props: Props) {
         setMulticraftable(recipe.multicraftable ?? false);
         setMulticraftMultiplier(recipe.multicraftMultiplier ?? 1.2);
         setResourcefulnessFactor(recipe.resourcefulnessFactor ?? 0.3);
+        setNotes(recipe.notes ?? "");
     }, [recipe]);
 
     // Close on Escape
@@ -123,6 +125,7 @@ export default function RecipeFormModal(props: Props) {
             multicraftable,
             multicraftMultiplier,
             resourcefulnessFactor,
+            notes: notes.trim() || null,
         };
 
         setSaving(true);
@@ -278,6 +281,18 @@ export default function RecipeFormModal(props: Props) {
                                 onChange={(e) => setResourcefulnessFactor(Math.min(1, Math.max(0, parseFloat(e.target.value) || 0.3)))}
                             />
                         </div>
+                    </div>
+
+                    {/* ── Notes ── */}
+                    <div className="field">
+                        <label className="label">Notes</label>
+                        <textarea
+                            className="input recipe-notes-textarea"
+                            rows={3}
+                            placeholder="Optional notes about this recipe (e.g. profitability conditions, knowledge requirements...)"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                        />
                     </div>
 
                     {/* ── Ingredients ── */}

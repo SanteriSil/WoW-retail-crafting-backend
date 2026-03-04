@@ -15,6 +15,7 @@ import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
 import com.crafting.repository.ProfessionRepository;
 import com.crafting.repository.RecipeRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,17 +41,20 @@ public class RecipeService {
     private final ProfessionRepository professionRepository;
     private final ExpansionRepository expansionRepository;
     private final ProfitCalculationService profitCalculationService;
+    private final EntityManager entityManager;
 
     public RecipeService(RecipeRepository recipeRepository,
                          ItemRepository itemRepository,
                          ProfessionRepository professionRepository,
                          ExpansionRepository expansionRepository,
-                         ProfitCalculationService profitCalculationService) {
+                         ProfitCalculationService profitCalculationService,
+                         EntityManager entityManager) {
         this.recipeRepository = recipeRepository;
         this.itemRepository = itemRepository;
         this.professionRepository = professionRepository;
         this.expansionRepository = expansionRepository;
         this.profitCalculationService = profitCalculationService;
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -366,6 +370,9 @@ public class RecipeService {
         recipe.setNotes(command.notes());
 
         recipe.getIngredients().clear();
+        recipe.getOptionalIngredientGroups().clear();
+        entityManager.flush(); // Force DELETEs before INSERTs to avoid unique constraint violations
+
         if (command.ingredients() != null) {
             for (IngredientCommand ingredientCommand : command.ingredients()) {
                 Item item = findItem(validation.items(), ingredientCommand.itemId());
@@ -378,7 +385,6 @@ public class RecipeService {
             }
         }
 
-        recipe.getOptionalIngredientGroups().clear();
         if (command.optionalIngredientGroups() != null) {
             for (OptionalIngredientGroupCommand groupCommand : command.optionalIngredientGroups()) {
                 RecipeOptionalIngredientGroup group = RecipeOptionalIngredientGroup.builder()
