@@ -264,6 +264,24 @@ class SecurityEndpointAccessTest {
         }
 
         @Test
+        @DisplayName("POST /recipe-lists/1/recipes → 401 without auth")
+        void addRecipeListMembersNoAuth() throws Exception {
+            mockMvc.perform(post("/recipe-lists/1/recipes")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"recipeIds\":[1]}"))
+                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("DELETE /recipe-lists/1/recipes → 401 without auth")
+        void removeRecipeListMembersNoAuth() throws Exception {
+            mockMvc.perform(delete("/recipe-lists/1/recipes")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"recipeIds\":[1]}"))
+                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
         @DisplayName("POST /recipes → 401 without auth")
         void createRecipeNoAuth() throws Exception {
             mockMvc.perform(post("/recipes")
@@ -513,6 +531,30 @@ class SecurityEndpointAccessTest {
             mockMvc.perform(get("/recipe-lists")
                             .with(user("99999").roles("ALLOWED_USER")))
                     .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("POST /recipe-lists/1/recipes → 403 with ALLOWED_USER")
+        void addRecipeListMembersForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(post("/recipe-lists/1/recipes")
+                    .with(user("99999").roles("ALLOWED_USER"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"recipeIds\":[1]}"))
+                .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("DELETE /recipe-lists/1/recipes → not 401/403 with ADMIN")
+        void removeRecipeListMembersAccessibleForAdmin() throws Exception {
+            mockMvc.perform(delete("/recipe-lists/1/recipes")
+                    .with(user("99999").roles("ADMIN"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"recipeIds\":[1]}"))
+                .andExpect(result -> {
+                int status = result.getResponse().getStatus();
+                org.assertj.core.api.Assertions.assertThat(status)
+                    .isNotIn(401, 403);
+                });
         }
 
         @Test

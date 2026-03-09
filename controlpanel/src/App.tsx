@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { archiveLogs, clearAuth, clearLogs, createItem, deleteItem, devLogin, exchangeDiscordCode, fetchCraftingAH, getItems, getProfessions, getStoredUser, getToken, setAuth, updateItem } from "./api";
 import type { Item, Profession } from "./types";
-import CreateItemForm from "./components/CreateItemForm";
-import UpdateItemForm from "./components/UpdateItemForm";
-import DeleteItemForm from "./components/DeleteItemForm";
-import ItemList from "./components/ItemList";
-import SheetBuilder from "./components/SheetBuilder";
-import LoginPage from "./components/LoginPage";
-import RecipesPage from "./components/RecipesPage";
-import CharactersPage from "./components/CharactersPage";
-import DashboardPage from "./components/DashboardPage";
-import AdminPage from "./components/AdminPage";
+import { AdminPage, SheetBuilder } from "./components/admin";
+import { LoginPage } from "./components/auth";
+import { CharactersPage } from "./components/characters";
+import { DashboardPage } from "./components/dashboard";
+import { CreateItemForm, DeleteItemForm, ItemList, UpdateItemForm } from "./components/items";
+import { RecipesPage } from "./components/recipes";
 
 export default function App() {
     // ── Auth state ──

@@ -8,6 +8,7 @@ import com.crafting.model.dto.DashboardResponse;
 import com.crafting.model.dto.DashboardResponse.DashboardCraft;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import com.crafting.repository.CharacterRecipeRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ public class CraftDashboardService {
         this.profitCalculationService = profitCalculationService;
     }
 
+    @Transactional
     public DashboardResponse getDashboardCrafts(Long discordId, DashboardFilterParams params) {
         List<CharacterRecipe> allAssignments = characterRecipeRepository.findAllByDiscordIdWithDetails(discordId);
 

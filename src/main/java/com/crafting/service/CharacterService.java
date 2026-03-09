@@ -63,12 +63,14 @@ public class CharacterService {
 
     // ── Query ───────────────────────────────────────────────────────────────
 
+    @Transactional
     public List<CharacterDTO> getMyCharacters(Long discordId) {
         return characterRepository.findByDiscordId(discordId).stream()
                 .map(this::toDTO)
                 .toList();
     }
 
+    @Transactional
     public CharacterDTO getCharacter(Long discordId, Long characterId) {
         WowCharacter character = findOwnedCharacter(discordId, characterId);
         return toDTO(character);
@@ -140,6 +142,7 @@ public class CharacterService {
 
     // ── Recipe Assignments ──────────────────────────────────────────────────
 
+    @Transactional
     public List<RecipeSummaryDTO> getAssignedRecipes(Long discordId, Long characterId) {
         WowCharacter character = findOwnedCharacter(discordId, characterId);
         return characterRecipeRepository.findByCharacterId(character.getId()).stream()
