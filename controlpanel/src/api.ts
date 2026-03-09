@@ -1,4 +1,4 @@
-import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -238,6 +238,10 @@ export async function getRecipe(id: number): Promise<RecipeDetail> {
     return request<RecipeDetail>(`/recipes/${id}`);
 }
 
+export async function getRecipeItemIds(): Promise<RecipeItemIdsResponse> {
+    return request<RecipeItemIdsResponse>("/recipes/item-ids");
+}
+
 export async function duplicateRecipe(id: number): Promise<RecipeDetail> {
     return request<RecipeDetail>(`/recipes/${id}/duplicate`, { method: "POST" });
 }
@@ -257,6 +261,13 @@ export async function updateRecipe(id: number, payload: RecipeWritePayload): Pro
     return request<RecipeDetail>(`/recipes/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
+    });
+}
+
+export async function refreshPricesForRecipes(recipeIds: number[]): Promise<RecipePriceRefreshResponse> {
+    return request<RecipePriceRefreshResponse>("/craftingAH/fetch-for-recipes", {
+        method: "POST",
+        body: JSON.stringify({ recipeIds }),
     });
 }
 

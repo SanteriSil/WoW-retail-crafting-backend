@@ -20,12 +20,31 @@ type Props = {
     page: Page<RecipeSummary> | null;
     loading: boolean;
     sort: string;
+    isAdmin: boolean;
+    selectedRecipeIds: Set<number>;
+    refreshBusy: boolean;
     onPageChange: (page: number) => void;
     onSortChange: (sort: string) => void;
     onSelectRecipe: (recipe: RecipeSummary) => void;
+    onToggleRecipeSelection: (recipeId: number) => void;
+    onSetRecipeSelection: (recipeIds: number[]) => void;
+    onRefreshSelected: () => void;
 };
 
-export default function RecipeList({ page, loading, sort, onPageChange, onSortChange, onSelectRecipe }: Props) {
+export default function RecipeList({
+    page,
+    loading,
+    sort,
+    isAdmin,
+    selectedRecipeIds,
+    refreshBusy,
+    onPageChange,
+    onSortChange,
+    onSelectRecipe,
+    onToggleRecipeSelection,
+    onSetRecipeSelection,
+    onRefreshSelected,
+}: Props) {
     const [sortField, sortDir] = sort.split(",");
     const [groupByOutput, setGroupByOutput] = useState(false);
     const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
@@ -93,6 +112,10 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
         });
     };
 
+    const visibleRecipes = groupedRecipes.flatMap((group) => [group.primary, ...(expandedGroupKeys.has(group.groupKey) ? group.variants : [])]);
+    const visibleRecipeIds = visibleRecipes.map((recipe) => recipe.id);
+    const allVisibleSelected = visibleRecipeIds.length > 0 && visibleRecipeIds.every((id) => selectedRecipeIds.has(id));
+
     if (loading && (!page || page.content.length === 0)) {
         return <div className="muted" style={{ padding: "16px 0" }}>Loading recipes…</div>;
     }
@@ -116,11 +139,32 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
                     />
                     Group by output
                 </label>
+                {isAdmin && (
+                    <div className="recipe-list-toolbar-actions">
+                        <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
+                            <input
+                                type="checkbox"
+                                checked={allVisibleSelected}
+                                onChange={(e) => onSetRecipeSelection(e.target.checked ? visibleRecipeIds : [])}
+                            />
+                            Select visible
+                        </label>
+                        <button
+                            type="button"
+                            className="button secondary small"
+                            disabled={selectedRecipeIds.size === 0 || refreshBusy}
+                            onClick={onRefreshSelected}
+                        >
+                            {refreshBusy ? "Refreshing…" : `Refresh Prices (${selectedRecipeIds.size})`}
+                        </button>
+                    </div>
+                )}
             </div>
             <div className="recipe-table-wrapper">
                 <table className="recipe-table">
                     <thead>
                         <tr>
+                            {isAdmin && <th style={{ width: 44, textAlign: "center" }}>☑</th>}
                             <th className="sortable" onClick={() => handleSortClick("name")}>
                                 Name <SortIcon field="name" />
                             </th>
@@ -150,6 +194,15 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
                                             if (e.key === "Enter" || e.key === " ") onSelectRecipe(recipe);
                                         }}
                                     >
+                                        {isAdmin && (
+                                            <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedRecipeIds.has(recipe.id)}
+                                                    onChange={() => onToggleRecipeSelection(recipe.id)}
+                                                />
+                                            </td>
+                                        )}
                                         <td style={{ fontWeight: 600 }}>
                                             <span className={isVariant ? "recipe-variant-name" : undefined}>{recipe.name}</span>
                                             {!isVariant && group.variants.length > 0 && (

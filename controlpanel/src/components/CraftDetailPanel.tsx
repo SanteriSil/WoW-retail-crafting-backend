@@ -16,6 +16,8 @@ type Props = {
     currentR: number;
     onApply: (m: number, r: number) => void;
     onReset: () => void;
+    isAdmin: boolean;
+    onRefreshPrices: () => Promise<unknown>;
 };
 
 export default function CraftDetailPanel({
@@ -26,9 +28,13 @@ export default function CraftDetailPanel({
     currentR,
     onApply,
     onReset,
+    isAdmin,
+    onRefreshPrices,
 }: Props) {
     const [m, setM] = useState(currentM);
     const [r, setR] = useState(currentR);
+    const [refreshBusy, setRefreshBusy] = useState(false);
+    const [refreshStatus, setRefreshStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
     useEffect(() => {
         setM(currentM);
@@ -60,6 +66,22 @@ export default function CraftDetailPanel({
     const breakEven = calculateBreakEven(craft, m, r);
     const resourcefulnessPct = (craft.resourcefulnessPercent * r).toFixed(1);
     const multicraftBonusPct = (craft.multicraftPercent * m).toFixed(1);
+
+    const handleRefreshPrices = async () => {
+        setRefreshBusy(true);
+        setRefreshStatus(null);
+        try {
+            const result = await onRefreshPrices();
+            const updatedCount = typeof result === "object" && result != null && "updatedCount" in result
+                ? Number((result as { updatedCount?: number }).updatedCount ?? 0)
+                : 0;
+            setRefreshStatus({ ok: true, message: `${updatedCount} item price${updatedCount === 1 ? "" : "s"} refreshed.` });
+        } catch (err) {
+            setRefreshStatus({ ok: false, message: err instanceof Error ? err.message : "Refresh failed." });
+        } finally {
+            setRefreshBusy(false);
+        }
+    };
 
     return (
         <div className="craft-detail-panel">
@@ -173,6 +195,11 @@ export default function CraftDetailPanel({
                     />
                 </label>
                 <div className="craft-detail-actions">
+                    {isAdmin && (
+                        <button type="button" className="button small ghost" onClick={() => void handleRefreshPrices()} disabled={refreshBusy}>
+                            {refreshBusy ? "Refreshing…" : "🔄 Refresh Prices"}
+                        </button>
+                    )}
                     <button type="button" className="button small secondary" onClick={onReset}>
                         Reset
                     </button>
@@ -181,6 +208,11 @@ export default function CraftDetailPanel({
                     </button>
                 </div>
             </div>
+            {refreshStatus && (
+                <div className={`craft-detail-status ${refreshStatus.ok ? "success" : "error"}`}>
+                    {refreshStatus.message}
+                </div>
+            )}
         </div>
     );
 }

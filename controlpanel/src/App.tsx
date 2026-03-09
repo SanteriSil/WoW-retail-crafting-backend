@@ -304,7 +304,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
 
             {activeTab === "dashboard" && (
                 <div className="card" style={{ marginTop: 16 }}>
-                    <DashboardPage professions={professions} />
+                    <DashboardPage professions={professions} role={role} />
                 </div>
             )}
 

@@ -2036,8 +2036,18 @@ body {
 
 .recipe-list-toolbar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
     margin-bottom: 8px;
+}
+
+.recipe-list-toolbar-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .group-variants-toggle {
@@ -2362,6 +2372,11 @@ body {
     display: inline-flex;
     gap: 8px;
     margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.craft-detail-status {
+    margin-top: 10px;
 }
 
 /* ── Crafting Calculator (U10) ───────────────────────────────────────────────── */

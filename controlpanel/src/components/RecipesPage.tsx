@@ -8,6 +8,7 @@ import {
     getItems,
     getRecipe,
     getRecipes,
+    refreshPricesForRecipes,
     updateRecipe,
 } from "../api";
 import type {
@@ -56,6 +57,8 @@ export default function RecipesPage({ professions, role }: Props) {
     const [exportBusy, setExportBusy] = useState(false);
     const [exportStatus, setExportStatus] = useState<{ msg: string; ok: boolean } | null>(null);
     const [actionStatus, setActionStatus] = useState<{ msg: string; ok: boolean } | null>(null);
+    const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<number>>(new Set());
+    const [refreshBusy, setRefreshBusy] = useState(false);
 
     // ── Load expansions once ──
     useEffect(() => {
@@ -111,10 +114,12 @@ export default function RecipesPage({ professions, role }: Props) {
 
     const handlePageChange = useCallback((page: number) => {
         setFilters((prev) => ({ ...prev, page }));
+        setSelectedRecipeIds(new Set());
     }, []);
 
     const handleSortChange = useCallback((sort: string) => {
         setFilters((prev) => ({ ...prev, sort, page: 0 }));
+        setSelectedRecipeIds(new Set());
     }, []);
 
     // ── Export ──
@@ -174,6 +179,34 @@ export default function RecipesPage({ professions, role }: Props) {
     const handleScrapeComplete = useCallback(() => {
         void fetchRecipes(filters);
     }, [fetchRecipes, filters]);
+
+    const toggleRecipeSelection = useCallback((recipeId: number) => {
+        setSelectedRecipeIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(recipeId)) next.delete(recipeId);
+            else next.add(recipeId);
+            return next;
+        });
+    }, []);
+
+    const setRecipeSelection = useCallback((recipeIds: number[]) => {
+        setSelectedRecipeIds(new Set(recipeIds));
+    }, []);
+
+    const handleRefreshSelected = useCallback(async () => {
+        if (selectedRecipeIds.size === 0) return;
+        setRefreshBusy(true);
+        try {
+            const result = await refreshPricesForRecipes(Array.from(selectedRecipeIds));
+            setActionStatus({ msg: `${result.updatedCount} item price${result.updatedCount === 1 ? "" : "s"} refreshed.`, ok: true });
+            await fetchRecipes(filters);
+        } catch (err) {
+            setActionStatus({ msg: err instanceof Error ? err.message : "Refresh failed.", ok: false });
+        } finally {
+            setRefreshBusy(false);
+            setTimeout(() => setActionStatus(null), 3000);
+        }
+    }, [fetchRecipes, filters, selectedRecipeIds]);
 
     return (
         <div className="recipes-page">
@@ -244,9 +277,15 @@ export default function RecipesPage({ professions, role }: Props) {
                 page={recipePage}
                 loading={listLoading}
                 sort={filters.sort ?? "name,asc"}
+                isAdmin={isAdmin}
+                selectedRecipeIds={selectedRecipeIds}
+                refreshBusy={refreshBusy}
                 onPageChange={handlePageChange}
                 onSortChange={handleSortChange}
                 onSelectRecipe={handleSelectRecipe}
+                onToggleRecipeSelection={toggleRecipeSelection}
+                onSetRecipeSelection={setRecipeSelection}
+                onRefreshSelected={() => void handleRefreshSelected()}
             />
 
             {/* ── Detail panel (portal-style overlay) ── */}

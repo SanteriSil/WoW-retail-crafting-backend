@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getCharacters, getDashboardCrafts, getRecipe } from "../api";
+import { getCharacters, getDashboardCrafts, getRecipe, refreshPricesForRecipes } from "../api";
 import type { CalculatorEntry, Character, CraftOverrides, DashboardCraft, DashboardResponse, Profession, RecipeDetail } from "../types";
 import DashboardFilters from "./DashboardFilters";
 import DashboardSummary from "./DashboardSummary";
@@ -8,6 +8,7 @@ import CraftingCalculator from "./CraftingCalculator";
 
 type Props = {
     professions: Profession[];
+    role: string | null;
 };
 
 function loadOverrides(): CraftOverrides {
@@ -26,7 +27,8 @@ function loadCalcEntries(): CalculatorEntry[] {
     }
 }
 
-export default function DashboardPage({ professions }: Props) {
+export default function DashboardPage({ professions, role }: Props) {
+    const isAdmin = role === "ADMIN" || role === "OWNER";
     const [characters, setCharacters] = useState<Character[]>([]);
     const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -65,8 +67,8 @@ export default function DashboardPage({ professions }: Props) {
         localStorage.setItem("craft-calculator", JSON.stringify(entries));
     };
 
-    const fetchRecipeDetail = useCallback(async (id: number) => {
-        if (recipeCacheRef.current.has(id) || fetchingRef.current.has(id)) return;
+    const fetchRecipeDetail = useCallback(async (id: number, force = false) => {
+        if (!force && (recipeCacheRef.current.has(id) || fetchingRef.current.has(id))) return;
 
         fetchingRef.current.add(id);
         setRecipeLoadingIds((prev) => {
@@ -178,6 +180,15 @@ export default function DashboardPage({ professions }: Props) {
         }
     };
 
+    const handleRefreshPrices = useCallback(async (recipeId: number) => {
+        const result = await refreshPricesForRecipes([recipeId]);
+        await Promise.all([
+            fetchDashboard(),
+            fetchRecipeDetail(recipeId, true),
+        ]);
+        return result;
+    }, [fetchDashboard, fetchRecipeDetail]);
+
     return (
         <div className="dashboard-page">
             <div className="recipes-page-header">
@@ -222,6 +233,7 @@ export default function DashboardPage({ professions }: Props) {
                         onSortChange={handleSortChange}
                         loading={loading}
                         groupByOutput={groupByOutput}
+                        isAdmin={isAdmin}
                         showBaseMetrics={showBaseMetrics}
                         overrides={overrides}
                         onOverrideChange={handleOverrideChange}
@@ -230,6 +242,7 @@ export default function DashboardPage({ professions }: Props) {
                         onFetchRecipe={(recipeId) => {
                             void fetchRecipeDetail(recipeId);
                         }}
+                        onRefreshPrices={handleRefreshPrices}
                         onAddToCalculator={handleAddToCalculator}
                     />
 

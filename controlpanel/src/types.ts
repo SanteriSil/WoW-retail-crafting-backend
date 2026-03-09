@@ -161,6 +161,18 @@ export type RecipeFilterParams = {
   ingredientItemId?: number;
 };
 
+export type RecipeItemIdsResponse = {
+  ingredientItemIds: number[];
+  outputItemIds: number[];
+  allItemIds: number[];
+};
+
+export type RecipePriceRefreshResponse = {
+  updatedCount: number;
+  itemIds: number[];
+  recipeIds: number[];
+};
+
 // ── Scraper (client-side, F3) ────────────────────────────────────────────────
 
 export type ScrapedRecipe = {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { submitAuctionData } from "../api";
+import { getRecipeItemIds, submitAuctionData } from "../api";
 import type { Item, Profession } from "../types";
 
 type AuctionSubmitPanelProps = {
@@ -13,6 +13,7 @@ export default function AuctionSubmitPanel({ items, professions }: AuctionSubmit
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [copyMsg, setCopyMsg] = useState<string | null>(null);
+    const [copyRecipeBusy, setCopyRecipeBusy] = useState(false);
     const [selectedProfIds, setSelectedProfIds] = useState<Set<number | null>>(new Set());
 
     const toggleProfession = (id: number | null) => {
@@ -72,6 +73,25 @@ export default function AuctionSubmitPanel({ items, professions }: AuctionSubmit
         }
     };
 
+    const handleCopyRecipeIds = async () => {
+        setCopyMsg(null);
+        setCopyRecipeBusy(true);
+        try {
+            const result = await getRecipeItemIds();
+            if (result.allItemIds.length === 0) {
+                setCopyMsg("No recipe item IDs available.");
+                return;
+            }
+            await navigator.clipboard.writeText(result.allItemIds.join(","));
+            setCopyMsg(`${result.allItemIds.length} recipe item IDs copied!`);
+            setTimeout(() => setCopyMsg(null), 3000);
+        } catch (err) {
+            setCopyMsg(err instanceof Error ? err.message : "Failed to copy recipe item IDs");
+        } finally {
+            setCopyRecipeBusy(false);
+        }
+    };
+
     const handlePaste = async () => {
         try {
             const text = await navigator.clipboard.readText();
@@ -124,6 +144,9 @@ export default function AuctionSubmitPanel({ items, professions }: AuctionSubmit
             <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <button type="button" className="button secondary" onClick={handleCopyIds}>
                     Copy Item IDs ({filteredIds.length})
+                </button>
+                <button type="button" className="button secondary" onClick={() => void handleCopyRecipeIds()} disabled={copyRecipeBusy}>
+                    {copyRecipeBusy ? "Copying…" : "Copy Recipe Item IDs"}
                 </button>
                 {copyMsg && <span className="muted" style={{ fontSize: 12 }}>{copyMsg}</span>}
             </div>
