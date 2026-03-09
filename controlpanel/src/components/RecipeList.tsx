@@ -20,18 +20,26 @@ type Props = {
     page: Page<RecipeSummary> | null;
     loading: boolean;
     sort: string;
+    isAdmin: boolean;
+    hasActiveRecipeList: boolean;
+    addToListBusy: boolean;
     onPageChange: (page: number) => void;
     onSortChange: (sort: string) => void;
     onSelectRecipe: (recipe: RecipeSummary) => void;
+    onAddRecipesToList: (recipeIds: number[]) => void;
 };
 
 export default function RecipeList({
     page,
     loading,
     sort,
+    isAdmin,
+    hasActiveRecipeList,
+    addToListBusy,
     onPageChange,
     onSortChange,
     onSelectRecipe,
+    onAddRecipesToList,
 }: Props) {
     const [sortField, sortDir] = sort.split(",");
     const [groupByOutput, setGroupByOutput] = useState(false);
@@ -137,6 +145,7 @@ export default function RecipeList({
                             <th>Output Item</th>
                             <th style={{ textAlign: "right" }}>MC</th>
                             <th style={{ textAlign: "right" }}>R</th>
+                            {isAdmin && <th style={{ textAlign: "right" }}>List</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -194,6 +203,38 @@ export default function RecipeList({
                                         <td style={{ textAlign: "right" }} className="muted">
                                             {`×${recipe.resourcefulnessFactor.toFixed(2)}`}
                                         </td>
+                                        {isAdmin && (
+                                            <td style={{ textAlign: "right" }}>
+                                                <div className="recipe-list-toolbar-actions" style={{ justifyContent: "flex-end" }}>
+                                                    <button
+                                                        type="button"
+                                                        className="button secondary small"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onAddRecipesToList([recipe.id]);
+                                                        }}
+                                                        disabled={!hasActiveRecipeList || addToListBusy}
+                                                        title={hasActiveRecipeList ? "Add recipe to active list" : "Select or create a recipe list first"}
+                                                    >
+                                                        + Add
+                                                    </button>
+                                                    {!isVariant && group.variants.length > 0 && groupByOutput && (
+                                                        <button
+                                                            type="button"
+                                                            className="button secondary small"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onAddRecipesToList([group.primary.id, ...group.variants.map((variant) => variant.id)]);
+                                                            }}
+                                                            disabled={!hasActiveRecipeList || addToListBusy}
+                                                            title={hasActiveRecipeList ? "Add this recipe and its variants" : "Select or create a recipe list first"}
+                                                        >
+                                                            + Group
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             });

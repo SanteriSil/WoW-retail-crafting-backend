@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+    addRecipesToList,
+    createRecipeList,
     createRecipe,
+    deleteRecipeList,
     deleteRecipe as apiDeleteRecipe,
     duplicateRecipe as apiDuplicateRecipe,
     exportRecipesExcel,
     getExpansions,
     getItems,
+    getRecipeList,
+    getRecipeLists,
     getRecipe,
     getRecipes,
+    getRecipeListItemIds,
+    removeRecipesFromList,
+    renameRecipeList,
     updateRecipe,
 } from "../api";
 import type {
@@ -17,6 +25,8 @@ import type {
     Profession,
     RecipeDetail,
     RecipeFilterParams,
+    RecipeListDetail,
+    RecipeListSummary,
     RecipeWritePayload,
     RecipeSummary,
 } from "../types";
@@ -24,6 +34,7 @@ import RecipeDetailPanel from "./RecipeDetailPanel";
 import RecipeFilters from "./RecipeFilters";
 import RecipeFormModal from "./RecipeFormModal";
 import RecipeList from "./RecipeList";
+import RecipeListManager from "./RecipeListManager";
 import ScraperPanel from "./ScraperPanel";
 
 type Props = {
@@ -56,6 +67,12 @@ export default function RecipesPage({ professions, role }: Props) {
     const [exportBusy, setExportBusy] = useState(false);
     const [exportStatus, setExportStatus] = useState<{ msg: string; ok: boolean } | null>(null);
     const [actionStatus, setActionStatus] = useState<{ msg: string; ok: boolean } | null>(null);
+    const [recipeLists, setRecipeLists] = useState<RecipeListSummary[]>([]);
+    const [activeRecipeListId, setActiveRecipeListId] = useState<number | null>(null);
+    const [activeRecipeList, setActiveRecipeList] = useState<RecipeListDetail | null>(null);
+    const [recipeListsLoading, setRecipeListsLoading] = useState(false);
+    const [recipeListBusy, setRecipeListBusy] = useState(false);
+    const [recipeListStatus, setRecipeListStatus] = useState<{ msg: string; ok: boolean } | null>(null);
 
     // ── Load expansions once ──
     useEffect(() => {
@@ -84,6 +101,61 @@ export default function RecipesPage({ professions, role }: Props) {
     useEffect(() => {
         void fetchRecipes(filters);
     }, [filters, fetchRecipes]);
+
+    const loadRecipeListDetail = useCallback(async (listId: number | null) => {
+        if (!isAdmin || listId == null) {
+            setActiveRecipeList(null);
+            return;
+        }
+
+        try {
+            const detail = await getRecipeList(listId);
+            setActiveRecipeList(detail);
+        } catch (err) {
+            setActiveRecipeList(null);
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to load recipe list.", ok: false });
+        }
+    }, [isAdmin]);
+
+    const loadRecipeLists = useCallback(async (preferredListId?: number | null) => {
+        if (!isAdmin) {
+            setRecipeLists([]);
+            setActiveRecipeListId(null);
+            setActiveRecipeList(null);
+            return;
+        }
+
+        setRecipeListsLoading(true);
+        try {
+            const lists = await getRecipeLists();
+            setRecipeLists(lists);
+
+            const requestedId = preferredListId ?? activeRecipeListId;
+            const resolvedId = requestedId != null && lists.some((list) => list.id === requestedId)
+                ? requestedId
+                : (lists[0]?.id ?? null);
+
+            setActiveRecipeListId(resolvedId);
+            if (resolvedId != null) {
+                const detail = await getRecipeList(resolvedId);
+                setActiveRecipeList(detail);
+            } else {
+                setActiveRecipeList(null);
+            }
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to load recipe lists.", ok: false });
+            setRecipeLists([]);
+            setActiveRecipeListId(null);
+            setActiveRecipeList(null);
+        } finally {
+            setRecipeListsLoading(false);
+        }
+    }, [activeRecipeListId, isAdmin]);
+
+    useEffect(() => {
+        if (!isAdmin) return;
+        void loadRecipeLists();
+    }, [isAdmin, loadRecipeLists]);
 
     // ── Select a recipe → open detail panel ──
     const handleSelectRecipe = useCallback(async (summary: RecipeSummary) => {
@@ -175,6 +247,134 @@ export default function RecipesPage({ professions, role }: Props) {
         void fetchRecipes(filters);
     }, [fetchRecipes, filters]);
 
+    const clearRecipeListStatusLater = useCallback(() => {
+        setTimeout(() => setRecipeListStatus(null), 3000);
+    }, []);
+
+    const promptForListName = useCallback((label: string, initialValue = "") => {
+        const input = window.prompt(label, initialValue);
+        if (input == null) return null;
+
+        const trimmed = input.trim();
+        if (!trimmed) {
+            setRecipeListStatus({ msg: "Recipe list name cannot be blank.", ok: false });
+            clearRecipeListStatusLater();
+            return null;
+        }
+
+        return trimmed;
+    }, [clearRecipeListStatusLater]);
+
+    const handleCreateRecipeList = useCallback(async () => {
+        const name = promptForListName("New recipe list name");
+        if (!name) return;
+
+        setRecipeListBusy(true);
+        try {
+            const created = await createRecipeList(name);
+            setRecipeListStatus({ msg: `Created list ${created.name}.`, ok: true });
+            await loadRecipeLists(created.id);
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to create recipe list.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [clearRecipeListStatusLater, loadRecipeLists, promptForListName]);
+
+    const handleRenameRecipeList = useCallback(async () => {
+        if (!activeRecipeList) return;
+        const name = promptForListName("Rename recipe list", activeRecipeList.name);
+        if (!name) return;
+
+        setRecipeListBusy(true);
+        try {
+            const updated = await renameRecipeList(activeRecipeList.id, name);
+            setActiveRecipeList(updated);
+            setRecipeListStatus({ msg: `Renamed list to ${updated.name}.`, ok: true });
+            await loadRecipeLists(updated.id);
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to rename recipe list.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [activeRecipeList, clearRecipeListStatusLater, loadRecipeLists, promptForListName]);
+
+    const handleDeleteRecipeList = useCallback(async () => {
+        if (!activeRecipeList) return;
+        if (!window.confirm(`Delete recipe list \"${activeRecipeList.name}\"?`)) return;
+
+        setRecipeListBusy(true);
+        try {
+            await deleteRecipeList(activeRecipeList.id);
+            setRecipeListStatus({ msg: `Deleted list ${activeRecipeList.name}.`, ok: true });
+            await loadRecipeLists(null);
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to delete recipe list.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [activeRecipeList, clearRecipeListStatusLater, loadRecipeLists]);
+
+    const handleRemoveRecipeFromList = useCallback(async (recipeId: number) => {
+        if (activeRecipeListId == null) return;
+
+        setRecipeListBusy(true);
+        try {
+            const updated = await removeRecipesFromList(activeRecipeListId, [recipeId]);
+            setActiveRecipeList(updated);
+            setRecipeListStatus({ msg: "Recipe removed from list.", ok: true });
+            await loadRecipeLists(activeRecipeListId);
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to remove recipe from list.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [activeRecipeListId, clearRecipeListStatusLater, loadRecipeLists]);
+
+    const handleCopyRecipeListItemIds = useCallback(async () => {
+        if (activeRecipeListId == null) return;
+
+        setRecipeListBusy(true);
+        try {
+            const result = await getRecipeListItemIds(activeRecipeListId);
+            if (result.allItemIds.length === 0) {
+                setRecipeListStatus({ msg: "No item IDs available for the selected list.", ok: false });
+            } else {
+                await navigator.clipboard.writeText(result.allItemIds.join(","));
+                setRecipeListStatus({ msg: `${result.allItemIds.length} item IDs copied.`, ok: true });
+            }
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to copy item IDs.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [activeRecipeListId, clearRecipeListStatusLater]);
+
+    const handleAddRecipesToActiveList = useCallback(async (recipeIds: number[]) => {
+        if (activeRecipeListId == null || recipeIds.length === 0) return;
+
+        setRecipeListBusy(true);
+        try {
+            const updated = await addRecipesToList(activeRecipeListId, recipeIds);
+            setActiveRecipeList(updated);
+            setRecipeListStatus({
+                msg: `Added ${recipeIds.length} recipe${recipeIds.length === 1 ? "" : "s"} to ${updated.name}.`,
+                ok: true,
+            });
+            await loadRecipeLists(activeRecipeListId);
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to add recipes to the list.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [activeRecipeListId, clearRecipeListStatusLater, loadRecipeLists]);
+
     return (
         <div className="recipes-page">
             {/* ── Header bar ── */}
@@ -225,6 +425,26 @@ export default function RecipesPage({ professions, role }: Props) {
                 />
             )}
 
+            {isAdmin && (
+                <RecipeListManager
+                    lists={recipeLists}
+                    activeListId={activeRecipeListId}
+                    activeList={activeRecipeList}
+                    loading={recipeListsLoading}
+                    busy={recipeListBusy}
+                    status={recipeListStatus}
+                    onSelectList={(listId) => {
+                        setActiveRecipeListId(listId);
+                        void loadRecipeListDetail(listId);
+                    }}
+                    onCreateList={() => void handleCreateRecipeList()}
+                    onRenameList={() => void handleRenameRecipeList()}
+                    onDeleteList={() => void handleDeleteRecipeList()}
+                    onRemoveRecipe={(recipeId) => void handleRemoveRecipeFromList(recipeId)}
+                    onCopyItemIds={() => void handleCopyRecipeListItemIds()}
+                />
+            )}
+
             {/* ── Filters ── */}
             <RecipeFilters
                 professions={professions}
@@ -244,9 +464,13 @@ export default function RecipesPage({ professions, role }: Props) {
                 page={recipePage}
                 loading={listLoading}
                 sort={filters.sort ?? "name,asc"}
+                isAdmin={isAdmin}
+                hasActiveRecipeList={activeRecipeListId != null}
+                addToListBusy={recipeListBusy}
                 onPageChange={handlePageChange}
                 onSortChange={handleSortChange}
                 onSelectRecipe={handleSelectRecipe}
+                onAddRecipesToList={(recipeIds) => void handleAddRecipesToActiveList(recipeIds)}
             />
 
             {/* ── Detail panel (portal-style overlay) ── */}

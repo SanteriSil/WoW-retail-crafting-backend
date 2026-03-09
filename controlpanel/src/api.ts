@@ -1,4 +1,4 @@
-import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -269,6 +269,52 @@ export async function refreshPricesForRecipes(recipeIds: number[]): Promise<Reci
         method: "POST",
         body: JSON.stringify({ recipeIds }),
     });
+}
+
+export async function getRecipeLists(): Promise<RecipeListSummary[]> {
+    return request<RecipeListSummary[]>("/recipe-lists");
+}
+
+export async function createRecipeList(name: string): Promise<RecipeListDetail> {
+    return request<RecipeListDetail>("/recipe-lists", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+    });
+}
+
+export async function getRecipeList(id: number): Promise<RecipeListDetail> {
+    return request<RecipeListDetail>(`/recipe-lists/${id}`);
+}
+
+export async function renameRecipeList(id: number, name: string): Promise<RecipeListDetail> {
+    return request<RecipeListDetail>(`/recipe-lists/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ name }),
+    });
+}
+
+export async function deleteRecipeList(id: number): Promise<void> {
+    await request<void>(`/recipe-lists/${id}`, {
+        method: "DELETE",
+    });
+}
+
+export async function addRecipesToList(id: number, recipeIds: number[]): Promise<RecipeListDetail> {
+    return request<RecipeListDetail>(`/recipe-lists/${id}/recipes`, {
+        method: "POST",
+        body: JSON.stringify({ recipeIds }),
+    });
+}
+
+export async function removeRecipesFromList(id: number, recipeIds: number[]): Promise<RecipeListDetail> {
+    return request<RecipeListDetail>(`/recipe-lists/${id}/recipes`, {
+        method: "DELETE",
+        body: JSON.stringify({ recipeIds }),
+    });
+}
+
+export async function getRecipeListItemIds(id: number): Promise<RecipeListItemIds> {
+    return request<RecipeListItemIds>(`/recipe-lists/${id}/item-ids`);
 }
 
 // ── Export ──────────────────────────────────────────────────────────────────────

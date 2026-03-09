@@ -173,6 +173,38 @@ export type RecipePriceRefreshResponse = {
   recipeIds: number[];
 };
 
+export type RecipeListSummary = {
+  id: number;
+  name: string;
+  recipeCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecipeListEntry = {
+  recipeId: number;
+  recipeName: string;
+  outputItemId: number | null;
+  outputItemName: string | null;
+};
+
+export type RecipeListDetail = {
+  id: number;
+  name: string;
+  recipes: RecipeListEntry[];
+  recipeCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecipeListItemIds = {
+  listId: number;
+  listName: string;
+  ingredientItemIds: number[];
+  outputItemIds: number[];
+  allItemIds: number[];
+};
+
 // ── Scraper (client-side, F3) ────────────────────────────────────────────────
 
 export type ScrapedRecipe = {
