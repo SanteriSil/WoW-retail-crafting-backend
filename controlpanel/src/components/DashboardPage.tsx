@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getCharacters, getDashboardCrafts, getRecipe, refreshPricesForRecipes } from "../api";
+import { getCharacters, getDashboardCrafts, getRecipe } from "../api";
 import type { CalculatorEntry, Character, CraftOverrides, DashboardCraft, DashboardResponse, Profession, RecipeDetail } from "../types";
 import DashboardFilters from "./DashboardFilters";
 import DashboardSummary from "./DashboardSummary";
@@ -28,7 +28,7 @@ function loadCalcEntries(): CalculatorEntry[] {
 }
 
 export default function DashboardPage({ professions, role }: Props) {
-    const isAdmin = role === "ADMIN" || role === "OWNER";
+    void role;
     const [characters, setCharacters] = useState<Character[]>([]);
     const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
     const [loading, setLoading] = useState(false);
@@ -180,15 +180,6 @@ export default function DashboardPage({ professions, role }: Props) {
         }
     };
 
-    const handleRefreshPrices = useCallback(async (recipeId: number) => {
-        const result = await refreshPricesForRecipes([recipeId]);
-        await Promise.all([
-            fetchDashboard(),
-            fetchRecipeDetail(recipeId, true),
-        ]);
-        return result;
-    }, [fetchDashboard, fetchRecipeDetail]);
-
     return (
         <div className="dashboard-page">
             <div className="recipes-page-header">
@@ -233,7 +224,6 @@ export default function DashboardPage({ professions, role }: Props) {
                         onSortChange={handleSortChange}
                         loading={loading}
                         groupByOutput={groupByOutput}
-                        isAdmin={isAdmin}
                         showBaseMetrics={showBaseMetrics}
                         overrides={overrides}
                         onOverrideChange={handleOverrideChange}
@@ -242,7 +232,6 @@ export default function DashboardPage({ professions, role }: Props) {
                         onFetchRecipe={(recipeId) => {
                             void fetchRecipeDetail(recipeId);
                         }}
-                        onRefreshPrices={handleRefreshPrices}
                         onAddToCalculator={handleAddToCalculator}
                     />
 

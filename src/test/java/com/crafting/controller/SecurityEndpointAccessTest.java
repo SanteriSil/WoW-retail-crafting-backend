@@ -248,6 +248,22 @@ class SecurityEndpointAccessTest {
         }
 
         @Test
+        @DisplayName("GET /recipe-lists → 401 without auth")
+        void getRecipeListsNoAuth() throws Exception {
+            mockMvc.perform(get("/recipe-lists"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("POST /recipe-lists → 401 without auth")
+        void createRecipeListNoAuth() throws Exception {
+            mockMvc.perform(post("/recipe-lists")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"name\":\"Raid Consumables\"}"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
         @DisplayName("POST /recipes → 401 without auth")
         void createRecipeNoAuth() throws Exception {
             mockMvc.perform(post("/recipes")
@@ -490,6 +506,38 @@ class SecurityEndpointAccessTest {
                                 .isNotIn(401, 403);
                             });
                     }
+
+        @Test
+        @DisplayName("GET /recipe-lists → 403 with ALLOWED_USER (requires ADMIN)")
+        void getRecipeListsForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(get("/recipe-lists")
+                            .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("GET /recipe-lists → not 401/403 with ADMIN")
+        void getRecipeListsAccessibleForAdmin() throws Exception {
+            mockMvc.perform(get("/recipe-lists")
+                            .with(user("99999").roles("ADMIN")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
+
+        @Test
+        @DisplayName("GET /recipe-lists/1/item-ids → not 401/403 with OWNER")
+        void getRecipeListItemIdsAccessibleForOwner() throws Exception {
+            mockMvc.perform(get("/recipe-lists/1/item-ids")
+                            .with(user("99999").roles("OWNER")))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                    });
+        }
 
         @Test
         @DisplayName("POST /recipes → 403 with ALLOWED_USER (requires ADMIN)")

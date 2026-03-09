@@ -24,14 +24,12 @@ type Props = {
     onSortChange: (field: string) => void;
     loading: boolean;
     groupByOutput: boolean;
-    isAdmin: boolean;
     showBaseMetrics: boolean;
     overrides: CraftOverrides;
     onOverrideChange: (overrides: CraftOverrides) => void;
     recipeCache: Map<number, RecipeDetail>;
     recipeLoadingIds: Set<number>;
     onFetchRecipe: (recipeId: number) => void;
-    onRefreshPrices: (recipeId: number) => Promise<unknown>;
     onAddToCalculator?: (craft: DashboardCraft) => void;
 };
 
@@ -42,14 +40,12 @@ export default function CraftTable({
     onSortChange,
     loading,
     groupByOutput,
-    isAdmin,
     showBaseMetrics,
     overrides,
     onOverrideChange,
     recipeCache,
     recipeLoadingIds,
     onFetchRecipe,
-    onRefreshPrices,
     onAddToCalculator,
 }: Props) {
     const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -304,8 +300,6 @@ export default function CraftTable({
                                                 currentR={currentR}
                                                 onApply={(m, r) => handleApply(key, m, r)}
                                                 onReset={() => handleReset(key)}
-                                                isAdmin={isAdmin}
-                                                onRefreshPrices={() => onRefreshPrices(c.recipeId)}
                                             />
                                         </td>
                                     </tr>
