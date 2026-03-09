@@ -20,6 +20,7 @@ public record DashboardResponse(
             String professionName,
             Long outputItemId,
             String outputItemName,
+            Long outputItemPrice,
             Float outputQuantity,
             Short outputItemQuality,
             ProfitEstimateDTO baseProfit,

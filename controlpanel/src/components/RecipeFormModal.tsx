@@ -53,7 +53,7 @@ export default function RecipeFormModal(props: Props) {
     const [ingredients, setIngredients] = useState<IngredientRow[]>([{ itemId: "", quantity: 1 }]);
     const [optGroups, setOptGroups] = useState<OptGroupRow[]>([]);
     const [multicraftable, setMulticraftable] = useState(false);
-    const [multicraftMultiplier, setMulticraftMultiplier] = useState(1.2);
+    const [multicraftMultiplier, setMulticraftMultiplier] = useState(1.25);
     const [resourcefulnessFactor, setResourcefulnessFactor] = useState(0.3);
     const [notes, setNotes] = useState("");
     const [saving, setSaving] = useState(false);
@@ -80,7 +80,7 @@ export default function RecipeFormModal(props: Props) {
             }))
         );
         setMulticraftable(recipe.multicraftable ?? false);
-        setMulticraftMultiplier(recipe.multicraftMultiplier ?? 1.2);
+        setMulticraftMultiplier(recipe.multicraftMultiplier ?? 1.25);
         setResourcefulnessFactor(recipe.resourcefulnessFactor ?? 0.3);
         setNotes(recipe.notes ?? "");
     }, [recipe]);
@@ -274,7 +274,7 @@ export default function RecipeFormModal(props: Props) {
                                     value={multicraftMultiplier}
                                     min={0}
                                     step={0.1}
-                                    onChange={(e) => setMulticraftMultiplier(parseFloat(e.target.value) || 1.2)}
+                                    onChange={(e) => setMulticraftMultiplier(parseFloat(e.target.value) || 1.25)}
                                 />
                             </div>
                         )}

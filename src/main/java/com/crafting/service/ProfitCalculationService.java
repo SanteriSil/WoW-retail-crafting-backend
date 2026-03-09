@@ -42,7 +42,7 @@ public class ProfitCalculationService {
 
         double yieldMultiplier = 1.0d;
         if (recipe.isMulticraftable() && multicraftPercent > 0) {
-            float M = recipe.getMulticraftMultiplier() != null ? recipe.getMulticraftMultiplier() : 1.2f;
+            float M = recipe.getMulticraftMultiplier() != null ? recipe.getMulticraftMultiplier() : 1.25f;
             yieldMultiplier = 1.0d + (multicraftPercent / 100.0d) * M;
         }
 
@@ -95,7 +95,7 @@ public class ProfitCalculationService {
         );
     }
 
-    private Long resolveEffectivePrice(Item item) {
+    public static Long resolvePrice(Item item) {
         if (item == null) {
             return null;
         }
@@ -109,5 +109,9 @@ public class ProfitCalculationService {
             return ahPrice;
         }
         return vendorPrice;
+    }
+
+    private Long resolveEffectivePrice(Item item) {
+        return resolvePrice(item);
     }
 }

@@ -48,6 +48,7 @@ public record RecipeDTO(
     public record IngredientView(
             Long id,
             ItemView item,
+            Long itemPrice,
             Integer quantity
     ) {
     }

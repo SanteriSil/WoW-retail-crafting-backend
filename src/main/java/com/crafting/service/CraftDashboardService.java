@@ -75,6 +75,7 @@ public class CraftDashboardService {
                     recipe.getProfession() != null ? recipe.getProfession().getName() : null,
                     recipe.getOutputItem().getId(),
                     recipe.getOutputItem().getName(),
+                    ProfitCalculationService.resolvePrice(recipe.getOutputItem()),
                     recipe.getOutputQuantity(),
                     recipe.getOutputItem().getQuality(),
                     baseProfit,

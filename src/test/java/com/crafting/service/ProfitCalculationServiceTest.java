@@ -321,7 +321,7 @@ class ProfitCalculationServiceTest {
         }
 
         @Test
-        @DisplayName("null multicraft multiplier defaults to 1.2")
+        @DisplayName("null multicraft multiplier defaults to 1.25")
         void nullMulticraftMultiplier() {
             Item output = item(1, "Potion", 10_000L);
 
@@ -329,11 +329,11 @@ class ProfitCalculationServiceTest {
             recipe.setMulticraftable(true);
             recipe.setMulticraftMultiplier(null);
 
-            // multicraftPercent=50 → yieldMultiplier = 1 + (50/100)*1.2 = 1.60
+            // multicraftPercent=50 → yieldMultiplier = 1 + (50/100)*1.25 = 1.625
             ProfitEstimateDTO result = service.calculate(recipe, 50f, 0f);
 
-            // Revenue = 10_000 * 1.60 * 0.95 = 15_200
-            assertThat(result.outputRevenue()).isEqualTo(15_200L);
+            // Revenue = 10_000 * 1.625 * 0.95 = 15_438
+            assertThat(result.outputRevenue()).isEqualTo(15_438L);
         }
 
         @Test

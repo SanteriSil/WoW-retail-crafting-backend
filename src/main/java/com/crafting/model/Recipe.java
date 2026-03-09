@@ -97,7 +97,7 @@ public class Recipe {
 
     @Builder.Default
     @Column(name = "multicraft_multiplier", nullable = false)
-    private Float multicraftMultiplier = 1.2f;
+    private Float multicraftMultiplier = 1.25f;
 
     @Builder.Default
     @Column(name = "resourcefulness_factor", nullable = false)
@@ -114,7 +114,7 @@ public class Recipe {
         this.source = "MANUAL";
         this.deleted = false;
         this.multicraftable = false;
-        this.multicraftMultiplier = 1.2f;
+        this.multicraftMultiplier = 1.25f;
         this.resourcefulnessFactor = 0.3f;
     }
 

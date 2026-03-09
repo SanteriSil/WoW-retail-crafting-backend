@@ -155,6 +155,9 @@ public class CharacterService {
                             r.getProfession() != null ? r.getProfession().getName() : null,
                             r.getExpansion().getId(), r.getExpansion().getName(),
                             r.getSource(), profit.profit(), profit.calculable(),
+                            r.isMulticraftable(),
+                            r.getMulticraftMultiplier(),
+                            r.getResourcefulnessFactor(),
                             r.getNotes() != null && !r.getNotes().isBlank(),
                             r.getUpdatedAt()
                     );

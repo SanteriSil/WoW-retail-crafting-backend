@@ -75,6 +75,7 @@ export type RecipeItemView = {
 export type IngredientView = {
   id: number;
   item: RecipeItemView;
+  itemPrice: number | null;
   quantity: number;
 };
 
@@ -108,6 +109,9 @@ export type RecipeSummary = {
   /** Pre-calculated profit in copper; null when not calculable */
   estimatedProfit: number | null;
   profitCalculable: boolean;
+  multicraftable: boolean;
+  multicraftMultiplier: number;
+  resourcefulnessFactor: number;
   hasNotes: boolean;
   updatedAt: string;
 };
@@ -253,6 +257,7 @@ export type DashboardCraft = {
   professionName: string;
   outputItemId: number;
   outputItemName: string;
+  outputItemPrice: number | null;
   outputQuantity: number;
   outputItemQuality: number | null;
   baseProfit: ProfitEstimate;

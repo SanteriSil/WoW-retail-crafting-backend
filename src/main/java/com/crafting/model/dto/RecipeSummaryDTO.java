@@ -17,6 +17,9 @@ public record RecipeSummaryDTO(
         String source,
         Long estimatedProfit,
         boolean profitCalculable,
+        boolean multicraftable,
+        Float multicraftMultiplier,
+        Float resourcefulnessFactor,
         boolean hasNotes,
         OffsetDateTime updatedAt
 ) {

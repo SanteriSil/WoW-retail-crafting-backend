@@ -365,7 +365,7 @@ public class RecipeService {
         recipe.setProfession(validation.profession());
         recipe.setExpansion(validation.expansion());
         recipe.setMulticraftable(command.multicraftable() != null ? command.multicraftable() : false);
-        recipe.setMulticraftMultiplier(command.multicraftMultiplier() != null ? command.multicraftMultiplier() : 1.2f);
+        recipe.setMulticraftMultiplier(command.multicraftMultiplier() != null ? command.multicraftMultiplier() : 1.25f);
         recipe.setResourcefulnessFactor(command.resourcefulnessFactor() != null ? command.resourcefulnessFactor() : 0.3f);
         recipe.setNotes(command.notes());
 
@@ -434,6 +434,9 @@ public class RecipeService {
                 recipe.getSource(),
                 profit.profit(),
                 profit.calculable(),
+                recipe.isMulticraftable(),
+                recipe.getMulticraftMultiplier(),
+                recipe.getResourcefulnessFactor(),
                 recipe.getNotes() != null && !recipe.getNotes().isBlank(),
                 recipe.getUpdatedAt()
         );
@@ -448,6 +451,7 @@ public class RecipeService {
                         .map(i -> new RecipeDTO.IngredientView(
                                 i.getId(),
                                 toItemView(i.getItem()),
+                        ProfitCalculationService.resolvePrice(i.getItem()),
                                 i.getQuantity()
                         ))
                         .toList();
