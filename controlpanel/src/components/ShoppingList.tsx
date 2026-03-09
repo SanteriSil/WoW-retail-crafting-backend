@@ -33,7 +33,7 @@ function buildShoppingItems(entries: Props["entries"], cache: Props["recipeCache
                     existing.totalCost = existing.unitPrice * existing.totalQuantity;
                 }
             } else {
-                const unitPrice = ing.item.currentPrice ?? null;
+                const unitPrice = ing.itemPrice ?? ing.item.currentPrice ?? null;
                 map.set(ing.item.id, {
                     itemId: ing.item.id,
                     itemName: ing.item.name,
@@ -73,8 +73,9 @@ export default function ShoppingList({ entries, recipeCache }: Props) {
                 <thead>
                     <tr>
                         <th>Item</th>
+                        <th style={{ textAlign: "right" }}>Unit Price</th>
                         <th style={{ textAlign: "right" }}>Qty</th>
-                        <th style={{ textAlign: "right" }}>Cost</th>
+                        <th style={{ textAlign: "right" }}>Line Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -94,6 +95,13 @@ export default function ShoppingList({ entries, recipeCache }: Props) {
                                     );
                                 })()}
                             </td>
+                            <td style={{ textAlign: "right" }}>
+                                {item.unitPrice != null ? (
+                                    <span>{formatGold(item.unitPrice, false)}</span>
+                                ) : (
+                                    <span className="muted">No price</span>
+                                )}
+                            </td>
                             <td style={{ textAlign: "right" }}>×{item.totalQuantity}</td>
                             <td style={{ textAlign: "right" }}>
                                 {item.totalCost != null ? (
@@ -107,7 +115,7 @@ export default function ShoppingList({ entries, recipeCache }: Props) {
                 </tbody>
                 <tfoot>
                     <tr className="shopping-list-total">
-                        <td colSpan={2}>Total Materials Cost</td>
+                        <td colSpan={3}>Grand Total</td>
                         <td style={{ textAlign: "right" }}>
                             <strong>{formatGold(totalMaterialsCost, false)}</strong>
                             {hasMissing && <span className="muted" style={{ fontSize: 11 }}> *</span>}

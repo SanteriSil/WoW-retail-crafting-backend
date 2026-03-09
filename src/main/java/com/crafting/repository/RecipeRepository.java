@@ -33,7 +33,11 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long>{
 		      AND (:expansionId IS NULL OR r.expansion.id = :expansionId)
 		      AND (:outputItemId IS NULL OR r.outputItem.id = :outputItemId)
 		      AND (:ingredientItemId IS NULL OR ri.item.id = :ingredientItemId)
-		      AND (:search = '' OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%')))
+		      AND (
+		            :search = ''
+		            OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))
+		            OR LOWER(r.outputItem.name) LIKE LOWER(CONCAT('%', :search, '%'))
+		      )
 		    """,
 	    countQuery = """
 		    SELECT COUNT(DISTINCT r.id)
@@ -44,7 +48,11 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long>{
 		      AND (:expansionId IS NULL OR r.expansion.id = :expansionId)
 		      AND (:outputItemId IS NULL OR r.outputItem.id = :outputItemId)
 		      AND (:ingredientItemId IS NULL OR ri.item.id = :ingredientItemId)
-		      AND (:search = '' OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%')))
+		      AND (
+		            :search = ''
+		            OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))
+		            OR LOWER(r.outputItem.name) LIKE LOWER(CONCAT('%', :search, '%'))
+		      )
 		    """
     )
     Page<Recipe> findActiveRecipes(

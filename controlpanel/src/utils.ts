@@ -57,3 +57,51 @@ export function recalculateAdjustedProfit(
         cost: adjustedCost,
     };
 }
+
+export function calculateResourcefulnessSavings(
+    craft: DashboardCraft,
+    rOverride?: number,
+): number {
+    const R = rOverride ?? craft.resourcefulnessFactor;
+    const resPct = craft.resourcefulnessPercent;
+    const rawCost = craft.baseProfit.ingredientCost;
+    return Math.round(rawCost * (resPct / 100) * R);
+}
+
+export function calculateMulticraftBonus(
+    craft: DashboardCraft,
+    mOverride?: number,
+): number {
+    if (!craft.isMulticraftable || craft.multicraftPercent <= 0) return 0;
+
+    const M = mOverride ?? craft.multicraftMultiplier;
+    const mcPct = craft.multicraftPercent;
+    const baseRevenue = craft.baseProfit.outputRevenue;
+    const bonusMult = (mcPct / 100) * M;
+    return Math.round(baseRevenue * bonusMult);
+}
+
+export function calculateBreakEven(
+    craft: DashboardCraft,
+    mOverride?: number,
+    rOverride?: number,
+): number | null {
+    if (!craft.baseProfit.calculable) return null;
+
+    const M = mOverride ?? craft.multicraftMultiplier;
+    const R = rOverride ?? craft.resourcefulnessFactor;
+    const mcPct = craft.multicraftPercent;
+    const resPct = craft.resourcefulnessPercent;
+
+    const yieldMult = craft.isMulticraftable && mcPct > 0
+        ? 1 + (mcPct / 100) * M
+        : 1;
+
+    const rawCost = craft.baseProfit.ingredientCost;
+    const adjustedCost = rawCost * (1 - (resPct / 100) * R);
+    const denominator = craft.outputQuantity * yieldMult * (1 - 0.05);
+
+    if (denominator <= 0) return null;
+
+    return Math.ceil(adjustedCost / denominator);
+}

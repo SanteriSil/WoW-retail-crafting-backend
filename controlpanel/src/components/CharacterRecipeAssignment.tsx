@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { assignRecipes, getCharacterRecipes, getRecipes, unassignRecipe } from "../api";
 import type { Page, Profession, RecipeFilterParams, RecipeSummary } from "../types";
 
@@ -27,6 +27,7 @@ export default function CharacterRecipeAssignment({ characterId, professions, ch
 
     // ── Browser state ──
     const [search, setSearch] = useState("");
+    const [outputSearch, setOutputSearch] = useState("");
     const [profFilter, setProfFilter] = useState<number | "" | "char">(
         hasCharProfs ? (charProfs.length === 1 ? charProfs[0].id : "char") : ""
     );
@@ -98,6 +99,15 @@ export default function CharacterRecipeAssignment({ characterId, professions, ch
     }, [search, profFilter, fetchBrowser]);
 
     const assignedIdSet = new Set(assigned.map((r) => r.id));
+    const filteredBrowserRecipes = useMemo(() => {
+        const outputNeedle = outputSearch.trim().toLowerCase();
+        if (!browserPage) return [];
+        if (!outputNeedle) return browserPage.content;
+
+        return browserPage.content.filter((recipe) =>
+            recipe.outputItemName.toLowerCase().includes(outputNeedle)
+        );
+    }, [browserPage, outputSearch]);
 
     // ── Unassign ──
     const handleUnassign = async (recipeId: number) => {
@@ -219,12 +229,19 @@ export default function CharacterRecipeAssignment({ characterId, professions, ch
                         ))}
                     </select>
                 </div>
+                <input
+                    className="input"
+                    placeholder="Filter by output item…"
+                    value={outputSearch}
+                    onChange={(e) => setOutputSearch(e.target.value)}
+                    style={{ maxWidth: 320, marginBottom: 8 }}
+                />
 
                 {browserLoading && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Searching…</div>}
 
-                {browserPage && browserPage.content.length > 0 && (
+                {browserPage && filteredBrowserRecipes.length > 0 && (
                     <div className="browser-recipe-list">
-                        {browserPage.content.map((r) => {
+                        {filteredBrowserRecipes.map((r) => {
                             const alreadyAssigned = assignedIdSet.has(r.id);
                             const checked = alreadyAssigned || selectedIds.has(r.id);
                             return (
@@ -255,7 +272,7 @@ export default function CharacterRecipeAssignment({ characterId, professions, ch
                     </div>
                 )}
 
-                {browserPage && browserPage.content.length === 0 && !browserLoading && (
+                {browserPage && filteredBrowserRecipes.length === 0 && !browserLoading && (
                     <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>No recipes found.</div>
                 )}
 

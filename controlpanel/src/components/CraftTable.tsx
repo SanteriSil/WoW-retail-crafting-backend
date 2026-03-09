@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { CraftOverrides, DashboardCraft } from "../types";
 import { formatGold, profitClass, recalculateAdjustedProfit } from "../utils";
-import CraftOverridePopover from "./CraftOverridePopover";
+import type { RecipeDetail } from "../types";
+import CraftDetailPanel from "./CraftDetailPanel";
+
+type CraftGroup = {
+    groupKey: string;
+    primary: DashboardCraft;
+    variants: DashboardCraft[];
+};
 
 function qualityStars(quality?: number | null): string | null {
     if (quality == null) return null;
@@ -16,14 +23,33 @@ type Props = {
     direction: string;
     onSortChange: (field: string) => void;
     loading: boolean;
+    groupByOutput: boolean;
     showBaseMetrics: boolean;
     overrides: CraftOverrides;
     onOverrideChange: (overrides: CraftOverrides) => void;
+    recipeCache: Map<number, RecipeDetail>;
+    recipeLoadingIds: Set<number>;
+    onFetchRecipe: (recipeId: number) => void;
     onAddToCalculator?: (craft: DashboardCraft) => void;
 };
 
-export default function CraftTable({ crafts, sort, direction, onSortChange, loading, showBaseMetrics, overrides, onOverrideChange, onAddToCalculator }: Props) {
-    const [popoverKey, setPopoverKey] = useState<string | null>(null);
+export default function CraftTable({
+    crafts,
+    sort,
+    direction,
+    onSortChange,
+    loading,
+    groupByOutput,
+    showBaseMetrics,
+    overrides,
+    onOverrideChange,
+    recipeCache,
+    recipeLoadingIds,
+    onFetchRecipe,
+    onAddToCalculator,
+}: Props) {
+    const [expandedKey, setExpandedKey] = useState<string | null>(null);
+    const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
     const [notesKey, setNotesKey] = useState<string | null>(null);
 
     const columns: { key: string; label: string; sortable: boolean; align?: "right" }[] = [
@@ -32,10 +58,10 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
         { key: "professionName", label: "Profession", sortable: true },
         { key: "outputItemName", label: "Output", sortable: false },
         { key: "adjustedProfit", label: "Adj. Profit", sortable: true, align: "right" },
+        { key: "outputItemPrice", label: "Sell Price", sortable: false, align: "right" },
         ...(showBaseMetrics
             ? [
                 { key: "baseCost", label: "Base Cost", sortable: false, align: "right" as const },
-                { key: "baseProfit", label: "Base Profit", sortable: true, align: "right" as const },
             ]
             : []),
         { key: "_calc", label: "", sortable: false },
@@ -46,20 +72,77 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
     }
 
     const handleRowClick = (key: string) => {
-        setPopoverKey((prev) => (prev === key ? null : key));
+        setExpandedKey((prev) => (prev === key ? null : key));
+    };
+
+    const getCraftKey = (craft: DashboardCraft) => `${craft.characterId}-${craft.recipeId}`;
+
+    const getEffectiveProfit = (craft: DashboardCraft) => {
+        const ov = overrides[getCraftKey(craft)];
+        if (ov && craft.baseProfit.calculable) {
+            return recalculateAdjustedProfit(craft, ov.multicraftMultiplier, ov.resourcefulnessFactor).profit;
+        }
+        return craft.adjustedProfit.profit;
+    };
+
+    const groupedCrafts = useMemo<CraftGroup[]>(() => {
+        if (!groupByOutput) {
+            return crafts.map((craft) => ({
+                groupKey: `${craft.characterId}-${craft.outputItemId}-${craft.recipeId}`,
+                primary: craft,
+                variants: [],
+            }));
+        }
+
+        const rowIndex = new Map(crafts.map((craft, index) => [getCraftKey(craft), index]));
+        const groups = new Map<string, DashboardCraft[]>();
+
+        for (const craft of crafts) {
+            const key = `${craft.characterId}-${craft.outputItemId}`;
+            const existing = groups.get(key) ?? [];
+            existing.push(craft);
+            groups.set(key, existing);
+        }
+
+        return Array.from(groups.entries())
+            .map(([groupKey, group]) => {
+                const sorted = [...group].sort((a, b) => {
+                    const profitDiff = getEffectiveProfit(b) - getEffectiveProfit(a);
+                    if (profitDiff !== 0) return profitDiff;
+                    return a.recipeName.localeCompare(b.recipeName);
+                });
+
+                return {
+                    groupKey,
+                    primary: sorted[0],
+                    variants: sorted.slice(1),
+                };
+            })
+            .sort((a, b) => {
+                const aIndex = rowIndex.get(getCraftKey(a.primary)) ?? 0;
+                const bIndex = rowIndex.get(getCraftKey(b.primary)) ?? 0;
+                return aIndex - bIndex;
+            });
+    }, [crafts, groupByOutput, overrides]);
+
+    const toggleGroup = (groupKey: string) => {
+        setExpandedGroupKeys((prev) => {
+            const next = new Set(prev);
+            if (next.has(groupKey)) next.delete(groupKey);
+            else next.add(groupKey);
+            return next;
+        });
     };
 
     const handleApply = (key: string, m: number, r: number) => {
         const next = { ...overrides, [key]: { multicraftMultiplier: m, resourcefulnessFactor: r } };
         onOverrideChange(next);
-        setPopoverKey(null);
     };
 
     const handleReset = (key: string) => {
         const next = { ...overrides };
         delete next[key];
         onOverrideChange(next);
-        setPopoverKey(null);
     };
 
     return (
@@ -85,10 +168,17 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                     </tr>
                 </thead>
                 <tbody>
-                    {crafts.map((c) => {
+                    {groupedCrafts.flatMap((group) => {
+                        const visibleCrafts = [group.primary, ...(expandedGroupKeys.has(group.groupKey) ? group.variants : [])];
+
+                        return visibleCrafts.map((c, rowIndex) => {
                         const key = `${c.characterId}-${c.recipeId}`;
+                        const isExpanded = expandedKey === key;
                         const ov = overrides[key];
                         const hasOverride = ov != null;
+                        const recipeDetail = recipeCache.get(c.recipeId);
+                        const isRecipeLoading = recipeLoadingIds.has(c.recipeId);
+                        const isVariant = rowIndex > 0;
 
                         // Recalculate profit if override exists
                         let adjProfit = c.adjustedProfit.profit;
@@ -99,105 +189,127 @@ export default function CraftTable({ crafts, sort, direction, onSortChange, load
                             adjCalculable = true;
                         }
 
+                        const currentM = ov?.multicraftMultiplier ?? c.multicraftMultiplier;
+                        const currentR = ov?.resourcefulnessFactor ?? c.resourcefulnessFactor;
+
                         return (
-                            <tr
-                                key={key}
-                                className={`craft-row${hasOverride ? " craft-row-overridden" : ""}`}
-                                onClick={() => handleRowClick(key)}
-                                style={{ cursor: "pointer" }}
-                            >
-                                <td>
-                                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                        {c.characterIconUrl && (
-                                            <img
-                                                src={c.characterIconUrl}
-                                                alt=""
-                                                width={20}
-                                                height={20}
-                                                style={{ borderRadius: "50%", objectFit: "cover" }}
-                                            />
+                            <Fragment key={key}>
+                                <tr
+                                    className={`craft-row${hasOverride ? " craft-row-overridden" : ""}${isExpanded ? " craft-row-expanded" : ""}`}
+                                    onClick={() => {
+                                        if (!isExpanded && !recipeDetail) {
+                                            onFetchRecipe(c.recipeId);
+                                        }
+                                        handleRowClick(key);
+                                    }}
+                                    style={{ cursor: "pointer" }}
+                                >
+                                    <td>
+                                        {isVariant ? (
+                                            <span className="muted craft-variant-placeholder">↳</span>
+                                        ) : (
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                                {c.characterIconUrl && (
+                                                    <img
+                                                        src={c.characterIconUrl}
+                                                        alt=""
+                                                        width={20}
+                                                        height={20}
+                                                        style={{ borderRadius: "50%", objectFit: "cover" }}
+                                                    />
+                                                )}
+                                                {c.characterName}
+                                            </span>
                                         )}
-                                        {c.characterName}
-                                    </span>
-                                </td>
-                                <td>
-                                    {c.recipeName}
-                                    {c.hasNotes && (
-                                        <button
-                                            className="notes-indicator-btn"
-                                            title="View notes"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setNotesKey((prev) => (prev === key ? null : key));
-                                            }}
-                                        >📝</button>
-                                    )}
-                                    {hasOverride && <span className="craft-override-badge" title="Custom M/R override active">⚙️</span>}
-                                </td>
-                                <td>{c.professionName}</td>
-                                <td>
-                                    {c.outputItemName}
-                                    {(() => {
-                                        const stars = qualityStars(c.outputItemQuality);
-                                        return stars ? <span className={`quality-stars q${c.outputItemQuality}`}> {stars}</span> : null;
-                                    })()}
-                                    {c.outputQuantity !== 1 && (
-                                        <span className="muted"> ×{c.outputQuantity}</span>
-                                    )}
-                                </td>
-                                <td style={{ textAlign: "right" }}>
-                                    <span className={profitClass(adjCalculable, adjProfit)}>
-                                        {formatGold(adjProfit)}
-                                    </span>
-                                </td>
-                                {showBaseMetrics && (
-                                    <>
+                                    </td>
+                                    <td>
+                                        <span className={isVariant ? "craft-variant-name" : undefined}>{c.recipeName}</span>
+                                        {c.hasNotes && (
+                                            <button
+                                                className="notes-indicator-btn"
+                                                title="View notes"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setNotesKey((prev) => (prev === key ? null : key));
+                                                }}
+                                            >📝</button>
+                                        )}
+                                        {!isVariant && group.variants.length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="group-variants-toggle"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleGroup(group.groupKey);
+                                                }}
+                                            >
+                                                {expandedGroupKeys.has(group.groupKey)
+                                                    ? `Hide ${group.variants.length} variant${group.variants.length === 1 ? "" : "s"}`
+                                                    : `+${group.variants.length} variant${group.variants.length === 1 ? "" : "s"}`}
+                                            </button>
+                                        )}
+                                        {hasOverride && <span className="craft-override-badge" title="Custom M/R override active">⚙️</span>}
+                                    </td>
+                                    <td>{c.professionName}</td>
+                                    <td>
+                                        {c.outputItemName}
+                                        {(() => {
+                                            const stars = qualityStars(c.outputItemQuality);
+                                            return stars ? <span className={`quality-stars q${c.outputItemQuality}`}> {stars}</span> : null;
+                                        })()}
+                                        {c.outputQuantity !== 1 && (
+                                            <span className="muted"> ×{c.outputQuantity}</span>
+                                        )}
+                                    </td>
+                                    <td style={{ textAlign: "right" }}>
+                                        <span className={profitClass(adjCalculable, adjProfit)}>
+                                            {formatGold(adjProfit)}
+                                        </span>
+                                    </td>
+                                    <td style={{ textAlign: "right" }}>
+                                        <span className="muted">{formatGold(c.outputItemPrice, false)}</span>
+                                    </td>
+                                    {showBaseMetrics && (
                                         <td style={{ textAlign: "right" }}>
                                             <span className="muted">{formatGold(c.baseProfit.ingredientCost, false)}</span>
                                         </td>
-                                        <td style={{ textAlign: "right" }}>
-                                            <span className={profitClass(c.baseProfit.calculable, c.baseProfit.profit)}>
-                                                {formatGold(c.baseProfit.profit)}
-                                            </span>
-                                        </td>
-                                    </>
-                                )}
-                                <td style={{ textAlign: "center", width: 36 }}>
-                                    {onAddToCalculator && (
-                                        <button
-                                            className="button small ghost calc-add-btn"
-                                            title="Add to calculator"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onAddToCalculator(c);
-                                            }}
-                                        >
-                                            🧮
-                                        </button>
                                     )}
-                                </td>
-                            </tr>
+                                    <td style={{ textAlign: "center", width: 36 }}>
+                                        {onAddToCalculator && (
+                                            <button
+                                                className="button small ghost calc-add-btn"
+                                                title="Add to calculator"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onAddToCalculator(c);
+                                                }}
+                                            >
+                                                🧮
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                                {isExpanded && (
+                                    <tr className="craft-detail-row">
+                                        <td colSpan={columns.length}>
+                                            <CraftDetailPanel
+                                                craft={c}
+                                                recipeDetail={recipeDetail}
+                                                isLoading={isRecipeLoading}
+                                                currentM={currentM}
+                                                currentR={currentR}
+                                                onApply={(m, r) => handleApply(key, m, r)}
+                                                onReset={() => handleReset(key)}
+                                            />
+                                        </td>
+                                    </tr>
+                                )}
+                            </Fragment>
                         );
+                    });
                     })}
                 </tbody>
             </table>
-
-            {/* Override popover */}
-            {popoverKey && (() => {
-                const craft = crafts.find((c) => `${c.characterId}-${c.recipeId}` === popoverKey);
-                if (!craft) return null;
-                const ov = overrides[popoverKey];
-                return (
-                    <CraftOverridePopover
-                        craft={craft}
-                        currentM={ov?.multicraftMultiplier ?? craft.multicraftMultiplier}
-                        currentR={ov?.resourcefulnessFactor ?? craft.resourcefulnessFactor}
-                        onApply={(m, r) => handleApply(popoverKey, m, r)}
-                        onReset={() => handleReset(popoverKey)}
-                        onClose={() => setPopoverKey(null)}
-                    />
-                );
-            })()}
 
             {/* Notes popover */}
             {notesKey && (() => {

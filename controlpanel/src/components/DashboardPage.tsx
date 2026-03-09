@@ -38,6 +38,7 @@ export default function DashboardPage({ professions }: Props) {
     const [search, setSearch] = useState("");
     const [sort, setSort] = useState("adjustedProfit");
     const [direction, setDirection] = useState("desc");
+    const [groupByOutput, setGroupByOutput] = useState(true);
     const [showBaseMetrics, setShowBaseMetrics] = useState(true);
 
     // U8: Override state
@@ -46,7 +47,13 @@ export default function DashboardPage({ professions }: Props) {
     // U10: Calculator state
     const [calcEntries, setCalcEntries] = useState<CalculatorEntry[]>(loadCalcEntries);
     const [recipeCache, setRecipeCache] = useState<Map<number, RecipeDetail>>(new Map());
+    const [recipeLoadingIds, setRecipeLoadingIds] = useState<Set<number>>(new Set());
     const fetchingRef = useRef<Set<number>>(new Set());
+    const recipeCacheRef = useRef<Map<number, RecipeDetail>>(new Map());
+
+    useEffect(() => {
+        recipeCacheRef.current = recipeCache;
+    }, [recipeCache]);
 
     const handleOverrideChange = (next: CraftOverrides) => {
         setOverrides(next);
@@ -58,34 +65,47 @@ export default function DashboardPage({ professions }: Props) {
         localStorage.setItem("craft-calculator", JSON.stringify(entries));
     };
 
-    // Fetch recipe details for calculator entries that aren't cached
-    useEffect(() => {
-        const missing = calcEntries
-            .map((e) => e.recipeId)
-            .filter((id) => !recipeCache.has(id) && !fetchingRef.current.has(id));
+    const fetchRecipeDetail = useCallback(async (id: number) => {
+        if (recipeCacheRef.current.has(id) || fetchingRef.current.has(id)) return;
 
-        const unique = [...new Set(missing)];
-        if (unique.length === 0) return;
+        fetchingRef.current.add(id);
+        setRecipeLoadingIds((prev) => {
+            const next = new Set(prev);
+            next.add(id);
+            return next;
+        });
 
-        for (const id of unique) fetchingRef.current.add(id);
-
-        Promise.all(
-            unique.map((id) =>
-                getRecipe(id)
-                    .then((detail) => ({ id, detail }))
-                    .catch(() => ({ id, detail: null }))
-            )
-        ).then((results) => {
+        try {
+            const detail = await getRecipe(id);
             setRecipeCache((prev) => {
                 const next = new Map(prev);
-                for (const { id, detail } of results) {
-                    if (detail) next.set(id, detail);
-                    fetchingRef.current.delete(id);
-                }
+                next.set(id, detail);
                 return next;
             });
+        } catch {
+            // Ignore here; consumers show a fallback message.
+        } finally {
+            fetchingRef.current.delete(id);
+            setRecipeLoadingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+        }
+    }, []);
+
+    // Fetch recipe details for calculator entries that aren't cached
+    useEffect(() => {
+        const missing = [...new Set(
+            calcEntries
+                .map((e) => e.recipeId)
+                .filter((id) => !recipeCache.has(id) && !fetchingRef.current.has(id))
+        )];
+
+        missing.forEach((id) => {
+            void fetchRecipeDetail(id);
         });
-    }, [calcEntries, recipeCache]);
+    }, [calcEntries, recipeCache, fetchRecipeDetail]);
 
     const handleAddToCalculator = (craft: DashboardCraft) => {
         setCalcEntries((prev) => {
@@ -176,10 +196,12 @@ export default function DashboardPage({ professions }: Props) {
                 characterId={characterId}
                 professionId={professionId}
                 search={search}
+                groupByOutput={groupByOutput}
                 showBaseMetrics={showBaseMetrics}
                 onCharacterChange={setCharacterId}
                 onProfessionChange={setProfessionId}
                 onSearchChange={setSearch}
+                onGroupByOutputChange={setGroupByOutput}
                 onShowBaseMetricsChange={setShowBaseMetrics}
             />
 
@@ -199,9 +221,15 @@ export default function DashboardPage({ professions }: Props) {
                         direction={direction}
                         onSortChange={handleSortChange}
                         loading={loading}
+                        groupByOutput={groupByOutput}
                         showBaseMetrics={showBaseMetrics}
                         overrides={overrides}
                         onOverrideChange={handleOverrideChange}
+                        recipeCache={recipeCache}
+                        recipeLoadingIds={recipeLoadingIds}
+                        onFetchRecipe={(recipeId) => {
+                            void fetchRecipeDetail(recipeId);
+                        }}
                         onAddToCalculator={handleAddToCalculator}
                     />
 

@@ -1805,6 +1805,12 @@ body {
     gap: 6px;
 }
 
+.dashboard-toggle-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
 .dashboard-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -1975,6 +1981,7 @@ body {
 
 .assignment-browser-controls {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 8px;
 }
@@ -2025,6 +2032,53 @@ body {
 .browser-recipe-row.assigned {
     opacity: 0.5;
     cursor: default;
+}
+
+.recipe-list-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.group-variants-toggle {
+    margin-left: 8px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+
+.group-variants-toggle:hover {
+    background: #dbeafe;
+}
+
+.recipe-variant-row td,
+.craft-row-variant td {
+    background: #f8fafc;
+}
+
+.recipe-variant-name,
+.craft-variant-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.recipe-variant-name::before,
+.craft-variant-name::before {
+    content: "↳";
+    color: #94a3b8;
+}
+
+.craft-variant-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
 }
 
 /* ── Realm autocomplete (U5) ───────────────────────────────────────────────── */
@@ -2183,9 +2237,131 @@ body {
     background: #fef3c7;
 }
 
+.craft-row-variant:hover {
+    background: #f1f5f9;
+}
+
+.craft-row-expanded {
+    border-bottom: 1px solid transparent;
+}
+
 .craft-override-badge {
     margin-left: 6px;
     font-size: 12px;
+}
+
+.craft-detail-row td {
+    padding: 0 !important;
+    background: #f8fbff;
+}
+
+.craft-detail-panel {
+    padding: 14px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.craft-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.craft-detail-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.craft-detail-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+}
+
+.craft-detail-loading {
+    padding: 10px 4px;
+    font-size: 13px;
+}
+
+.craft-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.craft-detail-table th,
+.craft-detail-table td {
+    padding: 6px 4px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.craft-detail-table th {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.craft-detail-totals {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.craft-detail-totals-plain {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.craft-detail-total-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 13px;
+}
+
+.craft-detail-total-row-strong {
+    font-weight: 700;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 4px;
+    padding-top: 10px;
+}
+
+.craft-detail-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.craft-detail-controls .craft-detail-title {
+    margin-bottom: 0;
+    margin-right: 8px;
+}
+
+.craft-detail-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #334155;
+}
+
+.craft-detail-actions {
+    display: inline-flex;
+    gap: 8px;
+    margin-left: auto;
 }
 
 /* ── Crafting Calculator (U10) ───────────────────────────────────────────────── */
@@ -2318,4 +2494,16 @@ body {
 .shopping-list-total td {
     padding: 8px;
     font-size: 13px;
+}
+
+@media (max-width: 900px) {
+    .craft-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .craft-detail-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-end;
+    }
 }

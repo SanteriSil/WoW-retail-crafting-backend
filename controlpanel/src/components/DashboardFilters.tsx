@@ -6,16 +6,19 @@ type Props = {
     characterId: number | undefined;
     professionId: number | undefined;
     search: string;
+    groupByOutput: boolean;
     showBaseMetrics: boolean;
     onCharacterChange: (id: number | undefined) => void;
     onProfessionChange: (id: number | undefined) => void;
     onSearchChange: (s: string) => void;
+    onGroupByOutputChange: (value: boolean) => void;
     onShowBaseMetricsChange: (value: boolean) => void;
 };
 
 export default function DashboardFilters({
     characters, professions, characterId, professionId, search,
-    showBaseMetrics, onCharacterChange, onProfessionChange, onSearchChange, onShowBaseMetricsChange,
+    groupByOutput, showBaseMetrics,
+    onCharacterChange, onProfessionChange, onSearchChange, onGroupByOutputChange, onShowBaseMetricsChange,
 }: Props) {
     return (
         <div className="dashboard-filters">
@@ -66,14 +69,25 @@ export default function DashboardFilters({
                 onChange={(e) => onSearchChange(e.target.value)}
                 style={{ maxWidth: 300 }}
             />
-            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
-                <input
-                    type="checkbox"
-                    checked={showBaseMetrics}
-                    onChange={(e) => onShowBaseMetricsChange(e.target.checked)}
-                />
-                Show base cost / base profit columns
-            </label>
+            <div className="dashboard-toggle-row">
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
+                    <input
+                        type="checkbox"
+                        checked={groupByOutput}
+                        onChange={(e) => onGroupByOutputChange(e.target.checked)}
+                    />
+                    Group by output
+                </label>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
+                    <input
+                        type="checkbox"
+                        checked={showBaseMetrics}
+                        onChange={(e) => onShowBaseMetricsChange(e.target.checked)}
+                    />
+                    Show base cost column
+                </label>
+            </div>
         </div>
     );
 }
+

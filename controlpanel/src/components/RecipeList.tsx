@@ -1,4 +1,11 @@
+import { useMemo, useState } from "react";
 import type { Page, RecipeSummary } from "../types";
+
+type RecipeGroup = {
+    groupKey: string;
+    primary: RecipeSummary;
+    variants: RecipeSummary[];
+};
 
 type SortableField = "name";
 
@@ -20,6 +27,8 @@ type Props = {
 
 export default function RecipeList({ page, loading, sort, onPageChange, onSortChange, onSelectRecipe }: Props) {
     const [sortField, sortDir] = sort.split(",");
+    const [groupByOutput, setGroupByOutput] = useState(false);
+    const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
 
     const handleSortClick = (field: SortableField) => {
         if (sortField === field) {
@@ -33,6 +42,55 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
         const active = sortField === field;
         const icon = active ? (sortDir === "asc" ? "↑" : "↓") : "↕";
         return <span className={`sort-indicator${active ? " active" : ""}`}>{icon}</span>;
+    };
+
+    const groupedRecipes = useMemo<RecipeGroup[]>(() => {
+        if (!page) return [];
+        if (!groupByOutput) {
+            return page.content.map((recipe) => ({
+                groupKey: `${recipe.outputItemId}-${recipe.id}`,
+                primary: recipe,
+                variants: [],
+            }));
+        }
+
+        const rowIndex = new Map(page.content.map((recipe, index) => [recipe.id, index]));
+        const groups = new Map<number, RecipeSummary[]>();
+
+        for (const recipe of page.content) {
+            const existing = groups.get(recipe.outputItemId) ?? [];
+            existing.push(recipe);
+            groups.set(recipe.outputItemId, existing);
+        }
+
+        const profitValue = (recipe: RecipeSummary) => recipe.profitCalculable && recipe.estimatedProfit != null
+            ? recipe.estimatedProfit
+            : Number.NEGATIVE_INFINITY;
+
+        return Array.from(groups.entries())
+            .map(([outputItemId, group]) => {
+                const sorted = [...group].sort((a, b) => {
+                    const profitDiff = profitValue(b) - profitValue(a);
+                    if (profitDiff !== 0) return profitDiff;
+                    return a.name.localeCompare(b.name);
+                });
+
+                return {
+                    groupKey: String(outputItemId),
+                    primary: sorted[0],
+                    variants: sorted.slice(1),
+                };
+            })
+            .sort((a, b) => (rowIndex.get(a.primary.id) ?? 0) - (rowIndex.get(b.primary.id) ?? 0));
+    }, [groupByOutput, page]);
+
+    const toggleGroup = (groupKey: string) => {
+        setExpandedGroupKeys((prev) => {
+            const next = new Set(prev);
+            if (next.has(groupKey)) next.delete(groupKey);
+            else next.add(groupKey);
+            return next;
+        });
     };
 
     if (loading && (!page || page.content.length === 0)) {
@@ -49,6 +107,16 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
 
     return (
         <div>
+            <div className="recipe-list-toolbar">
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#334155" }}>
+                    <input
+                        type="checkbox"
+                        checked={groupByOutput}
+                        onChange={(e) => setGroupByOutput(e.target.checked)}
+                    />
+                    Group by output
+                </label>
+            </div>
             <div className="recipe-table-wrapper">
                 <table className="recipe-table">
                     <thead>
@@ -60,36 +128,69 @@ export default function RecipeList({ page, loading, sort, onPageChange, onSortCh
                             <th>Expansion</th>
                             <th>Source</th>
                             <th>Output Item</th>
+                            <th style={{ textAlign: "right" }}>MC</th>
+                            <th style={{ textAlign: "right" }}>R</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {page.content.map((recipe) => (
-                            <tr
-                                key={recipe.id}
-                                onClick={() => onSelectRecipe(recipe)}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") onSelectRecipe(recipe);
-                                }}
-                            >
-                                <td style={{ fontWeight: 600 }}>{recipe.name}</td>
-                                <td className="muted">{recipe.professionName ?? "—"}</td>
-                                <td className="muted">{recipe.expansionName}</td>
-                                <td>
-                                    <span className={`source-badge ${recipe.source.toLowerCase()}`}>
-                                        {recipe.source}
-                                    </span>
-                                </td>
-                                <td className="muted">
-                                    {recipe.outputItemName}
-                                    {(() => {
-                                        const stars = qualityStars(recipe.outputItemQuality);
-                                        return stars ? <span className={`quality-stars q${recipe.outputItemQuality}`}> {stars}</span> : null;
-                                    })()}
-                                </td>
-                            </tr>
-                        ))}
+                        {groupedRecipes.flatMap((group) => {
+                            const visibleRecipes = [group.primary, ...(expandedGroupKeys.has(group.groupKey) ? group.variants : [])];
+
+                            return visibleRecipes.map((recipe, rowIndex) => {
+                                const isVariant = rowIndex > 0;
+
+                                return (
+                                    <tr
+                                        key={recipe.id}
+                                        className={isVariant ? "recipe-variant-row" : undefined}
+                                        onClick={() => onSelectRecipe(recipe)}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" || e.key === " ") onSelectRecipe(recipe);
+                                        }}
+                                    >
+                                        <td style={{ fontWeight: 600 }}>
+                                            <span className={isVariant ? "recipe-variant-name" : undefined}>{recipe.name}</span>
+                                            {!isVariant && group.variants.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    className="group-variants-toggle"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleGroup(group.groupKey);
+                                                    }}
+                                                >
+                                                    {expandedGroupKeys.has(group.groupKey)
+                                                        ? `Hide ${group.variants.length} variant${group.variants.length === 1 ? "" : "s"}`
+                                                        : `+${group.variants.length} variant${group.variants.length === 1 ? "" : "s"}`}
+                                                </button>
+                                            )}
+                                        </td>
+                                        <td className="muted">{recipe.professionName ?? "—"}</td>
+                                        <td className="muted">{recipe.expansionName}</td>
+                                        <td>
+                                            <span className={`source-badge ${recipe.source.toLowerCase()}`}>
+                                                {recipe.source}
+                                            </span>
+                                        </td>
+                                        <td className="muted">
+                                            {recipe.outputItemName}
+                                            {(() => {
+                                                const stars = qualityStars(recipe.outputItemQuality);
+                                                return stars ? <span className={`quality-stars q${recipe.outputItemQuality}`}> {stars}</span> : null;
+                                            })()}
+                                        </td>
+                                        <td style={{ textAlign: "right" }} className="muted">
+                                            {recipe.multicraftable ? `×${recipe.multicraftMultiplier.toFixed(2)}` : "—"}
+                                        </td>
+                                        <td style={{ textAlign: "right" }} className="muted">
+                                            {`×${recipe.resourcefulnessFactor.toFixed(2)}`}
+                                        </td>
+                                    </tr>
+                                );
+                            });
+                        })}
                     </tbody>
                 </table>
             </div>
