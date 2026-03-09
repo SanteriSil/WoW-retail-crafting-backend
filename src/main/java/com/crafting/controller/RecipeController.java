@@ -63,6 +63,16 @@ public class RecipeController {
         ));
     }
 
+    @GetMapping("/item-ids")
+    public ResponseEntity<RecipeItemIdsResponse> getRecipeItemIds() {
+        RecipeService.RecipeItemIdsView itemIds = recipeService.getRecipeItemIds();
+        return ResponseEntity.ok(new RecipeItemIdsResponse(
+                itemIds.ingredientItemIds(),
+                itemIds.outputItemIds(),
+                itemIds.allItemIds()
+        ));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getRecipe(@PathVariable Long id) {
         try {
@@ -214,5 +224,12 @@ public class RecipeController {
     }
 
     private record OptionalIngredientOptionRequest(Long itemId, Integer quantity) {
+    }
+
+    private record RecipeItemIdsResponse(
+            java.util.Set<Long> ingredientItemIds,
+            java.util.Set<Long> outputItemIds,
+            java.util.Set<Long> allItemIds
+    ) {
     }
 }

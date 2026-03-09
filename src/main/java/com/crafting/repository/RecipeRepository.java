@@ -15,6 +15,8 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long>{
 
     Optional<Recipe> findByIdAndDeletedFalse(Long id);
 
+	List<Recipe> findByIdInAndDeletedFalse(List<Long> ids);
+
     Optional<Recipe> findByWowheadSpellId(Long wowheadSpellId);
 
     boolean existsByWowheadSpellId(Long wowheadSpellId);
@@ -63,4 +65,10 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long>{
 	    @Param("search") String search,
 	    Pageable pageable
     );
+
+    @Query("SELECT DISTINCT ri.item.id FROM RecipeIngredient ri WHERE ri.recipe.deleted = false")
+    java.util.Set<Long> findAllIngredientItemIds();
+
+    @Query("SELECT DISTINCT r.outputItem.id FROM Recipe r WHERE r.deleted = false")
+    java.util.Set<Long> findAllOutputItemIds();
 }

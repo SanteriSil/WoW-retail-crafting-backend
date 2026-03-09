@@ -237,6 +237,28 @@ class AuctionProcesserTest {
                     new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)), Set.of(100));
             assertThat(result).isEmpty();
         }
+
+        @Test
+        @DisplayName("processForItems returns averages only for the requested items")
+        void targetedProcessing() throws IOException {
+            String json = """
+                {
+                    "auctions": [
+                        {"item": {"id": 100}, "unit_price": 50000, "quantity": 10},
+                        {"item": {"id": 100}, "unit_price": 52000, "quantity": 10},
+                        {"item": {"id": 200}, "unit_price": 30000, "quantity": 5}
+                    ]
+                }
+                """;
+
+            var result = processer.processForItems(
+                    new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)),
+                    Set.of(100)
+            );
+
+            assertThat(result).containsKey(100);
+            assertThat(result).doesNotContainKey(200);
+        }
     }
 
     // ── Average Price Calculation ──────────────────────────────────────

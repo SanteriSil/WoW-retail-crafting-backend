@@ -12,9 +12,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.crafting.repository.ItemRepository;
@@ -98,7 +100,7 @@ public class AHDataFetcher {
      *                            fresher addon data is not overwritten by Blizzard API results
      */
     @Transactional
-    private void saveItemsToDb(Map<Integer, Pair<Long, Long>> avgPrices, boolean skipRecentlyUpdated) {
+    private int saveItemsToDb(Map<Integer, Pair<Long, Long>> avgPrices, boolean skipRecentlyUpdated) {
         OffsetDateTime freshnessCutoff = skipRecentlyUpdated
                 ? OffsetDateTime.now().minus(ADDON_FRESHNESS_THRESHOLD)
                 : null;
@@ -135,6 +137,7 @@ public class AHDataFetcher {
             logger.info("Saved {} item prices", updated);
         }
         itemCache.invalidate();
+        return updated;
     }
 
     @Transactional
@@ -184,6 +187,22 @@ public class AHDataFetcher {
         Map<Integer, Pair<Long, Long>> avgPrices = auctionProcesser.calculateAveragePrices(matches);
         logger.debug("Saving average prices to database");
         saveItemsToDb(avgPrices, true);
+    }
+
+    @Transactional
+    public int processAuctionDataForItems(InputStream inputStream, Set<Integer> targetItemIds) throws IOException {
+        logger.debug("Processing auction data for {} targeted items", targetItemIds.size());
+        Set<Integer> dbItemIds = fetchDbItemIds();
+        Set<Integer> filteredTargetIds = new HashSet<>(targetItemIds);
+        filteredTargetIds.retainAll(dbItemIds);
+
+        if (filteredTargetIds.isEmpty()) {
+            return 0;
+        }
+
+        Map<Integer, Pair<Long, Long>> avgPrices = auctionProcesser.processForItems(inputStream, filteredTargetIds);
+        logger.debug("Saving targeted average prices to database");
+        return saveItemsToDb(avgPrices, false);
     }
 
     /**
@@ -260,6 +279,36 @@ public class AHDataFetcher {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        } finally {
+            fetchLock.unlock();
+        }
+    }
+
+    public int triggerFetchForItems(Set<Integer> itemIds) throws IOException {
+        Set<Integer> targetItemIds = itemIds == null ? Collections.emptySet() : new HashSet<>(itemIds);
+        if (targetItemIds.isEmpty()) {
+            return 0;
+        }
+
+        if (!fetchLock.tryLock()) {
+            logger.warn("Fetch already in progress, skipping targeted trigger");
+            return -1;
+        }
+
+        try {
+            if (clientId == null || clientSecret == null) {
+                logger.warn("Missing clientId/secret - check env vars and application.properties");
+                return 0;
+            }
+
+            String accessToken = tokenService.getAccessToken(clientId, clientSecret);
+            final int[] updatedCount = {0};
+
+            HttpStatusCode status = blizzApiClient.streamCommodities(accessToken, inputStream -> {
+                updatedCount[0] = processAuctionDataForItems(inputStream, targetItemIds);
+            });
+            logger.debug("Targeted API response status: {}", status);
+            return updatedCount[0];
         } finally {
             fetchLock.unlock();
         }

@@ -115,6 +115,11 @@ public class AuctionProcesser {
         return result;
     }
 
+    public Map<Integer, Pair<Long, Long>> processForItems(InputStream inputStream, Set<Integer> targetItemIds) throws IOException {
+        Map<Integer, List<AuctionEntry>> matches = processAndCollectStreaming(inputStream, targetItemIds);
+        return calculateAveragePrices(matches);
+    }
+
     public Map<Integer, Pair<Long, Long>> calculateAveragePrices(Map<Integer, List<AuctionEntry>> auctions) {
         /* The list of action entries is first sorted by unit price from lowest
         to highest. */

@@ -215,6 +215,15 @@ class SecurityEndpointAccessTest {
                     .andExpect(status().isUnauthorized());
         }
 
+        @Test
+        @DisplayName("POST /craftingAH/fetch-for-recipes → 401 without auth")
+        void ahFetchForRecipesNoAuth() throws Exception {
+            mockMvc.perform(post("/craftingAH/fetch-for-recipes")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"recipeIds\":[1]}"))
+                .andExpect(status().isUnauthorized());
+        }
+
         // ── Recipes (read = ALLOWED_USER+, write = ADMIN+) ──
 
         @Test
@@ -229,6 +238,13 @@ class SecurityEndpointAccessTest {
         void getSpellIdsNoAuth() throws Exception {
             mockMvc.perform(get("/recipes/spell-ids"))
                     .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("GET /recipes/item-ids → 401 without auth")
+        void getRecipeItemIdsNoAuth() throws Exception {
+            mockMvc.perform(get("/recipes/item-ids"))
+                .andExpect(status().isUnauthorized());
         }
 
         @Test
@@ -455,6 +471,26 @@ class SecurityEndpointAccessTest {
                     });
         }
 
+                    @Test
+                    @DisplayName("GET /recipes/item-ids → 403 with ALLOWED_USER (requires ADMIN)")
+                    void getRecipeItemIdsForbiddenForAllowedUser() throws Exception {
+                        mockMvc.perform(get("/recipes/item-ids")
+                                .with(user("99999").roles("ALLOWED_USER")))
+                            .andExpect(status().isForbidden());
+                    }
+
+                    @Test
+                    @DisplayName("GET /recipes/item-ids → not 401/403 with ADMIN")
+                    void getRecipeItemIdsAccessibleForAdmin() throws Exception {
+                        mockMvc.perform(get("/recipes/item-ids")
+                                .with(user("99999").roles("ADMIN")))
+                            .andExpect(result -> {
+                            int status = result.getResponse().getStatus();
+                            org.assertj.core.api.Assertions.assertThat(status)
+                                .isNotIn(401, 403);
+                            });
+                    }
+
         @Test
         @DisplayName("POST /recipes → 403 with ALLOWED_USER (requires ADMIN)")
         void createRecipeForbiddenForAllowedUser() throws Exception {
@@ -554,6 +590,16 @@ class SecurityEndpointAccessTest {
         void ahFetchForbiddenForAllowedUser() throws Exception {
             mockMvc.perform(get("/craftingAH/fetch")
                             .with(user("99999").roles("ALLOWED_USER")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("POST /craftingAH/fetch-for-recipes → 403 with ALLOWED_USER (requires ADMIN)")
+        void ahFetchForRecipesForbiddenForAllowedUser() throws Exception {
+            mockMvc.perform(post("/craftingAH/fetch-for-recipes")
+                            .with(user("99999").roles("ALLOWED_USER"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"recipeIds\":[1]}"))
                     .andExpect(status().isForbidden());
         }
     }

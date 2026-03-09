@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -196,6 +197,38 @@ public class RecipeService {
                 .toList();
     }
 
+    @Transactional
+    public RecipeItemIdsView getRecipeItemIds() {
+        Set<Long> ingredientIds = new TreeSet<>(recipeRepository.findAllIngredientItemIds());
+        Set<Long> outputIds = new TreeSet<>(recipeRepository.findAllOutputItemIds());
+        Set<Long> allIds = new TreeSet<>();
+        allIds.addAll(ingredientIds);
+        allIds.addAll(outputIds);
+        return new RecipeItemIdsView(ingredientIds, outputIds, allIds);
+    }
+
+    @Transactional
+    public Set<Integer> getTrackedItemIdsForRecipes(List<Long> recipeIds) {
+        if (recipeIds == null || recipeIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return recipeRepository.findByIdInAndDeletedFalse(recipeIds).stream()
+                .flatMap(recipe -> {
+                    Set<Integer> itemIds = new HashSet<>();
+                    if (recipe.getOutputItem() != null && recipe.getOutputItem().getId() != null) {
+                        itemIds.add(recipe.getOutputItem().getId().intValue());
+                    }
+                    recipe.getIngredients().forEach(ingredient -> {
+                        if (ingredient.getItem() != null && ingredient.getItem().getId() != null) {
+                            itemIds.add(ingredient.getItem().getId().intValue());
+                        }
+                    });
+                    return itemIds.stream();
+                })
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+    }
+
     // ── Scraper import (F3) ──────────────────────────────────────────────────
 
     @Transactional
@@ -293,6 +326,8 @@ public class RecipeService {
     }
 
     public record ImportResult(int added, int updated, int skipped, List<String> errors) {}
+
+    public record RecipeItemIdsView(Set<Long> ingredientItemIds, Set<Long> outputItemIds, Set<Long> allItemIds) {}
 
     private ValidationContext validateCommand(CreateOrUpdateRecipeCommand command, Long updatingRecipeId) {
         if (command.name() == null || command.name().isBlank()) {

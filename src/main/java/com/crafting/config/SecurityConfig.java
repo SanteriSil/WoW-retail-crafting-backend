@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/items", "/items/ids", "/items/ordered").permitAll()
                 .requestMatchers(HttpMethod.GET, "/professions").permitAll()
                 .requestMatchers(HttpMethod.GET, "/expansions").permitAll()
+                .requestMatchers(HttpMethod.GET, "/recipes/item-ids").hasAnyRole("ADMIN", "OWNER")
 
                 // ── ALLOWED_USER or higher: read recipes, profit, export, spell-ids ───
                 .requestMatchers(HttpMethod.GET, "/recipes/spell-ids").hasAnyRole("ALLOWED_USER", "ADMIN", "OWNER")
