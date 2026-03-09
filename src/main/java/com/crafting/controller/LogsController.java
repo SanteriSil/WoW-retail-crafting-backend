@@ -1,23 +1,17 @@
 package com.crafting.controller;
 
+import com.crafting.service.LogsService;
+import com.crafting.service.LogsService.LogFileInfo;
+import com.crafting.service.LogsService.LogViewResponse;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.concurrent.atomic.AtomicInteger;
-
-
 
 /**
  * Handles logs related operations.
@@ -27,8 +21,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class LogsController {
 
     private final static Logger log = LoggerFactory.getLogger(LogsController.class);
-    private static final String LOG_FILE_PATH = "logs/crafting.log";
-    private static final String ARCHIVE_DIR = "logs/archive/";
+    private final LogsService logsService;
+
+    public LogsController(LogsService logsService) {
+        this.logsService = logsService;
+    }
 
     /**
      * Archives the current log file and starts a new one.
@@ -36,20 +33,8 @@ public class LogsController {
      */
     @PostMapping("/archive")
     public ResponseEntity<String> archiveLogs() {
-        try {
-            log.debug("Archiving current log file");
-            Files.createDirectories(Paths.get(ARCHIVE_DIR));
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-            Path source = Paths.get(LOG_FILE_PATH);
-            Path target = Paths.get(ARCHIVE_DIR + "crafting_" + timestamp + ".log");
-            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
-            Files.createFile(source);
-            log.info("Log file archived as {}", target.getFileName());
-            return ResponseEntity.ok("Logs archived successfully");
-        } catch (IOException e) {
-            log.error("Error archiving log file: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error archiving logs");
-        }
+        log.debug("POST /logs/archive");
+        return ResponseEntity.ok(logsService.archiveLogs());
     }
 
     /**
@@ -58,26 +43,14 @@ public class LogsController {
      */
     @PostMapping("/clear")
     public ResponseEntity<String> clearLogs() {
-        AtomicInteger deletedCount = new AtomicInteger(0);
-        try {
-            log.debug("Clearing archived log files");
-            Files.walk(Paths.get(ARCHIVE_DIR))
-                .filter(Files::isRegularFile)
-                .forEach(path -> {
-                    try {
-                        Files.delete(path);
-                        deletedCount.incrementAndGet();
-                        log.debug("Deleted archived log file: {}", path.getFileName());
-                    } catch (IOException e) {
-                        log.error("Error deleting archived log file {}: {}", path.getFileName(), e.getMessage());
-                    }
-                });
-            log.info("Cleared {} archived log files", deletedCount.get());
-            return ResponseEntity.ok("Cleared " + deletedCount.get() + " archived log files");
-        } catch (IOException e) {
-            log.error("Error clearing archived log files: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error clearing archived logs");
-        }
+        log.debug("POST /logs/clear");
+        return ResponseEntity.ok(logsService.clearArchives());
+    }
+
+    @GetMapping("/files")
+    public ResponseEntity<List<LogFileInfo>> listLogFiles() {
+        log.debug("GET /logs/files");
+        return ResponseEntity.ok(logsService.listLogFiles());
     }
 
     /**
@@ -85,15 +58,12 @@ public class LogsController {
      * @return ResponseEntity with the log file content if successful, or INTERNAL_SERVER_ERROR if
      */
     @GetMapping("/current")
-    public ResponseEntity<String> getCurrentLogs() {
-        try {
-            log.debug("Retrieving current log file content");
-            String logs = new String(Files.readAllBytes(Paths.get(LOG_FILE_PATH)));
-            log.debug("Current log file content retrieved successfully");
-            return ResponseEntity.ok(logs);
-        } catch (IOException e) {
-            log.error("Error retrieving current log file content: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error retrieving current logs");
-        }
+    public ResponseEntity<LogViewResponse> getCurrentLogs(
+            @RequestParam(required = false, defaultValue = "current") String file,
+            @RequestParam(required = false) Integer lines,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String search) {
+        log.debug("GET /logs/current file={} lines={} level={} search='{}'", file, lines, level, search);
+        return ResponseEntity.ok(logsService.getLogView(file, lines, level, search));
     }
 }

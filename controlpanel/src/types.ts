@@ -331,6 +331,39 @@ export type DashboardResponse = {
   totalCrafts: number;
 };
 
+// ── Logs ───────────────────────────────────────────────────────────────────
+
+export type LogFileInfo = {
+  key: string;
+  fileName: string;
+  current: boolean;
+  sizeBytes: number;
+  lastModified: string;
+};
+
+export type LogEntry = {
+  lineNumber: number;
+  timestamp: string | null;
+  level: string | null;
+  logger: string | null;
+  thread: string | null;
+  message: string | null;
+  raw: string;
+};
+
+export type LogViewResponse = {
+  fileKey: string;
+  fileName: string;
+  totalLines: number;
+  matchedLines: number;
+  returnedLines: number;
+  truncated: boolean;
+  sizeBytes: number;
+  lastModified: string;
+  levelCounts: Record<string, number>;
+  entries: LogEntry[];
+};
+
 // ── Calculator (U10) ────────────────────────────────────────────────────────
 
 export type CalculatorEntry = {

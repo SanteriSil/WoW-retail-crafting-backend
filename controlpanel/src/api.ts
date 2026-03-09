@@ -1,4 +1,4 @@
-import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, LogFileInfo, LogViewResponse, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -142,8 +142,23 @@ export async function clearLogs(): Promise<void> {
     await request<void>("/logs/clear", { method: "POST" });
 }
 
-export async function getCurrentLogs(): Promise<string> {
-    return request<string>("/logs/current", { method: "GET" });
+export async function getLogFiles(): Promise<LogFileInfo[]> {
+    return request<LogFileInfo[]>("/logs/files", { method: "GET" });
+}
+
+export async function getCurrentLogs(params?: {
+    file?: string;
+    lines?: number;
+    level?: string;
+    search?: string;
+}): Promise<LogViewResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.file) searchParams.set("file", params.file);
+    if (params?.lines != null) searchParams.set("lines", String(params.lines));
+    if (params?.level) searchParams.set("level", params.level);
+    if (params?.search) searchParams.set("search", params.search);
+    const query = searchParams.toString();
+    return request<LogViewResponse>(`/logs/current${query ? `?${query}` : ""}`, { method: "GET" });
 }
 
 export async function fetchCraftingAH(): Promise<string | void> {

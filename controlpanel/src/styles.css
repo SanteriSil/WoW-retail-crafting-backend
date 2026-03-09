@@ -117,6 +117,12 @@ body {
     border-color: #fecaca;
 }
 
+.status-warning {
+    color: #92400e;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
 
 
 .tabs {

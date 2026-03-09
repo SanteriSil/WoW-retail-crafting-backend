@@ -65,7 +65,9 @@ public class CharacterService {
 
     @Transactional
     public List<CharacterDTO> getMyCharacters(Long discordId) {
-        return characterRepository.findByDiscordId(discordId).stream()
+        List<WowCharacter> characters = characterRepository.findByDiscordId(discordId);
+        log.debug("Loaded {} characters for discordId={}", characters.size(), discordId);
+        return characters.stream()
                 .map(this::toDTO)
                 .toList();
     }
@@ -73,6 +75,11 @@ public class CharacterService {
     @Transactional
     public CharacterDTO getCharacter(Long discordId, Long characterId) {
         WowCharacter character = findOwnedCharacter(discordId, characterId);
+        log.debug("Loaded character id={} for discordId={} with {} professions and {} assigned recipes",
+                characterId,
+                discordId,
+                character.getProfessions().size(),
+                character.getAssignedRecipes() != null ? character.getAssignedRecipes().size() : 0);
         return toDTO(character);
     }
 
@@ -80,6 +87,11 @@ public class CharacterService {
 
     @Transactional
     public CharacterDTO createCharacter(Long discordId, CreateCharacterCommand command) {
+        log.debug("Creating character for discordId={} name='{}' realm='{}' professionCount={}",
+            discordId,
+            command.name(),
+            command.realm(),
+            command.professions() != null ? command.professions().size() : 0);
         validateCommand(command);
 
         if (characterRepository.existsByDiscordIdAndNameIgnoreCaseAndRealmIgnoreCase(
@@ -101,6 +113,11 @@ public class CharacterService {
         character.setIconUrl(iconUrl);
 
         WowCharacter saved = characterRepository.save(character);
+        log.debug("Created character id={} for discordId={} with professions={} iconPresent={}",
+            saved.getId(),
+            discordId,
+            saved.getProfessions().stream().map(cp -> cp.getProfession().getId()).toList(),
+            saved.getIconUrl() != null);
         return toDTO(saved);
     }
 
@@ -108,8 +125,23 @@ public class CharacterService {
 
     @Transactional
     public CharacterDTO updateCharacter(Long discordId, Long characterId, CreateCharacterCommand command) {
+        log.debug("Updating character id={} for discordId={} name='{}' realm='{}' professionCount={}",
+            characterId,
+            discordId,
+            command.name(),
+            command.realm(),
+            command.professions() != null ? command.professions().size() : 0);
         validateCommand(command);
         WowCharacter character = findOwnedCharacter(discordId, characterId);
+
+        log.debug("Character id={} professions before update={}",
+            characterId,
+            character.getProfessions().stream()
+                .map(cp -> Map.of(
+                    "professionId", cp.getProfession().getId(),
+                    "multicraftPercent", cp.getMulticraftPercent(),
+                    "resourcefulnessPercent", cp.getResourcefulnessPercent()))
+                .toList());
 
         character.setName(command.name().trim());
         character.setRealm(command.realm().trim());
@@ -118,6 +150,14 @@ public class CharacterService {
         syncProfessions(character, command.professions());
 
         WowCharacter saved = characterRepository.save(character);
+        log.debug("Character id={} professions after update={}",
+            characterId,
+            saved.getProfessions().stream()
+                .map(cp -> Map.of(
+                    "professionId", cp.getProfession().getId(),
+                    "multicraftPercent", cp.getMulticraftPercent(),
+                    "resourcefulnessPercent", cp.getResourcefulnessPercent()))
+                .toList());
         return toDTO(saved);
     }
 
@@ -126,6 +166,7 @@ public class CharacterService {
     @Transactional
     public void deleteCharacter(Long discordId, Long characterId) {
         WowCharacter character = findOwnedCharacter(discordId, characterId);
+        log.debug("Deleting character id={} for discordId={}", characterId, discordId);
         characterRepository.delete(character);
     }
 
@@ -137,6 +178,7 @@ public class CharacterService {
         String iconUrl = fetchIconBestEffort(character.getRealm(), character.getName());
         character.setIconUrl(iconUrl);
         WowCharacter saved = characterRepository.save(character);
+        log.debug("Refreshed icon for character id={} discordId={} iconPresent={}", characterId, discordId, iconUrl != null);
         return toDTO(saved);
     }
 
@@ -145,7 +187,9 @@ public class CharacterService {
     @Transactional
     public List<RecipeSummaryDTO> getAssignedRecipes(Long discordId, Long characterId) {
         WowCharacter character = findOwnedCharacter(discordId, characterId);
-        return characterRecipeRepository.findByCharacterId(character.getId()).stream()
+        List<CharacterRecipe> assignments = characterRecipeRepository.findByCharacterId(character.getId());
+        log.debug("Loaded {} assigned recipes for character id={} discordId={}", assignments.size(), characterId, discordId);
+        return assignments.stream()
                 .map(cr -> {
                     Recipe r = cr.getRecipe();
                     var profit = profitCalculationService.calculate(r);
@@ -175,12 +219,24 @@ public class CharacterService {
                 .map(cp -> cp.getProfession().getId())
                 .collect(java.util.stream.Collectors.toSet());
 
+        log.debug("Assigning recipes {} to character id={} discordId={} characterProfessions={}",
+            recipeIds,
+            characterId,
+            discordId,
+            charProfessionIds);
+
         for (Long recipeId : recipeIds) {
             if (characterRecipeRepository.existsByCharacterIdAndRecipeId(character.getId(), recipeId)) {
+            log.debug("Skipping already assigned recipe id={} for character id={}", recipeId, characterId);
                 continue; // already assigned, skip silently
             }
             Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
                     .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
+
+            log.debug("Loaded recipe id={} professionId={} for assignment to character id={}",
+                recipeId,
+                recipe.getProfession() != null ? recipe.getProfession().getId() : null,
+                characterId);
 
             if (recipe.getProfession() != null && !charProfessionIds.contains(recipe.getProfession().getId())) {
                 throw new IllegalArgumentException(
@@ -194,12 +250,14 @@ public class CharacterService {
                     .recipe(recipe)
                     .build();
             characterRecipeRepository.save(cr);
+            log.debug("Assigned recipe id={} to character id={}", recipeId, characterId);
         }
     }
 
     @Transactional
     public void unassignRecipe(Long discordId, Long characterId, Long recipeId) {
         WowCharacter character = findOwnedCharacter(discordId, characterId);
+        log.debug("Unassigning recipe id={} from character id={} discordId={}", recipeId, characterId, discordId);
         characterRecipeRepository.deleteByCharacterIdAndRecipeId(character.getId(), recipeId);
     }
 
@@ -212,6 +270,15 @@ public class CharacterService {
     }
 
     private void validateCommand(CreateCharacterCommand command) {
+        log.debug("Validating character command name='{}' realm='{}' professions={}",
+            command.name(),
+            command.realm(),
+            command.professions() == null ? List.of() : command.professions().stream()
+                .map(pc -> Map.of(
+                    "professionId", pc.professionId(),
+                    "multicraftPercent", pc.multicraftPercent(),
+                    "resourcefulnessPercent", pc.resourcefulnessPercent()))
+                .toList());
         if (command.name() == null || command.name().trim().length() < 2) {
             throw new IllegalArgumentException("Character name must be at least 2 characters");
         }
@@ -252,6 +319,11 @@ public class CharacterService {
         for (ProfessionCommand pc : professionCommands) {
             Profession profession = professionRepository.findById(pc.professionId())
                     .orElseThrow(() -> new IllegalArgumentException("Unknown profession ID: " + pc.professionId()));
+            log.debug("Applying profession id={} multicraftPercent={} resourcefulnessPercent={} to new character name='{}'",
+                profession.getId(),
+                pc.multicraftPercent(),
+                pc.resourcefulnessPercent(),
+                character.getName());
             CharacterProfession cp = CharacterProfession.builder()
                     .character(character)
                     .profession(profession)
@@ -264,6 +336,10 @@ public class CharacterService {
 
     private void syncProfessions(WowCharacter character, List<ProfessionCommand> professionCommands) {
         List<ProfessionCommand> commands = professionCommands == null ? List.of() : professionCommands;
+        log.debug("Synchronizing professions for character id={} existing={} requested={}",
+            character.getId(),
+            character.getProfessions().stream().map(cp -> cp.getProfession().getId()).toList(),
+            commands.stream().map(ProfessionCommand::professionId).toList());
 
         Map<Integer, CharacterProfession> existingByProfessionId = character.getProfessions().stream()
                 .collect(java.util.stream.Collectors.toMap(cp -> cp.getProfession().getId(), cp -> cp));
@@ -279,9 +355,21 @@ public class CharacterService {
 
             CharacterProfession existing = existingByProfessionId.get(professionId);
             if (existing != null) {
+                log.debug("Updating profession id={} on character id={} multicraftPercent {}->{} resourcefulnessPercent {}->{}",
+                    professionId,
+                    character.getId(),
+                    existing.getMulticraftPercent(),
+                    pc.multicraftPercent(),
+                    existing.getResourcefulnessPercent(),
+                    pc.resourcefulnessPercent());
                 existing.setMulticraftPercent(pc.multicraftPercent());
                 existing.setResourcefulnessPercent(pc.resourcefulnessPercent());
             } else {
+                log.debug("Adding profession id={} to character id={} multicraftPercent={} resourcefulnessPercent={}",
+                    professionId,
+                    character.getId(),
+                    pc.multicraftPercent(),
+                    pc.resourcefulnessPercent());
                 CharacterProfession cp = CharacterProfession.builder()
                         .character(character)
                         .profession(profession)
@@ -292,6 +380,13 @@ public class CharacterService {
             }
         }
 
+        List<Integer> removedProfessionIds = character.getProfessions().stream()
+                .map(cp -> cp.getProfession().getId())
+                .filter(existingId -> !requestedProfessionIds.contains(existingId))
+                .toList();
+        if (!removedProfessionIds.isEmpty()) {
+            log.debug("Removing professions {} from character id={}", removedProfessionIds, character.getId());
+        }
         character.getProfessions().removeIf(cp -> !requestedProfessionIds.contains(cp.getProfession().getId()));
     }
 

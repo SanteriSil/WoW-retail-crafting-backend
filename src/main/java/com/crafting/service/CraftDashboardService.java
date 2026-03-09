@@ -9,6 +9,8 @@ import com.crafting.model.dto.DashboardResponse.DashboardCraft;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import com.crafting.repository.CharacterRecipeRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -17,6 +19,8 @@ import java.util.List;
 
 @Service
 public class CraftDashboardService {
+
+    private static final Logger log = LoggerFactory.getLogger(CraftDashboardService.class);
 
     private final CharacterRecipeRepository characterRecipeRepository;
     private final ProfitCalculationService profitCalculationService;
@@ -29,10 +33,21 @@ public class CraftDashboardService {
 
     @Transactional
     public DashboardResponse getDashboardCrafts(Long discordId, DashboardFilterParams params) {
+        log.debug("Loading dashboard crafts for discordId={} characterId={} professionId={} search='{}' sort={} direction={}",
+                discordId,
+                params.characterId(),
+                params.professionId(),
+                params.search(),
+                params.sort(),
+                params.direction());
         List<CharacterRecipe> allAssignments = characterRecipeRepository.findAllByDiscordIdWithDetails(discordId);
+        log.debug("Fetched {} raw character recipe assignments for discordId={}", allAssignments.size(), discordId);
 
         // Deduplicate due to LEFT JOIN FETCH on ingredients producing duplicate rows
         List<CharacterRecipe> assignments = allAssignments.stream().distinct().toList();
+        if (allAssignments.size() != assignments.size()) {
+            log.debug("Deduplicated dashboard assignments for discordId={} from {} to {}", discordId, allAssignments.size(), assignments.size());
+        }
 
         List<DashboardCraft> crafts = new ArrayList<>();
 
@@ -41,14 +56,29 @@ public class CraftDashboardService {
             Recipe recipe = cr.getRecipe();
 
             // Apply filters
-            if (params.characterId() != null && !character.getId().equals(params.characterId())) continue;
+            if (params.characterId() != null && !character.getId().equals(params.characterId())) {
+                log.debug("Skipping dashboard craft characterId={} recipeId={} due to character filter {}",
+                        character.getId(), recipe.getId(), params.characterId());
+                continue;
+            }
             if (params.professionId() != null && (recipe.getProfession() == null
-                    || !recipe.getProfession().getId().equals(params.professionId()))) continue;
+                    || !recipe.getProfession().getId().equals(params.professionId()))) {
+                log.debug("Skipping dashboard craft characterId={} recipeId={} due to profession filter {} actualProfessionId={}",
+                        character.getId(),
+                        recipe.getId(),
+                        params.professionId(),
+                        recipe.getProfession() != null ? recipe.getProfession().getId() : null);
+                continue;
+            }
             if (params.search() != null && !params.search().isBlank()) {
                 String q = params.search().toLowerCase();
                 boolean matchesRecipe = recipe.getName().toLowerCase().contains(q);
                 boolean matchesOutput = recipe.getOutputItem().getName().toLowerCase().contains(q);
-                if (!matchesRecipe && !matchesOutput) continue;
+                if (!matchesRecipe && !matchesOutput) {
+                    log.debug("Skipping dashboard craft characterId={} recipeId={} due to search filter '{}'",
+                            character.getId(), recipe.getId(), params.search());
+                    continue;
+                }
             }
 
             // Find character's stats for this recipe's profession
@@ -66,6 +96,20 @@ public class CraftDashboardService {
 
             ProfitEstimateDTO baseProfit = profitCalculationService.calculate(recipe);
             ProfitEstimateDTO adjustedProfit = profitCalculationService.calculate(recipe, multicraftPct, resourcefulnessPct);
+
+        log.debug("Dashboard craft characterId={} recipeId={} professionId={} ingredients={} optionalGroups={} baseCost={} adjustedCost={} baseProfit={} adjustedProfit={} multicraftPercent={} resourcefulnessPercent={} missingPrices={}",
+            character.getId(),
+            recipe.getId(),
+            recipe.getProfession() != null ? recipe.getProfession().getId() : null,
+            recipe.getIngredients() != null ? recipe.getIngredients().size() : 0,
+            recipe.getOptionalIngredientGroups() != null ? recipe.getOptionalIngredientGroups().size() : 0,
+            baseProfit.ingredientCost(),
+            adjustedProfit.ingredientCost(),
+            baseProfit.profit(),
+            adjustedProfit.profit(),
+            multicraftPct,
+            resourcefulnessPct,
+            adjustedProfit.missingPrices());
 
             crafts.add(new DashboardCraft(
                     character.getId(),
@@ -103,6 +147,9 @@ public class CraftDashboardService {
         long totalBase = crafts.stream().mapToLong(c -> c.baseProfit().profit()).sum();
         long totalBaseCost = crafts.stream().mapToLong(c -> c.baseProfit().ingredientCost()).sum();
         long totalAdjusted = crafts.stream().mapToLong(c -> c.adjustedProfit().profit()).sum();
+
+        log.debug("Returning {} dashboard crafts for discordId={} totalBaseCost={} totalBaseProfit={} totalAdjustedProfit={}",
+            crafts.size(), discordId, totalBaseCost, totalBase, totalAdjusted);
 
         return new DashboardResponse(crafts, totalBaseCost, totalBase, totalAdjusted, crafts.size());
     }

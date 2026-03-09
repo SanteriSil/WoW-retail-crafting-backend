@@ -8,10 +8,14 @@ import com.crafting.model.RecipeOptionalIngredientGroup;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProfitCalculationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ProfitCalculationService.class);
 
     private static final double AUCTION_HOUSE_FEE = 0.05d;
 
@@ -35,6 +39,21 @@ public class ProfitCalculationService {
      */
     public ProfitEstimateDTO calculate(Recipe recipe, float multicraftPercent, float resourcefulnessPercent) {
         List<Long> missingPrices = new ArrayList<>();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Calculating profit for recipeId={} name='{}' multicraftPercent={} resourcefulnessPercent={} outputItemId={} outputQuantity={} ingredientCount={} optionalGroupCount={} multicraftable={} multicraftMultiplier={} resourcefulnessFactor={}",
+                    recipe.getId(),
+                    recipe.getName(),
+                    multicraftPercent,
+                    resourcefulnessPercent,
+                    recipe.getOutputItem() != null ? recipe.getOutputItem().getId() : null,
+                    recipe.getOutputQuantity(),
+                    recipe.getIngredients() != null ? recipe.getIngredients().size() : 0,
+                    recipe.getOptionalIngredientGroups() != null ? recipe.getOptionalIngredientGroups().size() : 0,
+                    recipe.isMulticraftable(),
+                    recipe.getMulticraftMultiplier(),
+                    recipe.getResourcefulnessFactor());
+        }
 
         // ── Revenue ──────────────────────────────────────────────────────
         Long outputUnitPrice = resolveEffectivePrice(recipe.getOutputItem());
@@ -60,14 +79,43 @@ public class ProfitCalculationService {
                 Long ingredientPrice = resolveEffectivePrice(ingredient.getItem());
                 if (ingredientPrice == null) {
                     missingPrices.add(ingredient.getItem().getId());
+                    log.debug("Missing price for required ingredient itemId={} recipeId={}", ingredient.getItem().getId(), recipe.getId());
                     continue;
                 }
                 baseCost += ingredientPrice * ingredient.getQuantity();
+                log.debug("Required ingredient recipeId={} itemId={} unitPrice={} quantity={} lineCost={} runningBaseCost={}",
+                        recipe.getId(),
+                        ingredient.getItem().getId(),
+                        ingredientPrice,
+                        ingredient.getQuantity(),
+                        ingredientPrice * ingredient.getQuantity(),
+                        baseCost);
             }
         }
 
         // ── Cost: optional ingredient groups (not affected by resourcefulness) ──
         long optionalCost = 0L;
+        if (recipe.getOptionalIngredientGroups() != null && log.isDebugEnabled()) {
+            for (RecipeOptionalIngredientGroup group : recipe.getOptionalIngredientGroups()) {
+                log.debug("Optional ingredient group recipeId={} groupId={} slotIndex={} label='{}' optionCount={}",
+                        recipe.getId(),
+                        group.getId(),
+                        group.getSlotIndex(),
+                        group.getLabel(),
+                        group.getOptions() != null ? group.getOptions().size() : 0);
+                if (group.getOptions() != null) {
+                    for (RecipeOptionalIngredient option : group.getOptions()) {
+                        Long optionPrice = resolveEffectivePrice(option.getItem());
+                        log.debug("Optional ingredient option recipeId={} groupId={} itemId={} unitPrice={} quantity={}",
+                                recipe.getId(),
+                                group.getId(),
+                                option.getItem() != null ? option.getItem().getId() : null,
+                                optionPrice,
+                                option.getQuantity());
+                    }
+                }
+            }
+        }
         // Optional costs are computed for informational purposes but are NOT
         // included in the default profit calc (users pick options at craft time).
         // The plan says resourcefulness only affects non-optional portions, so
@@ -84,6 +132,17 @@ public class ProfitCalculationService {
         long totalCost = Math.round(adjustedBaseCost) + optionalCost;
         long profit = outputRevenue - totalCost;
         boolean calculable = missingPrices.isEmpty();
+
+        log.debug("Calculated profit for recipeId={} outputRevenue={} baseCost={} adjustedBaseCost={} optionalCost={} totalCost={} profit={} calculable={} missingPrices={}",
+            recipe.getId(),
+            outputRevenue,
+            baseCost,
+            Math.round(adjustedBaseCost),
+            optionalCost,
+            totalCost,
+            profit,
+            calculable,
+            missingPrices);
 
         return new ProfitEstimateDTO(
                 outputRevenue,
