@@ -121,6 +121,57 @@ class DashboardControllerTest {
                     .andExpect(jsonPath("$.crafts[0].recipeName", is("Arcane Thread")))
                     .andExpect(jsonPath("$.crafts[1].recipeName", is("Zest Flask")));
         }
+
+        @Test
+        @DisplayName("does not duplicate ingredient costs when character has multiple professions")
+        void doesNotDuplicateIngredientCostsForMultiProfessionCharacter() throws Exception {
+            WowCharacter character = saveCharacter(9001L, "Scribe", alchemy, 0f, 0f);
+            character.getProfessions().add(CharacterProfession.builder()
+                    .character(character)
+                    .profession(tailoring)
+                    .multicraftPercent(0f)
+                    .resourcefulnessPercent(0f)
+                    .build());
+            character = characterRepository.save(character);
+
+            Recipe recipe = saveRecipe("Munsell Ink", 1300L, alchemy, 2300L, "Munsell Ink", 108_460L, 3300L, 3_800L, 3);
+
+            Item pigmentA = itemRepository.save(Item.builder()
+                    .id(3301L)
+                    .name("Powder Pigment")
+                    .currentPrice(89_650L)
+                    .finishingIngredient(false)
+                    .build());
+            Item pigmentB = itemRepository.save(Item.builder()
+                    .id(3302L)
+                    .name("Mana Lily Pigment")
+                    .currentPrice(16_000L)
+                    .finishingIngredient(false)
+                    .build());
+
+            recipe.getIngredients().add(RecipeIngredient.builder()
+                    .recipe(recipe)
+                    .item(pigmentA)
+                    .quantity(20)
+                    .build());
+            recipe.getIngredients().add(RecipeIngredient.builder()
+                    .recipe(recipe)
+                    .item(pigmentB)
+                    .quantity(5)
+                    .build());
+            recipe = recipeRepository.save(recipe);
+
+            characterRecipeRepository.save(CharacterRecipe.builder().character(character).recipe(recipe).build());
+
+            long expectedCost = (3_800L * 3) + (89_650L * 20) + (16_000L * 5);
+
+            mockMvc.perform(get("/dashboard/crafts")
+                            .with(user("9001").roles("ALLOWED_USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalCrafts", is(1)))
+                    .andExpect(jsonPath("$.totalBaseCost", is((int) expectedCost)))
+                    .andExpect(jsonPath("$.crafts[0].baseProfit.ingredientCost", is((int) expectedCost)));
+        }
     }
 
     private WowCharacter saveCharacter(Long discordId, String name, Profession profession, float multicraft, float resourcefulness) {

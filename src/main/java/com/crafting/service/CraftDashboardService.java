@@ -8,6 +8,7 @@ import com.crafting.model.dto.DashboardResponse;
 import com.crafting.model.dto.DashboardResponse.DashboardCraft;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import com.crafting.repository.CharacterRecipeRepository;
+import com.crafting.repository.RecipeRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class CraftDashboardService {
@@ -23,11 +26,14 @@ public class CraftDashboardService {
     private static final Logger log = LoggerFactory.getLogger(CraftDashboardService.class);
 
     private final CharacterRecipeRepository characterRecipeRepository;
+    private final RecipeRepository recipeRepository;
     private final ProfitCalculationService profitCalculationService;
 
     public CraftDashboardService(CharacterRecipeRepository characterRecipeRepository,
+                                 RecipeRepository recipeRepository,
                                  ProfitCalculationService profitCalculationService) {
         this.characterRecipeRepository = characterRecipeRepository;
+        this.recipeRepository = recipeRepository;
         this.profitCalculationService = profitCalculationService;
     }
 
@@ -42,6 +48,18 @@ public class CraftDashboardService {
                 params.direction());
         List<CharacterRecipe> allAssignments = characterRecipeRepository.findAllByDiscordIdWithDetails(discordId);
         log.debug("Fetched {} raw character recipe assignments for discordId={}", allAssignments.size(), discordId);
+
+        // Prime the persistence context with correctly-loaded ingredient collections.
+        // Without this, the JOIN FETCH on ingredients in the CharacterRecipe query would
+        // produce a Cartesian product: N CharacterRecipes × M ingredients per recipe,
+        // inflating each recipe's ingredient list by the number of characters sharing it.
+        Set<Long> recipeIds = allAssignments.stream()
+                .map(cr -> cr.getRecipe().getId())
+                .collect(Collectors.toSet());
+        if (!recipeIds.isEmpty()) {
+            recipeRepository.findByIdsWithIngredients(recipeIds);
+            log.debug("Primed ingredient cache for {} distinct recipes", recipeIds.size());
+        }
 
         // Deduplicate due to LEFT JOIN FETCH on ingredients producing duplicate rows
         List<CharacterRecipe> assignments = allAssignments.stream().distinct().toList();

@@ -17,11 +17,7 @@ public interface CharacterRecipeRepository extends JpaRepository<CharacterRecipe
             SELECT cr FROM CharacterRecipe cr
             JOIN FETCH cr.recipe r
             JOIN FETCH r.outputItem
-            LEFT JOIN FETCH r.ingredients ri
-            LEFT JOIN FETCH ri.item
             JOIN FETCH cr.character c
-            LEFT JOIN FETCH c.professions cp
-            LEFT JOIN FETCH cp.profession
             WHERE c.discordId = :discordId
               AND r.deleted = false
             """)

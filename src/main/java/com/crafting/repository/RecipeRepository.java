@@ -71,4 +71,18 @@ public interface RecipeRepository extends JpaRepository<Recipe, Long>{
 
     @Query("SELECT DISTINCT r.outputItem.id FROM Recipe r WHERE r.deleted = false")
     java.util.Set<Long> findAllOutputItemIds();
+
+    /**
+     * Load recipes with their ingredients + ingredient items in one query.
+     * Must be called within the same persistence context as the CharacterRecipe query
+     * so that the L1 cache is primed and ingredient collections are already initialised
+     * when ProfitCalculationService iterates them.
+     */
+    @Query("""
+            SELECT DISTINCT r FROM Recipe r
+            LEFT JOIN FETCH r.ingredients ri
+            LEFT JOIN FETCH ri.item
+            WHERE r.id IN :ids
+            """)
+    List<Recipe> findByIdsWithIngredients(@Param("ids") java.util.Collection<Long> ids);
 }
