@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getCharacters, getDashboardCrafts, getRecipe } from "../api";
 import type { CalculatorEntry, Character, CraftOverrides, DashboardCraft, DashboardResponse, Profession, RecipeDetail } from "../types";
 import DashboardFilters from "./DashboardFilters";
-import DashboardSummary from "./DashboardSummary";
 import CraftTable from "./CraftTable";
 import CraftingCalculator from "./CraftingCalculator";
 
@@ -211,12 +210,6 @@ export default function DashboardPage({ professions, role }: Props) {
 
             {dashboard && (
                 <>
-                    <DashboardSummary
-                        totalBaseCost={dashboard.totalBaseCost}
-                        totalBaseProfit={dashboard.totalBaseProfit}
-                        totalAdjustedProfit={dashboard.totalAdjustedProfit}
-                        totalCrafts={dashboard.totalCrafts}
-                    />
                     <CraftTable
                         crafts={dashboard.crafts}
                         sort={sort}

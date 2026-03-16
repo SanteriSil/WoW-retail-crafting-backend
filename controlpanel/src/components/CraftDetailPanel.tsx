@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { DashboardCraft, RecipeDetail } from "../types";
 import {
     calculateBreakEven,
-    calculateMulticraftBonus,
     calculateResourcefulnessSavings,
     formatGold,
     recalculateAdjustedProfit,
@@ -53,10 +52,17 @@ export default function CraftDetailPanel({
     ), [recipeDetail]);
 
     const savings = calculateResourcefulnessSavings(craft, r);
-    const multicraftBonus = calculateMulticraftBonus(craft, m);
     const adjusted = craft.baseProfit.calculable
         ? recalculateAdjustedProfit(craft, m, r)
         : null;
+
+    const yieldMultiplier = craft.isMulticraftable && craft.multicraftPercent > 0
+        ? 1 + (craft.multicraftPercent / 100) * m
+        : 1;
+    const baseRevenueAfterAhCut = craft.baseProfit.outputRevenue;
+    const totalRevenueAfterAhCut = Math.round(baseRevenueAfterAhCut * yieldMultiplier);
+    const multicraftBonusAfterAhCut = totalRevenueAfterAhCut - baseRevenueAfterAhCut;
+
     const breakEven = calculateBreakEven(craft, m, r);
     const resourcefulnessPct = (craft.resourcefulnessPercent * r).toFixed(1);
     const multicraftBonusPct = (craft.multicraftPercent * m).toFixed(1);
@@ -65,7 +71,7 @@ export default function CraftDetailPanel({
         <div className="craft-detail-panel">
             <div className="craft-detail-grid">
                 <section className="craft-detail-card">
-                    <div className="craft-detail-title">📦 Cost Breakdown</div>
+                    <div className="craft-detail-title">Cost Breakdown</div>
                     {ingredientRows.length > 0 ? (
                         <table className="craft-detail-table">
                             <thead>
@@ -116,24 +122,24 @@ export default function CraftDetailPanel({
                 </section>
 
                 <section className="craft-detail-card">
-                    <div className="craft-detail-title">📈 Revenue Breakdown</div>
+                    <div className="craft-detail-title">Revenue Breakdown</div>
                     <div className="craft-detail-totals craft-detail-totals-plain">
                         <div className="craft-detail-total-row">
                             <span>Sell Price / unit</span>
                             <strong>{formatGold(craft.outputItemPrice, false)}</strong>
                         </div>
                         <div className="craft-detail-total-row">
-                            <span>Base Revenue</span>
-                            <strong>{formatGold(craft.baseProfit.outputRevenue, false)}</strong>
+                            <span>Base Revenue (after AH cut)</span>
+                            <strong>{formatGold(baseRevenueAfterAhCut, false)}</strong>
                         </div>
                         <div className="craft-detail-total-row">
-                            <span>Multicraft (+{multicraftBonusPct}%)</span>
-                            <strong>+{formatGold(multicraftBonus, false)}</strong>
+                            <span>Multicraft (+{multicraftBonusPct}%, after AH cut)</span>
+                            <strong>+{formatGold(multicraftBonusAfterAhCut, false)}</strong>
                         </div>
                         <div className="craft-detail-total-row craft-detail-total-row-strong">
-                            <span>Total Revenue</span>
+                            <span>Total Revenue (after AH cut)</span>
                             <strong>
-                                {adjusted ? formatGold(adjusted.revenue, false) : formatGold(craft.baseProfit.outputRevenue + multicraftBonus, false)}
+                                {formatGold(totalRevenueAfterAhCut, false)}
                             </strong>
                         </div>
                         <div className="craft-detail-total-row">
@@ -145,7 +151,7 @@ export default function CraftDetailPanel({
             </div>
 
             <div className="craft-detail-controls">
-                <div className="craft-detail-title">⚙️ Overrides</div>
+                <div className="craft-detail-title">Overrides</div>
                 <label className="craft-detail-control">
                     <span>M</span>
                     <input

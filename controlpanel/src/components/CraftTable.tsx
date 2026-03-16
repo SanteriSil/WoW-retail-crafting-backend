@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CraftOverrides, DashboardCraft } from "../types";
 import { formatGold, profitClass, recalculateAdjustedProfit } from "../utils";
 import type { RecipeDetail } from "../types";
@@ -9,6 +9,29 @@ type CraftGroup = {
     primary: DashboardCraft;
     variants: DashboardCraft[];
 };
+
+type ColumnDef = {
+    key: string;
+    label: string;
+    sortable: boolean;
+    align?: "right";
+    defaultWidth: number;
+    minWidth: number;
+    resizable?: boolean;
+};
+
+const COLUMN_WIDTHS_STORAGE_KEY = "dashboard-column-widths-v1";
+
+function loadColumnWidths(): Record<string, number> {
+    try {
+        const raw = localStorage.getItem(COLUMN_WIDTHS_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return typeof parsed === "object" && parsed ? parsed : {};
+    } catch {
+        return {};
+    }
+}
 
 function qualityStars(quality?: number | null): string | null {
     if (quality == null) return null;
@@ -51,21 +74,81 @@ export default function CraftTable({
     const [expandedKey, setExpandedKey] = useState<string | null>(null);
     const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
     const [notesKey, setNotesKey] = useState<string | null>(null);
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>(loadColumnWidths);
+    const resizeStateRef = useRef<{ key: string; startX: number; startWidth: number; minWidth: number } | null>(null);
 
-    const columns: { key: string; label: string; sortable: boolean; align?: "right" }[] = [
-        { key: "characterName", label: "Character", sortable: true },
-        { key: "recipeName", label: "Recipe", sortable: true },
-        { key: "professionName", label: "Profession", sortable: true },
-        { key: "outputItemName", label: "Output", sortable: false },
-        { key: "adjustedProfit", label: "Adj. Profit", sortable: true, align: "right" },
-        { key: "outputItemPrice", label: "Sell Price", sortable: false, align: "right" },
+    const columns: ColumnDef[] = [
+        { key: "characterName", label: "Character", sortable: true, defaultWidth: 220, minWidth: 88, resizable: true },
+        { key: "recipeName", label: "Recipe", sortable: true, defaultWidth: 320, minWidth: 110, resizable: true },
+        { key: "professionName", label: "Profession", sortable: true, defaultWidth: 150, minWidth: 88, resizable: true },
+        { key: "outputItemName", label: "Output", sortable: false, defaultWidth: 220, minWidth: 110, resizable: true },
+        { key: "adjustedProfit", label: "Adj. Profit", sortable: true, align: "right", defaultWidth: 140, minWidth: 84, resizable: true },
+        { key: "outputItemPrice", label: "Sell Price", sortable: false, align: "right", defaultWidth: 140, minWidth: 84, resizable: true },
         ...(showBaseMetrics
             ? [
-                { key: "baseCost", label: "Base Cost", sortable: false, align: "right" as const },
+                {
+                    key: "baseCost",
+                    label: "Base Cost",
+                    sortable: false,
+                    align: "right" as const,
+                    defaultWidth: 140,
+                    minWidth: 84,
+                    resizable: true,
+                },
             ]
             : []),
-        { key: "_calc", label: "", sortable: false },
+        { key: "_calc", label: "", sortable: false, defaultWidth: 52, minWidth: 36, resizable: false },
     ];
+
+    const getColumnWidth = useCallback((col: ColumnDef): number => {
+        const saved = columnWidths[col.key];
+        if (typeof saved === "number" && Number.isFinite(saved)) {
+            return Math.max(col.minWidth, saved);
+        }
+        return col.defaultWidth;
+    }, [columnWidths]);
+
+    useEffect(() => {
+        localStorage.setItem(COLUMN_WIDTHS_STORAGE_KEY, JSON.stringify(columnWidths));
+    }, [columnWidths]);
+
+    const stopResize = useCallback(() => {
+        resizeStateRef.current = null;
+        window.removeEventListener("mousemove", handleResizeMove);
+        window.removeEventListener("mouseup", stopResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const handleResizeMove = useCallback((event: MouseEvent) => {
+        const state = resizeStateRef.current;
+        if (!state) return;
+
+        const delta = event.clientX - state.startX;
+        const nextWidth = Math.max(state.minWidth, Math.round(state.startWidth + delta));
+        setColumnWidths((prev) => ({ ...prev, [state.key]: nextWidth }));
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            window.removeEventListener("mousemove", handleResizeMove);
+            window.removeEventListener("mouseup", stopResize);
+        };
+    }, [handleResizeMove, stopResize]);
+
+    const startResize = (event: React.MouseEvent, col: ColumnDef) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        resizeStateRef.current = {
+            key: col.key,
+            startX: event.clientX,
+            startWidth: getColumnWidth(col),
+            minWidth: col.minWidth,
+        };
+
+        window.addEventListener("mousemove", handleResizeMove);
+        window.addEventListener("mouseup", stopResize);
+    };
 
     if (crafts.length === 0 && !loading) {
         return <div className="muted" style={{ padding: 12, textAlign: "center" }}>No crafts to display.</div>;
@@ -147,13 +230,18 @@ export default function CraftTable({
 
     return (
         <div className="recipe-table-wrapper">
-            <table className="recipe-table">
+            <table className="recipe-table craft-table-resizable">
+                <colgroup>
+                    {columns.map((col) => (
+                        <col key={col.key} style={{ width: `${getColumnWidth(col)}px` }} />
+                    ))}
+                </colgroup>
                 <thead>
                     <tr>
                         {columns.map((col) => (
                             <th
                                 key={col.key}
-                                className={col.sortable ? "sortable" : ""}
+                                className={`${col.sortable ? "sortable" : ""}${col.resizable ? " resizable-th" : ""}`}
                                 style={col.align ? { textAlign: col.align } : undefined}
                                 onClick={col.sortable ? () => onSortChange(col.key) : undefined}
                             >
@@ -162,6 +250,15 @@ export default function CraftTable({
                                     <span className={`sort-indicator${sort === col.key ? " active" : ""}`}>
                                         {sort === col.key ? (direction === "asc" ? "▲" : "▼") : "⇅"}
                                     </span>
+                                )}
+                                {col.resizable && (
+                                    <span
+                                        className="column-resizer"
+                                        role="separator"
+                                        aria-orientation="vertical"
+                                        onMouseDown={(e) => startResize(e, col)}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
                                 )}
                             </th>
                         ))}
@@ -208,7 +305,7 @@ export default function CraftTable({
                                         {isVariant ? (
                                             <span className="muted craft-variant-placeholder">↳</span>
                                         ) : (
-                                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                            <span className="cell-inline-with-icon" title={c.characterName}>
                                                 {c.characterIconUrl && (
                                                     <img
                                                         src={c.characterIconUrl}
@@ -218,12 +315,17 @@ export default function CraftTable({
                                                         style={{ borderRadius: "50%", objectFit: "cover" }}
                                                     />
                                                 )}
-                                                {c.characterName}
+                                                <span className="cell-ellipsis">{c.characterName}</span>
                                             </span>
                                         )}
                                     </td>
                                     <td>
-                                        <span className={isVariant ? "craft-variant-name" : undefined}>{c.recipeName}</span>
+                                        <span
+                                            className={`recipe-cell-name${isVariant ? " craft-variant-name" : ""}`}
+                                            title={c.recipeName}
+                                        >
+                                            {c.recipeName}
+                                        </span>
                                         {c.hasNotes && (
                                             <button
                                                 className="notes-indicator-btn"
@@ -250,9 +352,9 @@ export default function CraftTable({
                                         )}
                                         {hasOverride && <span className="craft-override-badge" title="Custom M/R override active">⚙️</span>}
                                     </td>
-                                    <td>{c.professionName}</td>
+                                    <td title={c.professionName}><span className="cell-ellipsis">{c.professionName}</span></td>
                                     <td>
-                                        {c.outputItemName}
+                                        <span className="cell-ellipsis" title={c.outputItemName}>{c.outputItemName}</span>
                                         {(() => {
                                             const stars = qualityStars(c.outputItemQuality);
                                             return stars ? <span className={`quality-stars q${c.outputItemQuality}`}> {stars}</span> : null;

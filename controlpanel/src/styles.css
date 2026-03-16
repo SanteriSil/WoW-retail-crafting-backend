@@ -1137,6 +1137,42 @@ body {
     font-size: 13px;
 }
 
+.craft-table-resizable {
+    table-layout: fixed;
+}
+
+.craft-table-resizable td,
+.craft-table-resizable th {
+    overflow: hidden;
+}
+
+.cell-inline-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.cell-ellipsis {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.recipe-cell-name {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
 .recipe-table th,
 .recipe-table td {
     padding: 8px 12px;
@@ -1157,6 +1193,36 @@ body {
     position: sticky;
     top: 0;
     z-index: 1;
+}
+
+.recipe-table thead th.resizable-th {
+    position: relative;
+}
+
+.column-resizer {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 3;
+}
+
+.column-resizer::after {
+    content: "";
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: transparent;
+    transition: background 120ms;
+}
+
+.recipe-table thead th.resizable-th:hover .column-resizer::after {
+    background: #cbd5e1;
 }
 
 .recipe-table th.sortable {
