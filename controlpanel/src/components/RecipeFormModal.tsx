@@ -101,6 +101,10 @@ export default function RecipeFormModal(props: Props) {
         if (!outId) { setError("Output Item is required."); return; }
         if (!professionId) { setError("Profession is required."); return; }
         if (!expansionId) { setError("Expansion is required."); return; }
+        if (resourcefulnessFactor < 0.3 || resourcefulnessFactor > 1) {
+            setError("Resourcefulness factor must be between 0.3 and 1.0.");
+            return;
+        }
 
         const validIngredients = ingredients
             .filter((i) => parseInt(i.itemId, 10) > 0)
@@ -285,11 +289,12 @@ export default function RecipeFormModal(props: Props) {
                                 className="input"
                                 style={{ width: 120 }}
                                 value={resourcefulnessFactor}
-                                min={0}
+                                min={0.3}
                                 max={1}
                                 step={0.05}
-                                onChange={(e) => setResourcefulnessFactor(Math.min(1, Math.max(0, parseFloat(e.target.value) || 0.3)))}
+                                onChange={(e) => setResourcefulnessFactor(Math.min(1, Math.max(0.3, parseFloat(e.target.value) || 0.3)))}
                             />
+                            <div className="helper">Allowed range: 0.3–1.0</div>
                         </div>
                     </div>
 

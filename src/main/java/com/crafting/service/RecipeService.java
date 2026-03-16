@@ -336,6 +336,10 @@ public class RecipeService {
         if (command.outputQuantity() == null || command.outputQuantity() <= 0f) {
             throw new IllegalArgumentException("Output quantity must be > 0");
         }
+        if (command.resourcefulnessFactor() != null
+                && (command.resourcefulnessFactor() < 0.3f || command.resourcefulnessFactor() > 1.0f)) {
+            throw new IllegalArgumentException("Resourcefulness factor must be between 0.3 and 1.0");
+        }
 
         Item outputItem = itemRepository.findById(command.outputItemId())
                 .orElseThrow(() -> new IllegalArgumentException("Output item not found: " + command.outputItemId()));

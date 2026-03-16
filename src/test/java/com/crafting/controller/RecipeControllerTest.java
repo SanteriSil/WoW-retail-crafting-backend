@@ -145,6 +145,66 @@ class RecipeControllerTest {
             assertThat(recipeRepository.count()).isEqualTo(1);
             assertThat(recipeRepository.findAll().getFirst().getCreatedBy()).isEqualTo(4242L);
         }
+
+                @Test
+                @DisplayName("accepts resourcefulness factor upper bound")
+                void acceptsResourcefulnessFactorUpperBound() throws Exception {
+                        saveItem(2010L, "Boundary Flask");
+                        saveItem(3010L, "Boundary Herb");
+
+                        mockMvc.perform(post("/recipes")
+                                                        .with(user("4242").roles("ADMIN"))
+                                                        .contentType(MediaType.APPLICATION_JSON)
+                                                        .content("""
+                                                                        {
+                                                                            "name":"Boundary Flask",
+                                                                            "wowheadSpellId":555001,
+                                                                            "outputItemId":2010,
+                                                                            "outputQuantity":1.0,
+                                                                            "professionId":%d,
+                                                                            "expansionId":%d,
+                                                                            "source":"MANUAL",
+                                                                            "ingredients":[{"itemId":3010,"quantity":2}],
+                                                                            "optionalIngredientGroups":[],
+                                                                            "multicraftable":true,
+                                                                            "multicraftMultiplier":1.25,
+                                                                            "resourcefulnessFactor":1.0,
+                                                                            "notes":null
+                                                                        }
+                                                                        """.formatted(profession.getId(), expansion.getId())))
+                                        .andExpect(status().isCreated())
+                                        .andExpect(jsonPath("$.resourcefulnessFactor", is(1.0)));
+                }
+
+                @Test
+                @DisplayName("rejects resourcefulness factor below minimum")
+                void rejectsResourcefulnessFactorBelowMinimum() throws Exception {
+                        saveItem(2011L, "Invalid Boundary Flask");
+                        saveItem(3011L, "Invalid Boundary Herb");
+
+                        mockMvc.perform(post("/recipes")
+                                                        .with(user("4242").roles("ADMIN"))
+                                                        .contentType(MediaType.APPLICATION_JSON)
+                                                        .content("""
+                                                                        {
+                                                                            "name":"Invalid Boundary Flask",
+                                                                            "wowheadSpellId":555002,
+                                                                            "outputItemId":2011,
+                                                                            "outputQuantity":1.0,
+                                                                            "professionId":%d,
+                                                                            "expansionId":%d,
+                                                                            "source":"MANUAL",
+                                                                            "ingredients":[{"itemId":3011,"quantity":2}],
+                                                                            "optionalIngredientGroups":[],
+                                                                            "multicraftable":true,
+                                                                            "multicraftMultiplier":1.25,
+                                                                            "resourcefulnessFactor":0.2,
+                                                                            "notes":null
+                                                                        }
+                                                                        """.formatted(profession.getId(), expansion.getId())))
+                                        .andExpect(status().isBadRequest())
+                                        .andExpect(jsonPath("$.error", is("Resourcefulness factor must be between 0.3 and 1.0")));
+                }
     }
 
     @Nested

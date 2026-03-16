@@ -105,7 +105,7 @@ export default function CraftDetailPanel({
                             <strong>{formatGold(craft.baseProfit.ingredientCost, false)}</strong>
                         </div>
                         <div className="craft-detail-total-row">
-                            <span>Reso savings (−{resourcefulnessPct}%)</span>
+                            <span>Resourcefulness savings (−{resourcefulnessPct}%)</span>
                             <strong>−{formatGold(savings, false)}</strong>
                         </div>
                         <div className="craft-detail-total-row craft-detail-total-row-strong">
