@@ -18,6 +18,10 @@ body {
     padding: 24px;
 }
 
+.app.app-dashboard {
+    max-width: 1440px;
+}
+
 .header {
     display: flex;
     align-items: center;

@@ -179,6 +179,10 @@ export default function DashboardPage({ professions, role }: Props) {
         }
     };
 
+    const crafts = dashboard?.crafts ?? [];
+    const hasActiveFilter = characterId != null || professionId != null || search.trim().length > 0;
+    const showNoValidCombinations = !loading && dashboard != null && crafts.length === 0 && hasActiveFilter;
+
     return (
         <div className="dashboard-page">
             <div className="recipes-page-header">
@@ -208,10 +212,16 @@ export default function DashboardPage({ professions, role }: Props) {
 
             {error && <div className="error">{error}</div>}
 
-            {dashboard && (
+            {showNoValidCombinations && (
+                <div className="muted" style={{ padding: 16, textAlign: "center" }}>
+                    No valid character/profession combinations found for the selected filters.
+                </div>
+            )}
+
+            {dashboard && crafts.length > 0 && (
                 <>
                     <CraftTable
-                        crafts={dashboard.crafts}
+                        crafts={crafts}
                         sort={sort}
                         direction={direction}
                         onSortChange={handleSortChange}
@@ -230,7 +240,7 @@ export default function DashboardPage({ professions, role }: Props) {
 
                     <CraftingCalculator
                         entries={calcEntries}
-                        crafts={dashboard.crafts}
+                        crafts={crafts}
                         overrides={overrides}
                         recipeCache={recipeCache}
                         onUpdateQuantity={handleCalcUpdateQty}

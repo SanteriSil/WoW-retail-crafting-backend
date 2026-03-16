@@ -421,7 +421,15 @@ export async function getDashboardCrafts(params: {
     if (params.search) query.set("search", params.search);
     if (params.sort) query.set("sort", params.sort);
     if (params.direction) query.set("direction", params.direction);
-    return request<DashboardResponse>(`/dashboard/crafts?${query.toString()}`);
+    const data = await request<Partial<DashboardResponse>>(`/dashboard/crafts?${query.toString()}`);
+
+    return {
+        crafts: Array.isArray(data?.crafts) ? data.crafts : [],
+        totalBaseCost: typeof data?.totalBaseCost === "number" ? data.totalBaseCost : 0,
+        totalBaseProfit: typeof data?.totalBaseProfit === "number" ? data.totalBaseProfit : 0,
+        totalAdjustedProfit: typeof data?.totalAdjustedProfit === "number" ? data.totalAdjustedProfit : 0,
+        totalCrafts: typeof data?.totalCrafts === "number" ? data.totalCrafts : 0,
+    };
 }
 
 export async function exportRecipesExcel(params: RecipeFilterParams): Promise<void> {

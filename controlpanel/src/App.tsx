@@ -211,7 +211,7 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
     };
 
     return (
-        <div className="app">
+        <div className={`app${activeTab === "dashboard" ? " app-dashboard" : ""}`}>
             <SheetBuilder items={items} />
             <div className="header">
                 <div>
