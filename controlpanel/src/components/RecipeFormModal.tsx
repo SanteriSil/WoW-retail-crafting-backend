@@ -281,7 +281,7 @@ export default function RecipeFormModal(props: Props) {
                                 value={resourcefulnessFactor}
                                 min={0.3}
                                 max={1}
-                                step={0.05}
+                                step="any"
                                 onChange={(e) => setResourcefulnessFactor(Math.min(1, Math.max(0.3, parseFloat(e.target.value) || 0.3)))}
                             />
                             <div className="helper">Allowed range: 0.3–1.0</div>
