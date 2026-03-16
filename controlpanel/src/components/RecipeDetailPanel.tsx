@@ -39,7 +39,6 @@ export default function RecipeDetailPanel({ recipe, role, onEdit, onDuplicate, o
                     <h2 className="recipe-detail-title">{recipe.name}</h2>
                     <div className="recipe-detail-badges">
                         <span className="expansion-badge">{recipe.expansion.name}</span>
-                        <span className={`source-badge ${recipe.source.toLowerCase()}`}>{recipe.source}</span>
                         {recipe.wowheadSpellId && (
                             <a
                                 className="wowhead-link"

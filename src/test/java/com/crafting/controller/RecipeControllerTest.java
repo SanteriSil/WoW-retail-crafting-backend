@@ -147,6 +147,36 @@ class RecipeControllerTest {
         }
 
                 @Test
+                @DisplayName("creates recipe when source is omitted")
+                void createsRecipeWithoutSource() throws Exception {
+                        saveItem(2012L, "Source Omitted Flask");
+                        saveItem(3012L, "Source Omitted Herb");
+
+                        mockMvc.perform(post("/recipes")
+                                                        .with(user("4242").roles("ADMIN"))
+                                                        .contentType(MediaType.APPLICATION_JSON)
+                                                        .content("""
+                                                                        {
+                                                                            "name":"Source Omitted Flask",
+                                                                            "wowheadSpellId":223456,
+                                                                            "outputItemId":2012,
+                                                                            "outputQuantity":1.0,
+                                                                            "professionId":%d,
+                                                                            "expansionId":%d,
+                                                                            "ingredients":[{"itemId":3012,"quantity":3}],
+                                                                            "optionalIngredientGroups":[],
+                                                                            "multicraftable":true,
+                                                                            "multicraftMultiplier":1.5,
+                                                                            "resourcefulnessFactor":0.4,
+                                                                            "notes":"No source payload"
+                                                                        }
+                                                                        """.formatted(profession.getId(), expansion.getId())))
+                                        .andExpect(status().isCreated())
+                                        .andExpect(jsonPath("$.name", is("Source Omitted Flask")))
+                                        .andExpect(jsonPath("$.source", is("MANUAL")));
+                }
+
+                @Test
                 @DisplayName("accepts resourcefulness factor upper bound")
                 void acceptsResourcefulnessFactorUpperBound() throws Exception {
                         saveItem(2010L, "Boundary Flask");
@@ -246,6 +276,41 @@ class RecipeControllerTest {
 
             Recipe updated = recipeRepository.findById(recipe.getId()).orElseThrow();
             assertThat(updated.getName()).isEqualTo("Updated Flask");
+        }
+
+        @Test
+        @DisplayName("updates recipe when source is omitted")
+        void updatesRecipeWithoutSource() throws Exception {
+            Item outputItem = saveItem(2013L, "Updated Source Omitted Flask");
+            Item oldIngredient = saveItem(3013L, "Old Source Herb");
+            Item newIngredient = saveItem(3014L, "New Source Herb");
+            Recipe recipe = saveRecipe("Sourceful Flask", 1013L, outputItem, List.of(oldIngredient));
+
+            mockMvc.perform(put("/recipes/{id}", recipe.getId())
+                            .with(user("4242").roles("ADMIN"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "name":"Updated Source Omitted Flask",
+                                      "wowheadSpellId":1013,
+                                      "outputItemId":2013,
+                                      "outputQuantity":1.0,
+                                      "professionId":%d,
+                                      "expansionId":%d,
+                                      "ingredients":[{"itemId":3014,"quantity":4}],
+                                      "optionalIngredientGroups":[],
+                                      "multicraftable":false,
+                                      "multicraftMultiplier":1.25,
+                                      "resourcefulnessFactor":0.3,
+                                      "notes":"Updated without source"
+                                    }
+                                    """.formatted(profession.getId(), expansion.getId())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name", is("Updated Source Omitted Flask")))
+                    .andExpect(jsonPath("$.source", is("MANUAL")));
+
+            Recipe updated = recipeRepository.findById(recipe.getId()).orElseThrow();
+            assertThat(updated.getSource()).isEqualTo("MANUAL");
         }
     }
 

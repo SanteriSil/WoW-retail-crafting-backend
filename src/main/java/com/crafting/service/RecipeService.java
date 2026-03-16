@@ -64,7 +64,7 @@ public class RecipeService {
 
         Recipe recipe = new Recipe();
         applyRecipeFields(recipe, command, validation);
-        recipe.setSource(command.source() != null ? command.source() : "MANUAL");
+        recipe.setSource(normalizeSource(command.source()));
         recipe.setCreatedBy(createdByDiscordId);
 
         Recipe saved = recipeRepository.save(recipe);
@@ -78,6 +78,11 @@ public class RecipeService {
 
         ValidationContext validation = validateCommand(command, recipeId);
         applyRecipeFields(recipe, command, validation);
+        if (command.source() != null && !command.source().isBlank()) {
+            recipe.setSource(normalizeSource(command.source()));
+        } else if (recipe.getSource() == null || recipe.getSource().isBlank()) {
+            recipe.setSource("MANUAL");
+        }
 
         Recipe saved = recipeRepository.save(recipe);
         return toRecipeDTO(saved);
@@ -454,6 +459,13 @@ public class RecipeService {
                 .filter(i -> i.getId().equals(itemId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Item not found: " + itemId));
+    }
+
+    private String normalizeSource(String source) {
+        if (source == null || source.isBlank()) {
+            return "MANUAL";
+        }
+        return source.trim().toUpperCase();
     }
 
     private RecipeSummaryDTO toRecipeSummaryDTO(Recipe recipe) {

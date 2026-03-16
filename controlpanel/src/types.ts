@@ -276,7 +276,7 @@ export type RecipeWritePayload = {
   outputQuantity: number;
   professionId: number;
   expansionId: number;
-  source: string;
+  source?: string;
   ingredients: { itemId: number; quantity: number }[];
   optionalIngredientGroups: {
     slotIndex: number;

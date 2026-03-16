@@ -141,7 +141,6 @@ export default function RecipeList({
                             </th>
                             <th>Profession</th>
                             <th>Expansion</th>
-                            <th>Source</th>
                             <th>Output Item</th>
                             <th style={{ textAlign: "right" }}>MC</th>
                             <th style={{ textAlign: "right" }}>R</th>
@@ -185,11 +184,6 @@ export default function RecipeList({
                                         </td>
                                         <td className="muted">{recipe.professionName ?? "—"}</td>
                                         <td className="muted">{recipe.expansionName}</td>
-                                        <td>
-                                            <span className={`source-badge ${recipe.source.toLowerCase()}`}>
-                                                {recipe.source}
-                                            </span>
-                                        </td>
                                         <td className="muted">
                                             {recipe.outputItemName}
                                             {(() => {

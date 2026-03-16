@@ -3,8 +3,6 @@ import type { Expansion, Item, Profession, RecipeDetail, RecipeWritePayload } fr
 import ItemAutocomplete from "./ItemAutocomplete";
 import { qualityStars } from "./ItemList";
 
-const SOURCES = ["TRAINER", "DISCOVERY", "VENDOR", "DROP", "QUEST"] as const;
-
 type IngredientRow = { itemId: string; quantity: number };
 type OptGroupRow = {
     slotIndex: number;
@@ -49,7 +47,6 @@ export default function RecipeFormModal(props: Props) {
     const [outputQuantity, setOutputQuantity] = useState(1);
     const [professionId, setProfessionId] = useState<number | "">(professions[0]?.id ?? "");
     const [expansionId, setExpansionId] = useState<number | "">(expansions[0]?.id ?? "");
-    const [source, setSource] = useState<string>(SOURCES[0]);
     const [ingredients, setIngredients] = useState<IngredientRow[]>([{ itemId: "", quantity: 1 }]);
     const [optGroups, setOptGroups] = useState<OptGroupRow[]>([]);
     const [multicraftable, setMulticraftable] = useState(false);
@@ -68,7 +65,6 @@ export default function RecipeFormModal(props: Props) {
         setOutputQuantity(recipe.outputQuantity);
         setProfessionId(recipe.profession?.id ?? "");
         setExpansionId(recipe.expansion.id);
-        setSource(recipe.source);
         setIngredients(
             recipe.ingredients.map((i) => ({ itemId: i.item.id.toString(), quantity: i.quantity }))
         );
@@ -119,7 +115,6 @@ export default function RecipeFormModal(props: Props) {
             outputQuantity,
             professionId: professionId as number,
             expansionId: expansionId as number,
-            source,
             ingredients: validIngredients,
             optionalIngredientGroups: optGroups
                 .filter((g) => g.options.some((o) => parseInt(o.itemId, 10) > 0))
@@ -247,14 +242,6 @@ export default function RecipeFormModal(props: Props) {
                                 {expansions.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                             </select>
                         </div>
-                    </div>
-
-                    {/* Source */}
-                    <div className="field">
-                        <label className="label">Source *</label>
-                        <select className="input" value={source} onChange={(e) => setSource(e.target.value)}>
-                            {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
                     </div>
 
                     {/* ── Crafting Modifiers ── */}
