@@ -97,6 +97,10 @@ export default function RecipeFormModal(props: Props) {
         if (!outId) { setError("Output Item is required."); return; }
         if (!professionId) { setError("Profession is required."); return; }
         if (!expansionId) { setError("Expansion is required."); return; }
+        if (multicraftable && !Number.isFinite(multicraftMultiplier)) {
+            setError("Multicraft multiplier must be a valid number.");
+            return;
+        }
         if (resourcefulnessFactor < 0.3 || resourcefulnessFactor > 1) {
             setError("Resourcefulness factor must be between 0.3 and 1.0.");
             return;
@@ -263,9 +267,8 @@ export default function RecipeFormModal(props: Props) {
                                     className="input"
                                     style={{ width: 120 }}
                                     value={multicraftMultiplier}
-                                    min={0}
-                                    step={0.1}
-                                    onChange={(e) => setMulticraftMultiplier(parseFloat(e.target.value) || 1.25)}
+                                    step="any"
+                                    onChange={(e) => setMulticraftMultiplier(parseFloat(e.target.value))}
                                 />
                             </div>
                         )}
