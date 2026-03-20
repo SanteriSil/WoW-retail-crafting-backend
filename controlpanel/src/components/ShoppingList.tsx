@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CalculatorEntry, RecipeDetail } from "../types";
 import { formatGold } from "../utils";
 import { qualityStars } from "./ItemList";
@@ -78,6 +79,7 @@ function buildShoppingItems(entries: Props["entries"], cache: Props["recipeCache
 
 export default function ShoppingList({ entries, recipeCache }: Props) {
     const items = buildShoppingItems(entries, recipeCache);
+    const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
 
     if (items.length === 0) {
         return <div className="muted" style={{ fontSize: 13, padding: "6px 0" }}>No ingredients to show.</div>;
@@ -86,9 +88,45 @@ export default function ShoppingList({ entries, recipeCache }: Props) {
     const totalMaterialsCost = items.reduce((sum, i) => sum + (i.totalCost ?? 0), 0);
     const hasMissing = items.some((i) => i.totalCost == null);
 
+    const importPayload = items
+        .map((item) => `${item.itemId},${item.totalQuantity}`)
+        .join("\n");
+
+    const copyImportList = async () => {
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(importPayload);
+            } else {
+                const temp = document.createElement("textarea");
+                temp.value = importPayload;
+                temp.setAttribute("readonly", "");
+                temp.style.position = "absolute";
+                temp.style.left = "-9999px";
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand("copy");
+                document.body.removeChild(temp);
+            }
+            setCopyState("copied");
+            window.setTimeout(() => setCopyState("idle"), 1800);
+        } catch {
+            setCopyState("error");
+            window.setTimeout(() => setCopyState("idle"), 2200);
+        }
+    };
+
     return (
         <div className="shopping-list">
-            <div className="shopping-list-header">📋 Shopping List</div>
+            <div className="shopping-list-header-row">
+                <div className="shopping-list-header">📋 Shopping List</div>
+                <button
+                    className={`button small secondary shopping-list-import-btn${copyState === "copied" ? " copied" : ""}`}
+                    onClick={() => void copyImportList()}
+                    title="Copy itemId,quantity lines"
+                >
+                    {copyState === "copied" ? "Copied" : "Import"}
+                </button>
+            </div>
             <table className="shopping-list-table">
                 <thead>
                     <tr>
@@ -146,6 +184,11 @@ export default function ShoppingList({ entries, recipeCache }: Props) {
             {hasMissing && (
                 <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
                     * Some ingredient prices are missing and excluded from the total.
+                </div>
+            )}
+            {copyState === "error" && (
+                <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                    Failed to copy import list.
                 </div>
             )}
         </div>

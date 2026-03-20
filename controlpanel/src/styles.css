@@ -2552,6 +2552,24 @@ body {
     margin-bottom: 8px;
 }
 
+.shopping-list-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.shopping-list-header-row .shopping-list-header {
+    margin-bottom: 0;
+}
+
+.shopping-list-import-btn.copied {
+    background: #dcfce7 !important;
+    border-color: #22c55e !important;
+    color: #166534 !important;
+}
+
 .shopping-list-table {
     width: 100%;
     border-collapse: collapse;
