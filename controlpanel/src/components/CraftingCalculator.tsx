@@ -18,33 +18,32 @@ type CalculatorRow = {
     craft: DashboardCraft | undefined;
 };
 
+type CalculatorSortField = "recipe" | "character" | "quantity" | "profit";
+
 function normalizedName(name: string | null | undefined): string | null {
     if (name == null) return null;
     const trimmed = name.trim();
     return trimmed.length > 0 ? trimmed : null;
 }
 
-function compareCalculatorRows(a: CalculatorRow, b: CalculatorRow, direction: "asc" | "desc"): number {
-    const aName = normalizedName(a.craft?.characterName);
-    const bName = normalizedName(b.craft?.characterName);
+function compareText(a: string | null | undefined, b: string | null | undefined, direction: "asc" | "desc"): number {
+    const left = normalizedName(a);
+    const right = normalizedName(b);
+    if (left == null && right != null) return 1;
+    if (left != null && right == null) return -1;
+    if (left == null && right == null) return 0;
 
-    if (aName == null && bName != null) return 1;
-    if (aName != null && bName == null) return -1;
+    const byText = left!.localeCompare(right!, undefined, { sensitivity: "base" });
+    return direction === "asc" ? byText : -byText;
+}
 
-    if (aName != null && bName != null) {
-        const byName = aName.localeCompare(bName, undefined, { sensitivity: "base" });
-        if (byName !== 0) return direction === "asc" ? byName : -byName;
-    }
+function compareNumber(a: number | null, b: number | null, direction: "asc" | "desc"): number {
+    if (a == null && b != null) return 1;
+    if (a != null && b == null) return -1;
+    if (a == null && b == null) return 0;
 
-    const aRecipe = a.craft?.recipeName ?? "";
-    const bRecipe = b.craft?.recipeName ?? "";
-    const byRecipe = aRecipe.localeCompare(bRecipe, undefined, { sensitivity: "base" });
-    if (byRecipe !== 0) return byRecipe;
-
-    const byCharacterId = a.entry.characterId - b.entry.characterId;
-    if (byCharacterId !== 0) return byCharacterId;
-
-    return a.entry.recipeId - b.entry.recipeId;
+    const delta = a! - b!;
+    return direction === "asc" ? delta : -delta;
 }
 
 function getEffectiveProfit(
@@ -74,7 +73,8 @@ export default function CraftingCalculator({
     onRemove,
     onClear,
 }: Props) {
-    const [characterSortDirection, setCharacterSortDirection] = useState<"asc" | "desc">("asc");
+    const [sortField, setSortField] = useState<CalculatorSortField>("character");
+    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
     if (entries.length === 0) {
         return (
@@ -95,7 +95,55 @@ export default function CraftingCalculator({
         return { entry, craft };
     });
 
-    const sortedRows = [...rows].sort((a, b) => compareCalculatorRows(a, b, characterSortDirection));
+    const rowProfit = (row: CalculatorRow): number | null => {
+        if (!row.craft) return null;
+        const eff = getEffectiveProfit(row.craft, overrides);
+        return eff.calculable ? eff.profit * row.entry.quantity : null;
+    };
+
+    const sortedRows = [...rows].sort((a, b) => {
+        if (!a.craft && b.craft) return 1;
+        if (a.craft && !b.craft) return -1;
+
+        let primary = 0;
+        switch (sortField) {
+            case "recipe":
+                primary = compareText(a.craft?.recipeName, b.craft?.recipeName, sortDirection);
+                break;
+            case "character":
+                primary = compareText(a.craft?.characterName, b.craft?.characterName, sortDirection);
+                break;
+            case "quantity":
+                primary = compareNumber(a.entry.quantity, b.entry.quantity, sortDirection);
+                break;
+            case "profit":
+                primary = compareNumber(rowProfit(a), rowProfit(b), sortDirection);
+                break;
+        }
+        if (primary !== 0) return primary;
+
+        const byCharacter = compareText(a.craft?.characterName, b.craft?.characterName, "asc");
+        if (byCharacter !== 0) return byCharacter;
+        const byRecipe = compareText(a.craft?.recipeName, b.craft?.recipeName, "asc");
+        if (byRecipe !== 0) return byRecipe;
+        const byCharacterId = a.entry.characterId - b.entry.characterId;
+        if (byCharacterId !== 0) return byCharacterId;
+        return a.entry.recipeId - b.entry.recipeId;
+    });
+
+    const handleSort = (field: CalculatorSortField) => {
+        if (field === sortField) {
+            setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+            return;
+        }
+        setSortField(field);
+        setSortDirection("asc");
+    };
+
+    const sortIndicator = (field: CalculatorSortField) => {
+        if (sortField !== field) return "⇅";
+        return sortDirection === "asc" ? "▲" : "▼";
+    };
 
     // Totals
     let totalCost = 0;
@@ -120,28 +168,19 @@ export default function CraftingCalculator({
         <div className="calculator-panel card">
             <div className="calculator-header">
                 <span>🧮 Crafting Calculator</span>
-                <div style={{ display: "inline-flex", gap: 8 }}>
-                    <button
-                        className="button small secondary"
-                        onClick={() => setCharacterSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
-                        title="Sort by character name"
-                    >
-                        Character {characterSortDirection === "asc" ? "A→Z" : "Z→A"}
-                    </button>
-                    <button className="button small secondary" onClick={onClear} title="Clear all">
-                        Clear
-                    </button>
-                </div>
+                <button className="button small secondary" onClick={onClear} title="Clear all">
+                    Clear
+                </button>
             </div>
 
             <div className="recipe-table-wrapper" style={{ marginTop: 8 }}>
                 <table className="recipe-table">
                     <thead>
                         <tr>
-                            <th>Recipe</th>
-                            <th>Character</th>
-                            <th style={{ textAlign: "center", width: 64 }}>×Qty</th>
-                            <th style={{ textAlign: "right" }}>Profit</th>
+                            <th className="sortable" onClick={() => handleSort("recipe")}>Recipe <span className={`sort-indicator${sortField === "recipe" ? " active" : ""}`}>{sortIndicator("recipe")}</span></th>
+                            <th className="sortable" onClick={() => handleSort("character")}>Character <span className={`sort-indicator${sortField === "character" ? " active" : ""}`}>{sortIndicator("character")}</span></th>
+                            <th className="sortable" style={{ textAlign: "center", width: 64 }} onClick={() => handleSort("quantity")}>×Qty <span className={`sort-indicator${sortField === "quantity" ? " active" : ""}`}>{sortIndicator("quantity")}</span></th>
+                            <th className="sortable" style={{ textAlign: "right" }} onClick={() => handleSort("profit")}>Profit <span className={`sort-indicator${sortField === "profit" ? " active" : ""}`}>{sortIndicator("profit")}</span></th>
                             <th style={{ width: 32 }}></th>
                         </tr>
                     </thead>
