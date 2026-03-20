@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CalculatorEntry, CraftOverrides, DashboardCraft, RecipeDetail } from "../types";
 import { formatGold, profitClass, recalculateAdjustedProfit } from "../utils";
 import ShoppingList from "./ShoppingList";
@@ -11,6 +12,40 @@ type Props = {
     onRemove: (characterId: number, recipeId: number) => void;
     onClear: () => void;
 };
+
+type CalculatorRow = {
+    entry: CalculatorEntry;
+    craft: DashboardCraft | undefined;
+};
+
+function normalizedName(name: string | null | undefined): string | null {
+    if (name == null) return null;
+    const trimmed = name.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+function compareCalculatorRows(a: CalculatorRow, b: CalculatorRow, direction: "asc" | "desc"): number {
+    const aName = normalizedName(a.craft?.characterName);
+    const bName = normalizedName(b.craft?.characterName);
+
+    if (aName == null && bName != null) return 1;
+    if (aName != null && bName == null) return -1;
+
+    if (aName != null && bName != null) {
+        const byName = aName.localeCompare(bName, undefined, { sensitivity: "base" });
+        if (byName !== 0) return direction === "asc" ? byName : -byName;
+    }
+
+    const aRecipe = a.craft?.recipeName ?? "";
+    const bRecipe = b.craft?.recipeName ?? "";
+    const byRecipe = aRecipe.localeCompare(bRecipe, undefined, { sensitivity: "base" });
+    if (byRecipe !== 0) return byRecipe;
+
+    const byCharacterId = a.entry.characterId - b.entry.characterId;
+    if (byCharacterId !== 0) return byCharacterId;
+
+    return a.entry.recipeId - b.entry.recipeId;
+}
 
 function getEffectiveProfit(
     craft: DashboardCraft,
@@ -39,6 +74,8 @@ export default function CraftingCalculator({
     onRemove,
     onClear,
 }: Props) {
+    const [characterSortDirection, setCharacterSortDirection] = useState<"asc" | "desc">("asc");
+
     if (entries.length === 0) {
         return (
             <div className="calculator-panel card">
@@ -58,13 +95,15 @@ export default function CraftingCalculator({
         return { entry, craft };
     });
 
+    const sortedRows = [...rows].sort((a, b) => compareCalculatorRows(a, b, characterSortDirection));
+
     // Totals
     let totalCost = 0;
     let totalRevenue = 0;
     let totalProfit = 0;
     let hasUnavailable = false;
 
-    for (const { entry, craft } of rows) {
+    for (const { entry, craft } of sortedRows) {
         if (!craft) {
             hasUnavailable = true;
             continue;
@@ -81,9 +120,18 @@ export default function CraftingCalculator({
         <div className="calculator-panel card">
             <div className="calculator-header">
                 <span>🧮 Crafting Calculator</span>
-                <button className="button small secondary" onClick={onClear} title="Clear all">
-                    Clear
-                </button>
+                <div style={{ display: "inline-flex", gap: 8 }}>
+                    <button
+                        className="button small secondary"
+                        onClick={() => setCharacterSortDirection((prev) => (prev === "asc" ? "desc" : "asc"))}
+                        title="Sort by character name"
+                    >
+                        Character {characterSortDirection === "asc" ? "A→Z" : "Z→A"}
+                    </button>
+                    <button className="button small secondary" onClick={onClear} title="Clear all">
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <div className="recipe-table-wrapper" style={{ marginTop: 8 }}>
@@ -98,7 +146,7 @@ export default function CraftingCalculator({
                         </tr>
                     </thead>
                     <tbody>
-                        {rows.map(({ entry, craft }) => {
+                        {sortedRows.map(({ entry, craft }) => {
                             if (!craft) {
                                 return (
                                     <tr key={`${entry.characterId}-${entry.recipeId}`} className="calc-row-unavailable">

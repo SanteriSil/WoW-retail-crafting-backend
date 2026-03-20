@@ -10,6 +10,8 @@ type Props = {
     role: string | null;
 };
 
+const SHOW_BASE_METRICS_STORAGE_KEY = "dashboard-show-base-metrics";
+
 function loadOverrides(): CraftOverrides {
     try {
         return JSON.parse(localStorage.getItem("craft-overrides") || "{}");
@@ -23,6 +25,21 @@ function loadCalcEntries(): CalculatorEntry[] {
         return JSON.parse(localStorage.getItem("craft-calculator") || "[]");
     } catch {
         return [];
+    }
+}
+
+function loadShowBaseMetrics(): boolean {
+    try {
+        const raw = localStorage.getItem(SHOW_BASE_METRICS_STORAGE_KEY);
+        if (raw == null) return false;
+
+        if (raw === "true") return true;
+        if (raw === "false") return false;
+
+        const parsed = JSON.parse(raw);
+        return typeof parsed === "boolean" ? parsed : false;
+    } catch {
+        return false;
     }
 }
 
@@ -40,7 +57,7 @@ export default function DashboardPage({ professions, role }: Props) {
     const [sort, setSort] = useState("adjustedProfit");
     const [direction, setDirection] = useState("desc");
     const [groupByOutput, setGroupByOutput] = useState(true);
-    const [showBaseMetrics, setShowBaseMetrics] = useState(true);
+    const [showBaseMetrics, setShowBaseMetrics] = useState(loadShowBaseMetrics);
 
     // U8: Override state
     const [overrides, setOverrides] = useState<CraftOverrides>(loadOverrides);
@@ -60,6 +77,10 @@ export default function DashboardPage({ professions, role }: Props) {
         setOverrides(next);
         localStorage.setItem("craft-overrides", JSON.stringify(next));
     };
+
+    useEffect(() => {
+        localStorage.setItem(SHOW_BASE_METRICS_STORAGE_KEY, String(showBaseMetrics));
+    }, [showBaseMetrics]);
 
     const persistCalc = (entries: CalculatorEntry[]) => {
         setCalcEntries(entries);
