@@ -7,6 +7,8 @@ import com.crafting.model.Item;
 import com.crafting.model.Profession;
 import com.crafting.model.Recipe;
 import com.crafting.model.RecipeIngredient;
+import com.crafting.model.RecipeOptionalIngredient;
+import com.crafting.model.RecipeOptionalIngredientGroup;
 import com.crafting.model.WowCharacter;
 import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.CharacterRepository;
@@ -171,6 +173,45 @@ class DashboardControllerTest {
                     .andExpect(jsonPath("$.totalCrafts", is(1)))
                     .andExpect(jsonPath("$.totalBaseCost", is((int) expectedCost)))
                     .andExpect(jsonPath("$.crafts[0].baseProfit.ingredientCost", is((int) expectedCost)));
+        }
+
+        @Test
+        @DisplayName("includes optional reagent costs and keeps resourcefulness scoped to base materials")
+        void includesOptionalReagentsInDashboardCosts() throws Exception {
+            WowCharacter character = saveCharacter(9001L, "Optionalist", alchemy, 0f, 20f);
+            Recipe recipe = saveRecipe("Optional Flask", 1400L, alchemy, 2400L, "Optional Flask", 100_000L, 3400L, 10_000L, 10);
+
+            Item optional = itemRepository.save(Item.builder()
+                    .id(3401L)
+                    .name("Optional Powder")
+                    .currentPrice(2_000L)
+                    .finishingIngredient(false)
+                    .build());
+
+            RecipeOptionalIngredientGroup group = RecipeOptionalIngredientGroup.builder()
+                    .recipe(recipe)
+                    .slotIndex((short) 0)
+                    .label("Optional")
+                    .build();
+            RecipeOptionalIngredient option = RecipeOptionalIngredient.builder()
+                    .group(group)
+                    .item(optional)
+                    .quantity(4)
+                    .build();
+            group.getOptions().add(option);
+            recipe.getOptionalIngredientGroups().add(group);
+            recipe = recipeRepository.save(recipe);
+
+            characterRecipeRepository.save(CharacterRecipe.builder().character(character).recipe(recipe).build());
+
+            mockMvc.perform(get("/dashboard/crafts")
+                            .with(user("9001").roles("ALLOWED_USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.totalCrafts", is(1)))
+                    .andExpect(jsonPath("$.crafts[0].baseMaterialsCost", is(100_000)))
+                    .andExpect(jsonPath("$.crafts[0].optionalReagentsCost", is(8_000)))
+                    // adjusted base: 100_000 * (1 - 0.2 * 0.3) = 94_000; + optional 8_000 = 102_000
+                    .andExpect(jsonPath("$.crafts[0].adjustedProfit.ingredientCost", is(102_000)));
         }
     }
 

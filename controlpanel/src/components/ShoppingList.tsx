@@ -20,29 +20,49 @@ type Props = {
 function buildShoppingItems(entries: Props["entries"], cache: Props["recipeCache"]): ShoppingItem[] {
     const map = new Map<number, ShoppingItem>();
 
+    const addItem = (
+        itemId: number,
+        itemName: string,
+        quality: number | null,
+        iconUrl: string | null,
+        quantity: number,
+        unitPrice: number | null,
+    ) => {
+        const existing = map.get(itemId);
+        if (existing) {
+            existing.totalQuantity += quantity;
+            if (existing.unitPrice != null) {
+                existing.totalCost = existing.unitPrice * existing.totalQuantity;
+            }
+            return;
+        }
+
+        map.set(itemId, {
+            itemId,
+            itemName,
+            quality,
+            iconUrl,
+            totalQuantity: quantity,
+            unitPrice,
+            totalCost: unitPrice != null ? unitPrice * quantity : null,
+        });
+    };
+
     for (const entry of entries) {
         const detail = cache.get(entry.recipeId);
         if (!detail) continue;
 
         for (const ing of detail.ingredients) {
             const qty = ing.quantity * entry.quantity;
-            const existing = map.get(ing.item.id);
-            if (existing) {
-                existing.totalQuantity += qty;
-                if (existing.unitPrice != null) {
-                    existing.totalCost = existing.unitPrice * existing.totalQuantity;
-                }
-            } else {
-                const unitPrice = ing.itemPrice ?? ing.item.currentPrice ?? null;
-                map.set(ing.item.id, {
-                    itemId: ing.item.id,
-                    itemName: ing.item.name,
-                    quality: ing.item.quality,
-                    iconUrl: ing.item.iconUrl,
-                    totalQuantity: qty,
-                    unitPrice,
-                    totalCost: unitPrice != null ? unitPrice * qty : null,
-                });
+            const unitPrice = ing.itemPrice ?? ing.item.currentPrice ?? null;
+            addItem(ing.item.id, ing.item.name, ing.item.quality, ing.item.iconUrl, qty, unitPrice);
+        }
+
+        for (const group of detail.optionalIngredientGroups ?? []) {
+            for (const option of group.options ?? []) {
+                const qty = option.quantity * entry.quantity;
+                const unitPrice = option.item.currentPrice ?? null;
+                addItem(option.item.id, option.item.name, option.item.quality, option.item.iconUrl, qty, unitPrice);
             }
         }
     }

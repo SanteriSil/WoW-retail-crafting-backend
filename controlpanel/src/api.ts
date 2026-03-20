@@ -423,8 +423,20 @@ export async function getDashboardCrafts(params: {
     if (params.direction) query.set("direction", params.direction);
     const data = await request<Partial<DashboardResponse>>(`/dashboard/crafts?${query.toString()}`);
 
+    const normalizedCrafts = (Array.isArray(data?.crafts) ? data.crafts : []).map((craft) => ({
+        ...craft,
+        baseMaterialsCost:
+            typeof craft.baseMaterialsCost === "number"
+                ? craft.baseMaterialsCost
+                : (typeof craft.baseProfit?.ingredientCost === "number" ? craft.baseProfit.ingredientCost : 0),
+        optionalReagentsCost:
+            typeof craft.optionalReagentsCost === "number"
+                ? craft.optionalReagentsCost
+                : 0,
+    }));
+
     return {
-        crafts: Array.isArray(data?.crafts) ? data.crafts : [],
+        crafts: normalizedCrafts,
         totalBaseCost: typeof data?.totalBaseCost === "number" ? data.totalBaseCost : 0,
         totalBaseProfit: typeof data?.totalBaseProfit === "number" ? data.totalBaseProfit : 0,
         totalAdjustedProfit: typeof data?.totalAdjustedProfit === "number" ? data.totalAdjustedProfit : 0,

@@ -8,6 +8,8 @@ import com.crafting.model.RecipeOptionalIngredientGroup;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,13 @@ public class ProfitCalculationService {
     private static final Logger log = LoggerFactory.getLogger(ProfitCalculationService.class);
 
     private static final double AUCTION_HOUSE_FEE = 0.05d;
+
+        public record CostBreakdown(
+            long baseMaterialsCost,
+            long optionalReagentsCost,
+            List<Long> missingPrices
+        ) {
+        }
 
     /**
      * Base profit calculation — no character stat modifiers.
@@ -38,7 +47,7 @@ public class ProfitCalculationService {
      * </ul>
      */
     public ProfitEstimateDTO calculate(Recipe recipe, float multicraftPercent, float resourcefulnessPercent) {
-        List<Long> missingPrices = new ArrayList<>();
+        Set<Long> missingPriceSet = new LinkedHashSet<>();
 
         if (log.isDebugEnabled()) {
             log.debug("Calculating profit for recipeId={} name='{}' multicraftPercent={} resourcefulnessPercent={} outputItemId={} outputQuantity={} ingredientCount={} optionalGroupCount={} multicraftable={} multicraftMultiplier={} resourcefulnessFactor={}",
@@ -67,78 +76,32 @@ public class ProfitCalculationService {
 
         long outputRevenue = 0L;
         if (outputUnitPrice == null) {
-            missingPrices.add(recipe.getOutputItem().getId());
+            missingPriceSet.add(recipe.getOutputItem().getId());
         } else {
             outputRevenue = Math.round(outputUnitPrice * outputQuantity * yieldMultiplier * (1.0d - AUCTION_HOUSE_FEE));
         }
 
-        // ── Cost: required (non-optional) ingredients ────────────────────
-        long baseCost = 0L;
-        if (recipe.getIngredients() != null) {
-            for (RecipeIngredient ingredient : recipe.getIngredients()) {
-                Long ingredientPrice = resolveEffectivePrice(ingredient.getItem());
-                if (ingredientPrice == null) {
-                    missingPrices.add(ingredient.getItem().getId());
-                    log.debug("Missing price for required ingredient itemId={} recipeId={}", ingredient.getItem().getId(), recipe.getId());
-                    continue;
-                }
-                baseCost += ingredientPrice * ingredient.getQuantity();
-                log.debug("Required ingredient recipeId={} itemId={} unitPrice={} quantity={} lineCost={} runningBaseCost={}",
-                        recipe.getId(),
-                        ingredient.getItem().getId(),
-                        ingredientPrice,
-                        ingredient.getQuantity(),
-                        ingredientPrice * ingredient.getQuantity(),
-                        baseCost);
-            }
-        }
-
-        // ── Cost: optional ingredient groups (not affected by resourcefulness) ──
-        long optionalCost = 0L;
-        if (recipe.getOptionalIngredientGroups() != null && log.isDebugEnabled()) {
-            for (RecipeOptionalIngredientGroup group : recipe.getOptionalIngredientGroups()) {
-                log.debug("Optional ingredient group recipeId={} groupId={} slotIndex={} label='{}' optionCount={}",
-                        recipe.getId(),
-                        group.getId(),
-                        group.getSlotIndex(),
-                        group.getLabel(),
-                        group.getOptions() != null ? group.getOptions().size() : 0);
-                if (group.getOptions() != null) {
-                    for (RecipeOptionalIngredient option : group.getOptions()) {
-                        Long optionPrice = resolveEffectivePrice(option.getItem());
-                        log.debug("Optional ingredient option recipeId={} groupId={} itemId={} unitPrice={} quantity={}",
-                                recipe.getId(),
-                                group.getId(),
-                                option.getItem() != null ? option.getItem().getId() : null,
-                                optionPrice,
-                                option.getQuantity());
-                    }
-                }
-            }
-        }
-        // Optional costs are computed for informational purposes but are NOT
-        // included in the default profit calc (users pick options at craft time).
-        // The plan says resourcefulness only affects non-optional portions, so
-        // we separate them here for the formula even though the base calculate()
-        // did not previously account for optional costs at all.
+        CostBreakdown costBreakdown = calculateCostBreakdown(recipe);
+        missingPriceSet.addAll(costBreakdown.missingPrices());
 
         // ── Apply resourcefulness to base cost ──────────────────────────
-        double adjustedBaseCost = baseCost;
+        double adjustedBaseCost = costBreakdown.baseMaterialsCost();
         if (resourcefulnessPercent > 0) {
             float R = recipe.getResourcefulnessFactor() != null ? recipe.getResourcefulnessFactor() : 0.3f;
-            adjustedBaseCost = baseCost * (1.0d - (resourcefulnessPercent / 100.0d) * R);
+            adjustedBaseCost = costBreakdown.baseMaterialsCost() * (1.0d - (resourcefulnessPercent / 100.0d) * R);
         }
 
-        long totalCost = Math.round(adjustedBaseCost) + optionalCost;
+        long totalCost = Math.round(adjustedBaseCost) + costBreakdown.optionalReagentsCost();
         long profit = outputRevenue - totalCost;
+        List<Long> missingPrices = List.copyOf(missingPriceSet);
         boolean calculable = missingPrices.isEmpty();
 
         log.debug("Calculated profit for recipeId={} outputRevenue={} baseCost={} adjustedBaseCost={} optionalCost={} totalCost={} profit={} calculable={} missingPrices={}",
             recipe.getId(),
             outputRevenue,
-            baseCost,
+            costBreakdown.baseMaterialsCost(),
             Math.round(adjustedBaseCost),
-            optionalCost,
+            costBreakdown.optionalReagentsCost(),
             totalCost,
             profit,
             calculable,
@@ -149,9 +112,75 @@ public class ProfitCalculationService {
                 totalCost,
                 profit,
                 AUCTION_HOUSE_FEE,
-                List.copyOf(missingPrices),
+                missingPrices,
                 calculable
         );
+    }
+
+    public CostBreakdown calculateCostBreakdown(Recipe recipe) {
+        Set<Long> missingPriceSet = new LinkedHashSet<>();
+        long baseCost = 0L;
+
+        if (recipe.getIngredients() != null) {
+            for (RecipeIngredient ingredient : recipe.getIngredients()) {
+                Long ingredientPrice = resolveEffectivePrice(ingredient.getItem());
+                if (ingredientPrice == null) {
+                    missingPriceSet.add(ingredient.getItem().getId());
+                    log.debug("Missing price for required ingredient itemId={} recipeId={}", ingredient.getItem().getId(), recipe.getId());
+                    continue;
+                }
+
+                long lineCost = ingredientPrice * ingredient.getQuantity();
+                baseCost += lineCost;
+                log.debug("Required ingredient recipeId={} itemId={} unitPrice={} quantity={} lineCost={} runningBaseCost={}",
+                        recipe.getId(),
+                        ingredient.getItem().getId(),
+                        ingredientPrice,
+                        ingredient.getQuantity(),
+                        lineCost,
+                        baseCost);
+            }
+        }
+
+        long optionalCost = 0L;
+        if (recipe.getOptionalIngredientGroups() != null) {
+            for (RecipeOptionalIngredientGroup group : recipe.getOptionalIngredientGroups()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Optional ingredient group recipeId={} groupId={} slotIndex={} label='{}' optionCount={}",
+                            recipe.getId(),
+                            group.getId(),
+                            group.getSlotIndex(),
+                            group.getLabel(),
+                            group.getOptions() != null ? group.getOptions().size() : 0);
+                }
+
+                if (group.getOptions() == null) continue;
+                for (RecipeOptionalIngredient option : group.getOptions()) {
+                    Long optionPrice = resolveEffectivePrice(option.getItem());
+                    if (optionPrice == null) {
+                        missingPriceSet.add(option.getItem().getId());
+                        log.debug("Missing price for optional ingredient itemId={} recipeId={} groupId={}",
+                                option.getItem().getId(),
+                                recipe.getId(),
+                                group.getId());
+                        continue;
+                    }
+
+                    long lineCost = optionPrice * option.getQuantity();
+                    optionalCost += lineCost;
+                    log.debug("Optional ingredient option recipeId={} groupId={} itemId={} unitPrice={} quantity={} lineCost={} runningOptionalCost={}",
+                            recipe.getId(),
+                            group.getId(),
+                            option.getItem().getId(),
+                            optionPrice,
+                            option.getQuantity(),
+                            lineCost,
+                            optionalCost);
+                }
+            }
+        }
+
+        return new CostBreakdown(baseCost, optionalCost, List.copyOf(missingPriceSet));
     }
 
     public static Long resolvePrice(Item item) {

@@ -2,7 +2,11 @@ package com.crafting.controller;
 
 import com.crafting.cache.CachedResult;
 import com.crafting.model.Item;
+import com.crafting.repository.CharacterRecipeRepository;
+import com.crafting.repository.CharacterRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.RecipeListRepository;
+import com.crafting.repository.RecipeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,11 +36,19 @@ class ItemControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ItemRepository itemRepository;
+    @Autowired private RecipeRepository recipeRepository;
+    @Autowired private CharacterRecipeRepository characterRecipeRepository;
+    @Autowired private CharacterRepository characterRepository;
+    @Autowired private RecipeListRepository recipeListRepository;
     @Autowired private CachedResult<List<Item>> itemCache;
     @Autowired private CachedResult<List<Long>> itemIdCache;
 
     @BeforeEach
     void setUp() {
+        recipeListRepository.deleteAll();
+        characterRecipeRepository.deleteAll();
+        characterRepository.deleteAll();
+        recipeRepository.deleteAll();
         itemRepository.deleteAll();
         itemCache.invalidate();
         itemIdCache.invalidate();

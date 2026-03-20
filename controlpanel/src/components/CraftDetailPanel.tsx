@@ -37,19 +37,39 @@ export default function CraftDetailPanel({
         setR(currentR);
     }, [currentR]);
 
-    const ingredientRows = useMemo(() => (
-        recipeDetail?.ingredients.map((ingredient) => {
+    const ingredientRows = useMemo(() => {
+        if (!recipeDetail) return [];
+
+        const baseRows = recipeDetail.ingredients.map((ingredient) => {
             const unitPrice = ingredient.itemPrice ?? ingredient.item.currentPrice ?? null;
             const lineTotal = unitPrice != null ? unitPrice * ingredient.quantity : null;
             return {
-                id: ingredient.id,
+                key: `base-${ingredient.id}`,
                 name: ingredient.item.name,
                 quantity: ingredient.quantity,
                 unitPrice,
                 lineTotal,
+                kindLabel: "Base",
             };
-        }) ?? []
-    ), [recipeDetail]);
+        });
+
+        const optionalRows = (recipeDetail.optionalIngredientGroups ?? []).flatMap((group) =>
+            (group.options ?? []).map((option) => {
+                const unitPrice = option.item.currentPrice ?? null;
+                const lineTotal = unitPrice != null ? unitPrice * option.quantity : null;
+                return {
+                    key: `optional-${option.id}`,
+                    name: option.item.name,
+                    quantity: option.quantity,
+                    unitPrice,
+                    lineTotal,
+                    kindLabel: group.label?.trim() ? `Optional (${group.label})` : "Optional",
+                };
+            })
+        );
+
+        return [...baseRows, ...optionalRows];
+    }, [recipeDetail]);
 
     const savings = calculateResourcefulnessSavings(craft, r);
     const adjusted = craft.baseProfit.calculable
@@ -77,6 +97,7 @@ export default function CraftDetailPanel({
                             <thead>
                                 <tr>
                                     <th>Item</th>
+                                    <th>Type</th>
                                     <th style={{ textAlign: "right" }}>Unit Price</th>
                                     <th style={{ textAlign: "right" }}>Qty</th>
                                     <th style={{ textAlign: "right" }}>Line Total</th>
@@ -84,8 +105,9 @@ export default function CraftDetailPanel({
                             </thead>
                             <tbody>
                                 {ingredientRows.map((ingredient) => (
-                                    <tr key={ingredient.id}>
+                                    <tr key={ingredient.key}>
                                         <td>{ingredient.name}</td>
+                                        <td>{ingredient.kindLabel}</td>
                                         <td style={{ textAlign: "right" }}>{formatGold(ingredient.unitPrice, false)}</td>
                                         <td style={{ textAlign: "right" }}>×{ingredient.quantity}</td>
                                         <td style={{ textAlign: "right" }}>{formatGold(ingredient.lineTotal, false)}</td>
@@ -101,8 +123,16 @@ export default function CraftDetailPanel({
 
                     <div className="craft-detail-totals">
                         <div className="craft-detail-total-row">
-                            <span>Subtotal</span>
-                            <strong>{formatGold(craft.baseProfit.ingredientCost, false)}</strong>
+                            <span>Base materials</span>
+                            <strong>{formatGold(craft.baseMaterialsCost, false)}</strong>
+                        </div>
+                        <div className="craft-detail-total-row">
+                            <span>Optional reagents</span>
+                            <strong>{formatGold(craft.optionalReagentsCost, false)}</strong>
+                        </div>
+                        <div className="craft-detail-total-row">
+                            <span>Pre-adjustment subtotal</span>
+                            <strong>{formatGold(craft.baseMaterialsCost + craft.optionalReagentsCost, false)}</strong>
                         </div>
                         <div className="craft-detail-total-row">
                             <span>Resourcefulness savings (−{resourcefulnessPct}%)</span>

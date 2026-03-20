@@ -3,6 +3,8 @@ package com.crafting.service;
 import com.crafting.model.Item;
 import com.crafting.model.Recipe;
 import com.crafting.model.RecipeIngredient;
+import com.crafting.model.RecipeOptionalIngredient;
+import com.crafting.model.RecipeOptionalIngredientGroup;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -68,6 +70,24 @@ class ProfitCalculationServiceTest {
                 .ingredients(ingredients)
                 .build();
         return recipe;
+    }
+
+    private RecipeOptionalIngredientGroup optionalGroup(Recipe recipe, short slotIndex, String label, List<RecipeOptionalIngredient> options) {
+        RecipeOptionalIngredientGroup group = RecipeOptionalIngredientGroup.builder()
+                .recipe(recipe)
+                .slotIndex(slotIndex)
+                .label(label)
+                .build();
+        group.setOptions(options);
+        return group;
+    }
+
+    private RecipeOptionalIngredient optionalIngredient(RecipeOptionalIngredientGroup group, Item item, int quantity) {
+        return RecipeOptionalIngredient.builder()
+                .group(group)
+                .item(item)
+                .quantity(quantity)
+                .build();
     }
 
     // ── Base profit calculation ─────────────────────────────────────────
@@ -431,6 +451,71 @@ class ProfitCalculationServiceTest {
             assertThat(result.ingredientCost()).isEqualTo(54_600L);
             assertThat(result.profit()).isEqualTo(123_500L - 54_600L);
             assertThat(result.calculable()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("Optional reagent costing")
+    class OptionalReagents {
+
+        @Test
+        @DisplayName("optional reagent cost is included in ingredient cost")
+        void includesOptionalReagentCost() {
+            Item output = item(1, "Potion", 100_000L);
+            Item baseReagent = item(2, "Herb", 20_000L);
+            Item optionalReagent = item(3, "Missive", 5_000L);
+
+            Recipe recipe = basicRecipe(output, List.of());
+            recipe.setIngredients(List.of(ingredient(recipe, baseReagent, 2))); // 40_000
+
+            RecipeOptionalIngredientGroup group = optionalGroup(recipe, (short) 0, "Infusion", List.of());
+            group.setOptions(List.of(optionalIngredient(group, optionalReagent, 3))); // 15_000
+            recipe.setOptionalIngredientGroups(List.of(group));
+
+            ProfitEstimateDTO result = service.calculate(recipe);
+
+            assertThat(result.ingredientCost()).isEqualTo(55_000L);
+        }
+
+        @Test
+        @DisplayName("resourcefulness only reduces base materials, not optional reagents")
+        void resourcefulnessDoesNotReduceOptional() {
+            Item output = item(1, "Potion", 100_000L);
+            Item baseReagent = item(2, "Herb", 10_000L);
+            Item optionalReagent = item(3, "Missive", 8_000L);
+
+            Recipe recipe = basicRecipe(output, List.of());
+            recipe.setResourcefulnessFactor(0.3f);
+            recipe.setIngredients(List.of(ingredient(recipe, baseReagent, 10))); // 100_000
+
+            RecipeOptionalIngredientGroup group = optionalGroup(recipe, (short) 1, "Optional", List.of());
+            group.setOptions(List.of(optionalIngredient(group, optionalReagent, 2))); // 16_000
+            recipe.setOptionalIngredientGroups(List.of(group));
+
+            ProfitEstimateDTO result = service.calculate(recipe, 0f, 20f);
+
+            // adjusted base = 100_000 * (1 - 0.2*0.3) = 94_000, optional = 16_000
+            assertThat(result.ingredientCost()).isEqualTo(110_000L);
+        }
+
+        @Test
+        @DisplayName("missing optional reagent price marks result as not calculable")
+        void missingOptionalPrice() {
+            Item output = item(1, "Potion", 100_000L);
+            Item baseReagent = item(2, "Herb", 10_000L);
+            Item optionalReagent = item(3, "Missing Optional", null);
+
+            Recipe recipe = basicRecipe(output, List.of());
+            recipe.setIngredients(List.of(ingredient(recipe, baseReagent, 1)));
+
+            RecipeOptionalIngredientGroup group = optionalGroup(recipe, (short) 1, "Optional", List.of());
+            group.setOptions(List.of(optionalIngredient(group, optionalReagent, 2)));
+            recipe.setOptionalIngredientGroups(List.of(group));
+
+            ProfitEstimateDTO result = service.calculate(recipe);
+
+            assertThat(result.calculable()).isFalse();
+            assertThat(result.missingPrices()).contains(3L);
         }
     }
 }

@@ -114,6 +114,7 @@ public class CraftDashboardService {
 
             ProfitEstimateDTO baseProfit = profitCalculationService.calculate(recipe);
             ProfitEstimateDTO adjustedProfit = profitCalculationService.calculate(recipe, multicraftPct, resourcefulnessPct);
+            ProfitCalculationService.CostBreakdown costBreakdown = profitCalculationService.calculateCostBreakdown(recipe);
 
         log.debug("Dashboard craft characterId={} recipeId={} professionId={} ingredients={} optionalGroups={} baseCost={} adjustedCost={} baseProfit={} adjustedProfit={} multicraftPercent={} resourcefulnessPercent={} missingPrices={}",
             character.getId(),
@@ -121,7 +122,7 @@ public class CraftDashboardService {
             recipe.getProfession() != null ? recipe.getProfession().getId() : null,
             recipe.getIngredients() != null ? recipe.getIngredients().size() : 0,
             recipe.getOptionalIngredientGroups() != null ? recipe.getOptionalIngredientGroups().size() : 0,
-            baseProfit.ingredientCost(),
+            costBreakdown.baseMaterialsCost() + costBreakdown.optionalReagentsCost(),
             adjustedProfit.ingredientCost(),
             baseProfit.profit(),
             adjustedProfit.profit(),
@@ -144,6 +145,8 @@ public class CraftDashboardService {
                     recipe.getOutputItem().getQuality(),
                     baseProfit,
                     adjustedProfit,
+                    costBreakdown.baseMaterialsCost(),
+                    costBreakdown.optionalReagentsCost(),
                     recipe.isMulticraftable(),
                     recipe.getMulticraftMultiplier(),
                     recipe.getResourcefulnessFactor(),

@@ -25,6 +25,8 @@ public record DashboardResponse(
             Short outputItemQuality,
             ProfitEstimateDTO baseProfit,
             ProfitEstimateDTO adjustedProfit,
+            Long baseMaterialsCost,
+            Long optionalReagentsCost,
             boolean isMulticraftable,
             Float multicraftMultiplier,
             Float resourcefulnessFactor,

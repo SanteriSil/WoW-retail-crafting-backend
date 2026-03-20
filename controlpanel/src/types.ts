@@ -306,6 +306,8 @@ export type DashboardCraft = {
   outputItemQuality: number | null;
   baseProfit: ProfitEstimate;
   adjustedProfit: ProfitEstimate;
+  baseMaterialsCost: number;
+  optionalReagentsCost: number;
   isMulticraftable: boolean;
   multicraftMultiplier: number;
   resourcefulnessFactor: number;
