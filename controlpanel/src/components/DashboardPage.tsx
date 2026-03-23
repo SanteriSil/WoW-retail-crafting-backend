@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getCharacters, getDashboardCrafts, getRecipe } from "../api";
 import type { CalculatorEntry, Character, CraftOverrides, DashboardCraft, DashboardResponse, Profession, RecipeDetail } from "../types";
 import DashboardFilters from "./DashboardFilters";
@@ -168,6 +168,32 @@ export default function DashboardPage({ professions, role }: Props) {
         getCharacters().then(setCharacters).catch(() => setCharacters([]));
     }, []);
 
+    const availableProfessions = useMemo(() => {
+        const selectedCharacter = characterId != null
+            ? characters.find((c) => c.id === characterId)
+            : undefined;
+
+        const assignedProfessionIds = new Set<number>();
+
+        if (selectedCharacter) {
+            selectedCharacter.professions.forEach((p) => assignedProfessionIds.add(p.professionId));
+        } else {
+            characters.forEach((c) =>
+                c.professions.forEach((p) => assignedProfessionIds.add(p.professionId))
+            );
+        }
+
+        return professions.filter((p) => assignedProfessionIds.has(p.id));
+    }, [professions, characters, characterId]);
+
+    useEffect(() => {
+        if (professionId == null) return;
+        const stillAvailable = availableProfessions.some((p) => p.id === professionId);
+        if (!stillAvailable) {
+            setProfessionId(undefined);
+        }
+    }, [availableProfessions, professionId]);
+
     const fetchDashboard = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -218,7 +244,7 @@ export default function DashboardPage({ professions, role }: Props) {
 
             <DashboardFilters
                 characters={characters}
-                professions={professions}
+                professions={availableProfessions}
                 characterId={characterId}
                 professionId={professionId}
                 search={search}
