@@ -43,19 +43,22 @@ public class RecipeService {
     private final ExpansionRepository expansionRepository;
     private final ProfitCalculationService profitCalculationService;
     private final EntityManager entityManager;
+    private final AuditWriter auditWriter;
 
     public RecipeService(RecipeRepository recipeRepository,
                          ItemRepository itemRepository,
                          ProfessionRepository professionRepository,
                          ExpansionRepository expansionRepository,
                          ProfitCalculationService profitCalculationService,
-                         EntityManager entityManager) {
+                         EntityManager entityManager,
+                         AuditWriter auditWriter) {
         this.recipeRepository = recipeRepository;
         this.itemRepository = itemRepository;
         this.professionRepository = professionRepository;
         this.expansionRepository = expansionRepository;
         this.profitCalculationService = profitCalculationService;
         this.entityManager = entityManager;
+        this.auditWriter = auditWriter;
     }
 
     @Transactional
@@ -68,11 +71,19 @@ public class RecipeService {
         recipe.setCreatedBy(createdByDiscordId);
 
         Recipe saved = recipeRepository.save(recipe);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+                createdByDiscordId,
+                "CREATE",
+                "RECIPE",
+                String.valueOf(saved.getId()),
+                "SUCCESS",
+                null
+        ));
         return toRecipeDTO(saved);
     }
 
     @Transactional
-    public RecipeDTO updateRecipe(Long recipeId, CreateOrUpdateRecipeCommand command) {
+    public RecipeDTO updateRecipe(Long recipeId, CreateOrUpdateRecipeCommand command, Long actorDiscordId) {
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
 
@@ -85,6 +96,14 @@ public class RecipeService {
         }
 
         Recipe saved = recipeRepository.save(recipe);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+            actorDiscordId,
+            "UPDATE",
+            "RECIPE",
+            String.valueOf(saved.getId()),
+            "SUCCESS",
+            null
+        ));
         return toRecipeDTO(saved);
     }
 
@@ -133,15 +152,31 @@ public class RecipeService {
         }
 
         Recipe saved = recipeRepository.save(copy);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+            createdByDiscordId,
+            "DUPLICATE",
+            "RECIPE",
+            String.valueOf(saved.getId()),
+            "SUCCESS",
+            "sourceRecipeId=" + recipeId
+        ));
         return toRecipeDTO(saved);
     }
 
     @Transactional
-    public void softDeleteRecipe(Long recipeId) {
+    public void softDeleteRecipe(Long recipeId, Long actorDiscordId) {
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
         recipe.setDeleted(true);
-        recipeRepository.save(recipe);
+        Recipe saved = recipeRepository.save(recipe);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+            actorDiscordId,
+            "DELETE",
+            "RECIPE",
+            String.valueOf(saved.getId()),
+            "SUCCESS",
+            "softDelete=true"
+        ));
     }
 
     @Transactional

@@ -1,5 +1,6 @@
 package com.crafting.controller;
 
+import com.crafting.auth.ActorContextService;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import com.crafting.model.dto.RecipeDTO;
 import com.crafting.model.dto.RecipeSummaryDTO;
@@ -30,9 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class RecipeController {
 
     private final RecipeService recipeService;
+    private final ActorContextService actorContextService;
 
-    public RecipeController(RecipeService recipeService) {
+    public RecipeController(RecipeService recipeService, ActorContextService actorContextService) {
         this.recipeService = recipeService;
+        this.actorContextService = actorContextService;
     }
 
     @GetMapping("/spell-ids")
@@ -95,7 +98,7 @@ public class RecipeController {
     @PostMapping
     public ResponseEntity<?> createRecipe(@RequestBody RecipeWriteRequest request, Authentication authentication) {
         try {
-            Long callerDiscordId = parseCallerDiscordId(authentication);
+            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
             RecipeDTO created = recipeService.createRecipe(toCommand(request), callerDiscordId);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (ConflictException e) {
@@ -106,9 +109,12 @@ public class RecipeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateRecipe(@PathVariable Long id, @RequestBody RecipeWriteRequest request) {
+    public ResponseEntity<?> updateRecipe(@PathVariable Long id,
+                                          @RequestBody RecipeWriteRequest request,
+                                          Authentication authentication) {
         try {
-            RecipeDTO updated = recipeService.updateRecipe(id, toCommand(request));
+            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
+            RecipeDTO updated = recipeService.updateRecipe(id, toCommand(request), callerDiscordId);
             return ResponseEntity.ok(updated);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -122,7 +128,7 @@ public class RecipeController {
     @PostMapping("/{id}/duplicate")
     public ResponseEntity<?> duplicateRecipe(@PathVariable Long id, Authentication authentication) {
         try {
-            Long callerDiscordId = parseCallerDiscordId(authentication);
+            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
             RecipeDTO duplicated = recipeService.duplicateRecipe(id, callerDiscordId);
             return ResponseEntity.status(HttpStatus.CREATED).body(duplicated);
         } catch (ResourceNotFoundException e) {
@@ -131,9 +137,10 @@ public class RecipeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteRecipe(@PathVariable Long id) {
+    public ResponseEntity<?> deleteRecipe(@PathVariable Long id, Authentication authentication) {
         try {
-            recipeService.softDeleteRecipe(id);
+            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
+            recipeService.softDeleteRecipe(id, callerDiscordId);
             return ResponseEntity.noContent().build();
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -183,17 +190,6 @@ public class RecipeController {
                 request.resourcefulnessFactor(),
                 request.notes()
         );
-    }
-
-    private Long parseCallerDiscordId(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return null;
-        }
-        try {
-            return Long.parseLong(authentication.getName());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private record RecipeWriteRequest(
