@@ -17,7 +17,7 @@ import java.util.Date;
 public class JwtService {
 
     private final SecretKey key;
-    private static final long EXPIRATION_HOURS = 72;
+    private static final long EXPIRATION_HOURS = 168;
 
     public JwtService(@Value("${jwt.secret}") String secret) {
         // Pad or hash the secret to ensure it's at least 256 bits for HS256
