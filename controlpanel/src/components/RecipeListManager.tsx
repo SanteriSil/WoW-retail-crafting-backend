@@ -18,6 +18,11 @@ type Props = {
     onDeleteList: () => void;
     onRemoveRecipe: (recipeId: number) => void;
     onCopyItemIds: () => void;
+    activeListBlacklistedItemIds: number[];
+    expandedRecipeIds: Set<number>;
+    recipeComponentMap: Record<number, { itemId: number; itemName: string; blacklisted: boolean }[]>;
+    onToggleRecipeExpand: (recipeId: number) => void;
+    onToggleItemBlacklist: (itemId: number, blacklisted: boolean) => void;
 };
 
 export default function RecipeListManager({
@@ -33,6 +38,11 @@ export default function RecipeListManager({
     onDeleteList,
     onRemoveRecipe,
     onCopyItemIds,
+    activeListBlacklistedItemIds,
+    expandedRecipeIds,
+    recipeComponentMap,
+    onToggleRecipeExpand,
+    onToggleItemBlacklist,
 }: Props) {
     return (
         <section className="card" style={{ marginBottom: 16 }}>
@@ -97,9 +107,16 @@ export default function RecipeListManager({
                         <div className="muted" style={{ fontSize: 13 }}>
                             Recipes in list ({activeList.recipeCount})
                         </div>
-                        <button type="button" className="button secondary small" onClick={onCopyItemIds} disabled={busy}>
-                            📋 Copy Item IDs
-                        </button>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                            {activeListBlacklistedItemIds.length > 0 && (
+                                <span className="status-inline status-warning">
+                                    ⚠ {activeListBlacklistedItemIds.length} blacklisted item ID{activeListBlacklistedItemIds.length === 1 ? "" : "s"} excluded
+                                </span>
+                            )}
+                            <button type="button" className="button secondary small" onClick={onCopyItemIds} disabled={busy}>
+                                📋 Copy Item IDs
+                            </button>
+                        </div>
                     </div>
 
                     {activeList.recipes.length === 0 ? (
@@ -109,22 +126,64 @@ export default function RecipeListManager({
                     ) : (
                         <div className="list" style={{ maxHeight: 260 }}>
                             {activeList.recipes.map((entry) => (
-                                <div key={entry.recipeId} className="list-item" style={{ alignItems: "center", gap: 12 }}>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-                                        <strong style={{ fontSize: 14 }}>{entry.recipeName}</strong>
-                                        <span className="muted" style={{ fontSize: 12 }}>
-                                            {entry.outputItemName ?? "Unknown output"}
-                                        </span>
+                                <div key={entry.recipeId} className="list-item" style={{ alignItems: "stretch", gap: 12, flexDirection: "column", cursor: "default" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                                            <strong style={{ fontSize: 14 }}>{entry.recipeName}</strong>
+                                            <span className="muted" style={{ fontSize: 12 }}>
+                                                {entry.outputItemName ?? "Unknown output"}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="button secondary small"
+                                            onClick={() => onToggleRecipeExpand(entry.recipeId)}
+                                            disabled={busy}
+                                            style={{ marginLeft: "auto" }}
+                                        >
+                                            {expandedRecipeIds.has(entry.recipeId) ? "▾ Components" : "▸ Components"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="button secondary small"
+                                            onClick={() => onRemoveRecipe(entry.recipeId)}
+                                            disabled={busy}
+                                        >
+                                            ✕ Remove
+                                        </button>
                                     </div>
-                                    <button
-                                        type="button"
-                                        className="button secondary small"
-                                        onClick={() => onRemoveRecipe(entry.recipeId)}
-                                        disabled={busy}
-                                        style={{ marginLeft: "auto" }}
-                                    >
-                                        ✕ Remove
-                                    </button>
+
+                                    {expandedRecipeIds.has(entry.recipeId) && (
+                                        <div style={{ display: "grid", gap: 6 }}>
+                                            {(recipeComponentMap[entry.recipeId] ?? []).map((component) => (
+                                                <div
+                                                    key={`${entry.recipeId}-${component.itemId}`}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 10,
+                                                        padding: "6px 8px",
+                                                        borderRadius: 8,
+                                                        background: component.blacklisted ? "#1f2937" : "#f8fafc",
+                                                        color: component.blacklisted ? "#f9fafb" : "inherit",
+                                                        opacity: component.blacklisted ? 0.9 : 1,
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 13, fontWeight: 600 }}>{component.itemName}</span>
+                                                    <span style={{ fontSize: 12, opacity: 0.8 }}>#{component.itemId}</span>
+                                                    <button
+                                                        type="button"
+                                                        className="button secondary small"
+                                                        style={{ marginLeft: "auto" }}
+                                                        disabled={busy}
+                                                        onClick={() => onToggleItemBlacklist(component.itemId, component.blacklisted)}
+                                                    >
+                                                        {component.blacklisted ? "Unblacklist" : "Blacklist"}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>

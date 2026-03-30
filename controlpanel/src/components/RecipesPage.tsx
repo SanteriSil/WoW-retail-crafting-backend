@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+    addItemPriceBlacklist,
     addRecipesToList,
     createRecipeList,
     createRecipe,
@@ -15,6 +16,7 @@ import {
     getRecipes,
     getRecipeListItemIds,
     removeRecipesFromList,
+    removeItemPriceBlacklist,
     renameRecipeList,
     updateRecipe,
 } from "../api";
@@ -73,6 +75,9 @@ export default function RecipesPage({ professions, role }: Props) {
     const [recipeListsLoading, setRecipeListsLoading] = useState(false);
     const [recipeListBusy, setRecipeListBusy] = useState(false);
     const [recipeListStatus, setRecipeListStatus] = useState<{ msg: string; ok: boolean } | null>(null);
+    const [activeListBlacklistedItemIds, setActiveListBlacklistedItemIds] = useState<number[]>([]);
+    const [expandedRecipeIds, setExpandedRecipeIds] = useState<Set<number>>(new Set());
+    const [recipeComponentMap, setRecipeComponentMap] = useState<Record<number, { itemId: number; itemName: string; blacklisted: boolean }[]>>({});
 
     // ── Load expansions once ──
     useEffect(() => {
@@ -105,14 +110,20 @@ export default function RecipesPage({ professions, role }: Props) {
     const loadRecipeListDetail = useCallback(async (listId: number | null) => {
         if (!isAdmin || listId == null) {
             setActiveRecipeList(null);
+            setActiveListBlacklistedItemIds([]);
             return;
         }
 
         try {
-            const detail = await getRecipeList(listId);
+            const [detail, itemIds] = await Promise.all([
+                getRecipeList(listId),
+                getRecipeListItemIds(listId),
+            ]);
             setActiveRecipeList(detail);
+            setActiveListBlacklistedItemIds(itemIds.blacklistedItemIds ?? []);
         } catch (err) {
             setActiveRecipeList(null);
+            setActiveListBlacklistedItemIds([]);
             setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to load recipe list.", ok: false });
         }
     }, [isAdmin]);
@@ -122,6 +133,7 @@ export default function RecipesPage({ professions, role }: Props) {
             setRecipeLists([]);
             setActiveRecipeListId(null);
             setActiveRecipeList(null);
+            setActiveListBlacklistedItemIds([]);
             return;
         }
 
@@ -137,16 +149,22 @@ export default function RecipesPage({ professions, role }: Props) {
 
             setActiveRecipeListId(resolvedId);
             if (resolvedId != null) {
-                const detail = await getRecipeList(resolvedId);
+                const [detail, itemIds] = await Promise.all([
+                    getRecipeList(resolvedId),
+                    getRecipeListItemIds(resolvedId),
+                ]);
                 setActiveRecipeList(detail);
+                setActiveListBlacklistedItemIds(itemIds.blacklistedItemIds ?? []);
             } else {
                 setActiveRecipeList(null);
+                setActiveListBlacklistedItemIds([]);
             }
         } catch (err) {
             setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to load recipe lists.", ok: false });
             setRecipeLists([]);
             setActiveRecipeListId(null);
             setActiveRecipeList(null);
+            setActiveListBlacklistedItemIds([]);
         } finally {
             setRecipeListsLoading(false);
         }
@@ -156,6 +174,19 @@ export default function RecipesPage({ professions, role }: Props) {
         if (!isAdmin) return;
         void loadRecipeLists();
     }, [isAdmin, loadRecipeLists]);
+
+    useEffect(() => {
+        setRecipeComponentMap((prev) => {
+            const next: typeof prev = {};
+            for (const [recipeId, components] of Object.entries(prev)) {
+                next[Number(recipeId)] = components.map((component) => ({
+                    ...component,
+                    blacklisted: activeListBlacklistedItemIds.includes(component.itemId),
+                }));
+            }
+            return next;
+        });
+    }, [activeListBlacklistedItemIds]);
 
     // ── Select a recipe → open detail panel ──
     const handleSelectRecipe = useCallback(async (summary: RecipeSummary) => {
@@ -342,11 +373,22 @@ export default function RecipesPage({ professions, role }: Props) {
         try {
             const result = await getRecipeListItemIds(activeRecipeListId);
             if (result.allItemIds.length === 0) {
-                setRecipeListStatus({ msg: "No item IDs available for the selected list.", ok: false });
+                if ((result.blacklistedItemIds ?? []).length > 0) {
+                    setRecipeListStatus({ msg: "All item IDs in this list are blacklisted.", ok: false });
+                } else {
+                    setRecipeListStatus({ msg: "No item IDs available for the selected list.", ok: false });
+                }
             } else {
                 await navigator.clipboard.writeText(result.allItemIds.join(","));
-                setRecipeListStatus({ msg: `${result.allItemIds.length} item IDs copied.`, ok: true });
+                const excluded = result.blacklistedItemIds?.length ?? 0;
+                setRecipeListStatus({
+                    msg: excluded > 0
+                        ? `${result.allItemIds.length} item IDs copied (${excluded} blacklisted excluded).`
+                        : `${result.allItemIds.length} item IDs copied.`,
+                    ok: true,
+                });
             }
+            setActiveListBlacklistedItemIds(result.blacklistedItemIds ?? []);
         } catch (err) {
             setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to copy item IDs.", ok: false });
         } finally {
@@ -374,6 +416,98 @@ export default function RecipesPage({ professions, role }: Props) {
             clearRecipeListStatusLater();
         }
     }, [activeRecipeListId, clearRecipeListStatusLater, loadRecipeLists]);
+
+    const refreshActiveListBlacklist = useCallback(async () => {
+        if (activeRecipeListId == null) return;
+        const [itemIds] = await Promise.all([
+            getRecipeListItemIds(activeRecipeListId),
+        ]);
+        setActiveListBlacklistedItemIds(itemIds.blacklistedItemIds ?? []);
+    }, [activeRecipeListId]);
+
+    const loadRecipeComponents = useCallback(async (recipeId: number) => {
+        const detail = await getRecipe(recipeId);
+        const seen = new Set<number>();
+        const components: { itemId: number; itemName: string }[] = [];
+
+        const push = (itemId: number, itemName: string) => {
+            if (seen.has(itemId)) return;
+            seen.add(itemId);
+            components.push({ itemId, itemName });
+        };
+
+        if (detail.outputItem?.id != null) {
+            push(detail.outputItem.id, detail.outputItem.name ?? `Item ${detail.outputItem.id}`);
+        }
+        for (const ingredient of detail.ingredients ?? []) {
+            if (ingredient.item?.id != null) {
+                push(ingredient.item.id, ingredient.item.name ?? `Item ${ingredient.item.id}`);
+            }
+        }
+        for (const group of detail.optionalIngredientGroups ?? []) {
+            for (const option of group.options ?? []) {
+                if (option.item?.id != null) {
+                    push(option.item.id, option.item.name ?? `Item ${option.item.id}`);
+                }
+            }
+        }
+
+        setRecipeComponentMap((prev) => ({
+            ...prev,
+            [recipeId]: components.map((component) => ({
+                ...component,
+                blacklisted: activeListBlacklistedItemIds.includes(component.itemId),
+            })),
+        }));
+    }, [activeListBlacklistedItemIds]);
+
+    const handleToggleRecipeExpand = useCallback((recipeId: number) => {
+        setExpandedRecipeIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(recipeId)) {
+                next.delete(recipeId);
+            } else {
+                next.add(recipeId);
+                if (!recipeComponentMap[recipeId]) {
+                    void loadRecipeComponents(recipeId);
+                }
+            }
+            return next;
+        });
+    }, [loadRecipeComponents, recipeComponentMap]);
+
+    const handleToggleItemBlacklist = useCallback(async (itemId: number, blacklisted: boolean) => {
+        if (activeRecipeListId == null) return;
+
+        setRecipeListBusy(true);
+        try {
+            if (blacklisted) {
+                await removeItemPriceBlacklist(activeRecipeListId, itemId);
+            } else {
+                await addItemPriceBlacklist(activeRecipeListId, itemId);
+            }
+
+            await refreshActiveListBlacklist();
+            setRecipeComponentMap((prev) => {
+                const next: typeof prev = {};
+                for (const [recipeId, components] of Object.entries(prev)) {
+                    next[Number(recipeId)] = components.map((component) =>
+                        component.itemId === itemId ? { ...component, blacklisted: !blacklisted } : component
+                    );
+                }
+                return next;
+            });
+            setRecipeListStatus({
+                msg: blacklisted ? `Removed item ${itemId} from list blacklist.` : `Blacklisted item ${itemId} for this list.`,
+                ok: true,
+            });
+        } catch (err) {
+            setRecipeListStatus({ msg: err instanceof Error ? err.message : "Failed to update item blacklist.", ok: false });
+        } finally {
+            setRecipeListBusy(false);
+            clearRecipeListStatusLater();
+        }
+    }, [activeRecipeListId, clearRecipeListStatusLater, refreshActiveListBlacklist]);
 
     return (
         <div className="recipes-page">
@@ -442,6 +576,11 @@ export default function RecipesPage({ professions, role }: Props) {
                     onDeleteList={() => void handleDeleteRecipeList()}
                     onRemoveRecipe={(recipeId) => void handleRemoveRecipeFromList(recipeId)}
                     onCopyItemIds={() => void handleCopyRecipeListItemIds()}
+                    activeListBlacklistedItemIds={activeListBlacklistedItemIds}
+                    expandedRecipeIds={expandedRecipeIds}
+                    recipeComponentMap={recipeComponentMap}
+                    onToggleRecipeExpand={handleToggleRecipeExpand}
+                    onToggleItemBlacklist={(itemId, blacklisted) => void handleToggleItemBlacklist(itemId, blacklisted)}
                 />
             )}
 

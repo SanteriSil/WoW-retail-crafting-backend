@@ -4,6 +4,7 @@ import com.crafting.model.Recipe;
 import com.crafting.model.RecipeList;
 import com.crafting.model.dto.RecipeListDTO;
 import com.crafting.model.dto.RecipeListItemIdsDTO;
+import com.crafting.repository.ItemPriceUpdateBlacklistRepository;
 import com.crafting.repository.RecipeListRepository;
 import com.crafting.repository.RecipeRepository;
 import jakarta.transaction.Transactional;
@@ -21,10 +22,14 @@ public class RecipeListService {
 
     private final RecipeListRepository recipeListRepository;
     private final RecipeRepository recipeRepository;
+    private final ItemPriceUpdateBlacklistRepository itemPriceUpdateBlacklistRepository;
 
-    public RecipeListService(RecipeListRepository recipeListRepository, RecipeRepository recipeRepository) {
+    public RecipeListService(RecipeListRepository recipeListRepository,
+                             RecipeRepository recipeRepository,
+                             ItemPriceUpdateBlacklistRepository itemPriceUpdateBlacklistRepository) {
         this.recipeListRepository = recipeListRepository;
         this.recipeRepository = recipeRepository;
+        this.itemPriceUpdateBlacklistRepository = itemPriceUpdateBlacklistRepository;
     }
 
     @Transactional
@@ -110,12 +115,21 @@ public class RecipeListService {
         Set<Long> allItemIds = new TreeSet<>(ingredientItemIds);
         allItemIds.addAll(outputItemIds);
 
+        Set<Long> blacklistedItemIds = itemPriceUpdateBlacklistRepository.findItemIdsByListId(recipeList.getId()).stream()
+            .filter(allItemIds::contains)
+            .collect(TreeSet::new, Set::add, Set::addAll);
+
+        ingredientItemIds.removeAll(blacklistedItemIds);
+        outputItemIds.removeAll(blacklistedItemIds);
+        allItemIds.removeAll(blacklistedItemIds);
+
         return new RecipeListItemIdsDTO(
                 recipeList.getId(),
                 recipeList.getName(),
                 ingredientItemIds,
                 outputItemIds,
-                allItemIds
+            allItemIds,
+            blacklistedItemIds
         );
     }
 

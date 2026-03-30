@@ -99,7 +99,7 @@ public class AHFetchController {
 
             return ResponseEntity.ok(Map.of(
                     "updatedCount", updatedCount,
-                    "itemIds", itemIds,
+                "itemIds", itemIds,
                     "recipeIds", recipeIds
             ));
         } catch (Exception e) {

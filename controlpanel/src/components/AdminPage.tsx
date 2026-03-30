@@ -53,10 +53,20 @@ export default function AdminPage({
         try {
             const result = await getRecipeListItemIds(listId);
             if (result.allItemIds.length === 0) {
-                setRecipeListsStatus({ msg: "Selected list has no item IDs to copy.", ok: false });
+                if ((result.blacklistedItemIds ?? []).length > 0) {
+                    setRecipeListsStatus({ msg: "All item IDs in this list are blacklisted.", ok: false });
+                } else {
+                    setRecipeListsStatus({ msg: "Selected list has no item IDs to copy.", ok: false });
+                }
             } else {
                 await navigator.clipboard.writeText(result.allItemIds.join(","));
-                setRecipeListsStatus({ msg: `Copied ${result.allItemIds.length} item IDs.`, ok: true });
+                const excluded = result.blacklistedItemIds?.length ?? 0;
+                setRecipeListsStatus({
+                    msg: excluded > 0
+                        ? `Copied ${result.allItemIds.length} item IDs (${excluded} blacklisted excluded).`
+                        : `Copied ${result.allItemIds.length} item IDs.`,
+                    ok: true,
+                });
             }
         } catch (err) {
             setRecipeListsStatus({ msg: err instanceof Error ? err.message : "Failed to copy item IDs.", ok: false });

@@ -2,12 +2,14 @@ package com.crafting.controller;
 
 import com.crafting.model.Expansion;
 import com.crafting.model.Item;
+import com.crafting.model.ItemPriceUpdateBlacklistEntry;
 import com.crafting.model.Profession;
 import com.crafting.model.Recipe;
 import com.crafting.model.RecipeIngredient;
 import com.crafting.model.RecipeList;
 import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.ItemPriceUpdateBlacklistRepository;
 import com.crafting.repository.ProfessionRepository;
 import com.crafting.repository.RecipeListRepository;
 import com.crafting.repository.RecipeRepository;
@@ -43,6 +45,7 @@ class RecipeListControllerTest {
     @Autowired private RecipeListRepository recipeListRepository;
     @Autowired private RecipeRepository recipeRepository;
     @Autowired private ItemRepository itemRepository;
+    @Autowired private ItemPriceUpdateBlacklistRepository itemPriceUpdateBlacklistRepository;
     @Autowired private ProfessionRepository professionRepository;
     @Autowired private ExpansionRepository expansionRepository;
 
@@ -51,6 +54,7 @@ class RecipeListControllerTest {
 
     @BeforeEach
     void setUp() {
+        itemPriceUpdateBlacklistRepository.deleteAll();
         recipeListRepository.deleteAll();
         recipeRepository.deleteAll();
         itemRepository.deleteAll();
@@ -263,8 +267,32 @@ class RecipeListControllerTest {
                     .andExpect(jsonPath("$.listName", is("Item Ids")))
                     .andExpect(jsonPath("$.ingredientItemIds", containsInAnyOrder(3010, 3011, 3012)))
                     .andExpect(jsonPath("$.outputItemIds", containsInAnyOrder(2008, 2009)))
-                    .andExpect(jsonPath("$.allItemIds", containsInAnyOrder(2008, 2009, 3010, 3011, 3012)));
+                        .andExpect(jsonPath("$.allItemIds", containsInAnyOrder(2008, 2009, 3010, 3011, 3012)))
+                        .andExpect(jsonPath("$.blacklistedItemIds", hasSize(0)));
         }
+
+                @Test
+                @DisplayName("excludes blacklisted items from recipe-list item IDs")
+                void excludesBlacklistedItems() throws Exception {
+                    Recipe recipe = saveRecipe("Blacklist Check", 1010L, "Output", 2010L, List.of(3013L, 3014L));
+                    RecipeList recipeList = recipeListRepository.save(RecipeList.builder().name("Blacklist List").build());
+                    recipeList.getRecipes().add(recipe);
+                    recipeListRepository.save(recipeList);
+
+                    Item blacklisted = itemRepository.findById(3014L).orElseThrow();
+                    itemPriceUpdateBlacklistRepository.save(ItemPriceUpdateBlacklistEntry.builder()
+                            .recipeList(recipeList)
+                        .item(blacklisted)
+                        .build());
+
+                    mockMvc.perform(get("/recipe-lists/{id}/item-ids", recipeList.getId())
+                            .with(user("admin").roles("ADMIN")))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.ingredientItemIds", containsInAnyOrder(3013)))
+                        .andExpect(jsonPath("$.outputItemIds", containsInAnyOrder(2010)))
+                        .andExpect(jsonPath("$.allItemIds", containsInAnyOrder(2010, 3013)))
+                        .andExpect(jsonPath("$.blacklistedItemIds", containsInAnyOrder(3014)));
+                }
 
         @Test
         @DisplayName("empty list returns empty arrays")

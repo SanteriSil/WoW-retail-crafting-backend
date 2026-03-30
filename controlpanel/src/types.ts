@@ -170,6 +170,7 @@ export type RecipeItemIdsResponse = {
 export type RecipePriceRefreshResponse = {
   updatedCount: number;
   itemIds: number[];
+  blacklistedItemIds?: number[];
   recipeIds: number[];
 };
 
@@ -203,6 +204,14 @@ export type RecipeListItemIds = {
   ingredientItemIds: number[];
   outputItemIds: number[];
   allItemIds: number[];
+  blacklistedItemIds: number[];
+};
+
+export type ItemPriceUpdateBlacklistEntry = {
+  listId: number;
+  itemId: number;
+  itemName: string;
+  createdAt: string;
 };
 
 // ── Scraper (client-side, F3) ────────────────────────────────────────────────

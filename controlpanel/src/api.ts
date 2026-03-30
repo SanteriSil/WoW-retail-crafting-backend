@@ -1,4 +1,4 @@
-import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, LogFileInfo, LogViewResponse, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, ItemPriceUpdateBlacklistEntry, LogFileInfo, LogViewResponse, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -330,6 +330,22 @@ export async function removeRecipesFromList(id: number, recipeIds: number[]): Pr
 
 export async function getRecipeListItemIds(id: number): Promise<RecipeListItemIds> {
     return request<RecipeListItemIds>(`/recipe-lists/${id}/item-ids`);
+}
+
+export async function getItemPriceBlacklist(listId: number): Promise<ItemPriceUpdateBlacklistEntry[]> {
+    return request<ItemPriceUpdateBlacklistEntry[]>(`/recipe-lists/${listId}/item-price-blacklist`);
+}
+
+export async function addItemPriceBlacklist(listId: number, itemId: number): Promise<ItemPriceUpdateBlacklistEntry> {
+    return request<ItemPriceUpdateBlacklistEntry>(`/recipe-lists/${listId}/item-price-blacklist/${itemId}`, {
+        method: "POST",
+    });
+}
+
+export async function removeItemPriceBlacklist(listId: number, itemId: number): Promise<void> {
+    await request<void>(`/recipe-lists/${listId}/item-price-blacklist/${itemId}`, {
+        method: "DELETE",
+    });
 }
 
 // ── Export ──────────────────────────────────────────────────────────────────────
