@@ -7,6 +7,7 @@ public record RecipeListItemIdsDTO(
         String listName,
         Set<Long> ingredientItemIds,
         Set<Long> outputItemIds,
-        Set<Long> allItemIds
+        Set<Long> allItemIds,
+        Set<Long> blacklistedItemIds
 ) {
 }
