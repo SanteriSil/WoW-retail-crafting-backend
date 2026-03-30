@@ -15,6 +15,7 @@ import com.crafting.repository.CharacterRepository;
 import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
 import com.crafting.repository.ProfessionRepository;
+import com.crafting.repository.RecipeCharacterStatOverrideRepository;
 import com.crafting.repository.RecipeListRepository;
 import com.crafting.repository.RecipeRepository;
 import java.util.List;
@@ -29,8 +30,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,6 +51,7 @@ class DashboardControllerTest {
     @Autowired private ItemRepository itemRepository;
     @Autowired private ProfessionRepository professionRepository;
     @Autowired private ExpansionRepository expansionRepository;
+        @Autowired private RecipeCharacterStatOverrideRepository statOverrideRepository;
 
     private Profession alchemy;
     private Profession tailoring;
@@ -53,6 +59,7 @@ class DashboardControllerTest {
 
     @BeforeEach
     void setUp() {
+                statOverrideRepository.deleteAll();
         recipeListRepository.deleteAll();
         characterRecipeRepository.deleteAll();
         characterRepository.deleteAll();
@@ -212,6 +219,68 @@ class DashboardControllerTest {
                     .andExpect(jsonPath("$.crafts[0].optionalReagentsCost", is(8_000)))
                     // adjusted base: 100_000 * (1 - 0.2 * 0.3) = 94_000; + optional 8_000 = 102_000
                     .andExpect(jsonPath("$.crafts[0].adjustedProfit.ingredientCost", is(102_000)));
+        }
+
+        @Test
+        @DisplayName("applies recipe+character stat override with precedence")
+        void appliesStatOverridePrecedence() throws Exception {
+            WowCharacter character = saveCharacter(9001L, "OverrideCrafter", alchemy, 5f, 7f);
+            Recipe recipe = saveRecipe("Override Flask", 1450L, alchemy, 2450L, "Override Flask", 100_000L, 3450L, 30_000L, 1);
+            characterRecipeRepository.save(CharacterRecipe.builder().character(character).recipe(recipe).build());
+
+            mockMvc.perform(put("/dashboard/stat-overrides")
+                            .with(user("9001").roles("ALLOWED_USER"))
+                            .contentType("application/json")
+                            .content("{\"recipeId\":" + recipe.getId() + ",\"characterId\":" + character.getId() + ",\"multicraftPercent\":22.5,\"resourcefulnessPercent\":11.0}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id", notNullValue()));
+
+            mockMvc.perform(get("/dashboard/crafts")
+                            .with(user("9001").roles("ALLOWED_USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.crafts[0].baseMulticraftPercent", is(5.0)))
+                    .andExpect(jsonPath("$.crafts[0].baseResourcefulnessPercent", is(7.0)))
+                    .andExpect(jsonPath("$.crafts[0].multicraftPercent", is(22.5)))
+                    .andExpect(jsonPath("$.crafts[0].resourcefulnessPercent", is(11.0)))
+                    .andExpect(jsonPath("$.crafts[0].statOverrideActive", is(true)));
+        }
+    }
+
+    @Nested
+    @DisplayName("/dashboard/stat-overrides")
+    class StatOverrides {
+
+        @Test
+        @DisplayName("lists and deletes own overrides")
+        void listAndDelete() throws Exception {
+            WowCharacter character = saveCharacter(9001L, "Lister", alchemy, 0f, 0f);
+            Recipe recipe = saveRecipe("List Recipe", 1500L, alchemy, 2500L, "List Output", 10_000L, 3500L, 1_000L, 1);
+            characterRecipeRepository.save(CharacterRecipe.builder().character(character).recipe(recipe).build());
+
+            mockMvc.perform(put("/dashboard/stat-overrides")
+                            .with(user("9001").roles("ALLOWED_USER"))
+                            .contentType("application/json")
+                            .content("{\"recipeId\":" + recipe.getId() + ",\"characterId\":" + character.getId() + ",\"multicraftPercent\":12,\"resourcefulnessPercent\":15}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(get("/dashboard/stat-overrides")
+                            .with(user("9001").roles("ALLOWED_USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].recipeId", is(recipe.getId().intValue())))
+                    .andExpect(jsonPath("$[0].characterId", is(character.getId().intValue())));
+
+            mockMvc.perform(delete("/dashboard/stat-overrides")
+                            .with(user("9001").roles("ALLOWED_USER"))
+                            .param("recipeId", String.valueOf(recipe.getId()))
+                            .param("characterId", String.valueOf(character.getId())))
+                    .andExpect(status().isNoContent())
+                    .andExpect(content().string(""));
+
+            mockMvc.perform(get("/dashboard/stat-overrides")
+                            .with(user("9001").roles("ALLOWED_USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(0)));
         }
     }
 

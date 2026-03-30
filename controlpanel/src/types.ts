@@ -320,11 +320,26 @@ export type DashboardCraft = {
   isMulticraftable: boolean;
   multicraftMultiplier: number;
   resourcefulnessFactor: number;
+  baseMulticraftPercent: number;
+  baseResourcefulnessPercent: number;
   multicraftPercent: number;
   resourcefulnessPercent: number;
+  statOverrideActive: boolean;
   missingPriceItemIds: number[];
   hasNotes: boolean;
   notes: string | null;
+};
+
+export type RecipeCharacterStatOverride = {
+  id: number;
+  recipeId: number;
+  recipeName: string;
+  characterId: number;
+  characterName: string;
+  multicraftPercent: number;
+  resourcefulnessPercent: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type CraftOverrides = {

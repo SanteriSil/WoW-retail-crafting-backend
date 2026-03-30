@@ -30,8 +30,11 @@ public record DashboardResponse(
             boolean isMulticraftable,
             Float multicraftMultiplier,
             Float resourcefulnessFactor,
+                        Float baseMulticraftPercent,
+                        Float baseResourcefulnessPercent,
             Float multicraftPercent,
             Float resourcefulnessPercent,
+                        boolean statOverrideActive,
             List<Long> missingPriceItemIds,
             boolean hasNotes,
             String notes

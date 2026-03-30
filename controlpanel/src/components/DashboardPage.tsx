@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCharacters, getDashboardCrafts, getRecipe } from "../api";
+import { deleteDashboardStatOverride, getCharacters, getDashboardCrafts, getRecipe, upsertDashboardStatOverride } from "../api";
 import type { CalculatorEntry, Character, CraftOverrides, DashboardCraft, DashboardResponse, Profession, RecipeDetail } from "../types";
 import DashboardFilters from "./DashboardFilters";
 import CraftTable from "./CraftTable";
@@ -226,6 +226,21 @@ export default function DashboardPage({ professions, role }: Props) {
         }
     };
 
+    const handleSaveStatOverride = useCallback(async (craft: DashboardCraft, multicraftPercent: number, resourcefulnessPercent: number) => {
+        await upsertDashboardStatOverride({
+            recipeId: craft.recipeId,
+            characterId: craft.characterId,
+            multicraftPercent,
+            resourcefulnessPercent,
+        });
+        await fetchDashboard();
+    }, [fetchDashboard]);
+
+    const handleDeleteStatOverride = useCallback(async (craft: DashboardCraft) => {
+        await deleteDashboardStatOverride(craft.recipeId, craft.characterId);
+        await fetchDashboard();
+    }, [fetchDashboard]);
+
     const crafts = dashboard?.crafts ?? [];
     const hasActiveFilter = characterId != null || professionId != null || search.trim().length > 0;
     const showNoValidCombinations = !loading && dashboard != null && crafts.length === 0 && hasActiveFilter;
@@ -283,6 +298,8 @@ export default function DashboardPage({ professions, role }: Props) {
                             void fetchRecipeDetail(recipeId);
                         }}
                         onAddToCalculator={handleAddToCalculator}
+                        onSaveStatOverride={handleSaveStatOverride}
+                        onDeleteStatOverride={handleDeleteStatOverride}
                     />
 
                     <CraftingCalculator

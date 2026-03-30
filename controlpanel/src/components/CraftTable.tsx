@@ -54,6 +54,8 @@ type Props = {
     recipeLoadingIds: Set<number>;
     onFetchRecipe: (recipeId: number) => void;
     onAddToCalculator?: (craft: DashboardCraft) => void;
+    onSaveStatOverride: (craft: DashboardCraft, multicraftPercent: number, resourcefulnessPercent: number) => Promise<void>;
+    onDeleteStatOverride: (craft: DashboardCraft) => Promise<void>;
 };
 
 export default function CraftTable({
@@ -70,6 +72,8 @@ export default function CraftTable({
     recipeLoadingIds,
     onFetchRecipe,
     onAddToCalculator,
+    onSaveStatOverride,
+    onDeleteStatOverride,
 }: Props) {
     const [expandedKey, setExpandedKey] = useState<string | null>(null);
     const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
@@ -351,6 +355,7 @@ export default function CraftTable({
                                             </button>
                                         )}
                                         {hasOverride && <span className="craft-override-badge" title="Custom M/R override active">⚙️</span>}
+                                        {c.statOverrideActive && <span className="craft-override-badge" title="Recipe+character stat override active">📌</span>}
                                     </td>
                                     <td title={c.professionName}><span className="cell-ellipsis">{c.professionName}</span></td>
                                     <td>
@@ -402,6 +407,12 @@ export default function CraftTable({
                                                 currentR={currentR}
                                                 onApply={(m, r) => handleApply(key, m, r)}
                                                 onReset={() => handleReset(key)}
+                                                onSaveStatOverride={async (multicraftPercent, resourcefulnessPercent) => {
+                                                    await onSaveStatOverride(c, multicraftPercent, resourcefulnessPercent);
+                                                }}
+                                                onDeleteStatOverride={async () => {
+                                                    await onDeleteStatOverride(c);
+                                                }}
                                             />
                                         </td>
                                     </tr>

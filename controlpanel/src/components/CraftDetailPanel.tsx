@@ -15,6 +15,8 @@ type Props = {
     currentR: number;
     onApply: (m: number, r: number) => void;
     onReset: () => void;
+    onSaveStatOverride: (multicraftPercent: number, resourcefulnessPercent: number) => Promise<void>;
+    onDeleteStatOverride: () => Promise<void>;
 };
 
 export default function CraftDetailPanel({
@@ -25,9 +27,14 @@ export default function CraftDetailPanel({
     currentR,
     onApply,
     onReset,
+    onSaveStatOverride,
+    onDeleteStatOverride,
 }: Props) {
     const [m, setM] = useState(currentM);
     const [r, setR] = useState(currentR);
+    const [statMulticraft, setStatMulticraft] = useState(craft.multicraftPercent);
+    const [statResourcefulness, setStatResourcefulness] = useState(craft.resourcefulnessPercent);
+    const [savingStats, setSavingStats] = useState(false);
 
     useEffect(() => {
         setM(currentM);
@@ -36,6 +43,11 @@ export default function CraftDetailPanel({
     useEffect(() => {
         setR(currentR);
     }, [currentR]);
+
+    useEffect(() => {
+        setStatMulticraft(craft.multicraftPercent);
+        setStatResourcefulness(craft.resourcefulnessPercent);
+    }, [craft.multicraftPercent, craft.resourcefulnessPercent]);
 
     const ingredientRows = useMemo(() => {
         if (!recipeDetail) return [];
@@ -214,6 +226,73 @@ export default function CraftDetailPanel({
                     </button>
                     <button type="button" className="button small primary" onClick={() => onApply(m, r)}>
                         Apply
+                    </button>
+                </div>
+            </div>
+
+            <div className="craft-detail-controls">
+                <div className="craft-detail-title">Persisted Stats Override</div>
+                <div className="muted" style={{ marginRight: 10 }}>
+                    Base: MC {craft.baseMulticraftPercent.toFixed(1)}% · RF {craft.baseResourcefulnessPercent.toFixed(1)}%
+                </div>
+                <label className="craft-detail-control">
+                    <span>MC%</span>
+                    <input
+                        type="number"
+                        className="input"
+                        style={{ width: 90 }}
+                        value={statMulticraft}
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        onChange={(e) => setStatMulticraft(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                        disabled={savingStats}
+                    />
+                </label>
+                <label className="craft-detail-control">
+                    <span>RF%</span>
+                    <input
+                        type="number"
+                        className="input"
+                        style={{ width: 90 }}
+                        value={statResourcefulness}
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        onChange={(e) => setStatResourcefulness(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                        disabled={savingStats}
+                    />
+                </label>
+                <div className="craft-detail-actions">
+                    <button
+                        type="button"
+                        className="button small secondary"
+                        disabled={savingStats || !craft.statOverrideActive}
+                        onClick={async () => {
+                            setSavingStats(true);
+                            try {
+                                await onDeleteStatOverride();
+                            } finally {
+                                setSavingStats(false);
+                            }
+                        }}
+                    >
+                        Clear
+                    </button>
+                    <button
+                        type="button"
+                        className="button small primary"
+                        disabled={savingStats}
+                        onClick={async () => {
+                            setSavingStats(true);
+                            try {
+                                await onSaveStatOverride(statMulticraft, statResourcefulness);
+                            } finally {
+                                setSavingStats(false);
+                            }
+                        }}
+                    >
+                        Save
                     </button>
                 </div>
             </div>
