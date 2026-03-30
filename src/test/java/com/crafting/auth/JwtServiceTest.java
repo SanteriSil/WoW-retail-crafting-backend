@@ -60,16 +60,16 @@ class JwtServiceTest {
         }
 
         @Test
-        @DisplayName("expiration is approximately 72 hours from issuedAt")
-        void expirationIs72Hours() {
+        @DisplayName("expiration is approximately 7 days from issuedAt")
+        void expirationIs7Days() {
             String token = jwtService.generateToken(12345L, "testuser", Role.ALLOWED_USER);
             Claims claims = jwtService.validateToken(token);
 
             assertThat(claims).isNotNull();
             long diffMs = claims.getExpiration().getTime() - claims.getIssuedAt().getTime();
-            long expected72hMs = 72 * 60 * 60 * 1000L;
+            long expected7dMs = 7 * 24 * 60 * 60 * 1000L;
             // Allow 5-second tolerance for test execution time
-            assertThat(diffMs).isBetween(expected72hMs - 5_000L, expected72hMs + 5_000L);
+            assertThat(diffMs).isBetween(expected7dMs - 5_000L, expected7dMs + 5_000L);
         }
 
         @Test
