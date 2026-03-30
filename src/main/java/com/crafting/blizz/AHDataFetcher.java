@@ -233,21 +233,28 @@ public class AHDataFetcher {
      * @return number of item prices updated, or -1 if another fetch is already running
      */
     public int submitAuctionData(String csv) {
+        SubmissionResult result = submitAuctionDataDetailed(csv);
+        return result.updatedCount();
+    }
+
+    public SubmissionResult submitAuctionDataDetailed(String csv) {
         if (!fetchLock.tryLock()) {
             logger.warn("Fetch already in progress, skipping user-submitted data");
-            return -1;
+            return new SubmissionResult(-1, Collections.emptyMap());
         }
         try {
             Map<Integer, Pair<Long, Long>> results = processCsvAuctionData(csv);
             logger.info("User-submitted auction data processed – {} item prices updated", results.size());
-            return results.size();
+            return new SubmissionResult(results.size(), results);
         } catch (Exception e) {
             logger.error("Error processing user-submitted auction data", e);
-            return -1;
+            return new SubmissionResult(-1, Collections.emptyMap());
         } finally {
             fetchLock.unlock();
         }
     }
+
+    public record SubmissionResult(int updatedCount, Map<Integer, Pair<Long, Long>> submissions) {}
 
     /**
      * Method for manually triggering the fetch process, can be called from controller

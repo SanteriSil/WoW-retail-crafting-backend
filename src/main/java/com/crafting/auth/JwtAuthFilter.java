@@ -68,6 +68,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
                     );
+                        auth.setDetails(Map.of(
+                            "discordUsername", claims.get("username", String.class)
+                        ));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
                 // role == null → discordId not in DB and not owner

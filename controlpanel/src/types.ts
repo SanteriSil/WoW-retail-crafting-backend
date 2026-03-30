@@ -375,6 +375,28 @@ export type LogViewResponse = {
   entries: LogEntry[];
 };
 
+export type PriceSubmissionRecord = {
+  id: number;
+  itemId: number;
+  itemName: string;
+  submittedPrice: number;
+  submittedQuantity: number;
+  source: string;
+  actorDiscordId: number;
+  actorDiscordUsername: string | null;
+  auditEventId: number | null;
+  batchId: string;
+  submittedAt: string;
+};
+
+export type PriceSubmissionFilterParams = {
+  page?: number;
+  size?: number;
+  itemId?: number;
+  actorDiscordId?: number;
+  source?: string;
+};
+
 // ── Calculator (U10) ────────────────────────────────────────────────────────
 
 export type CalculatorEntry = {
