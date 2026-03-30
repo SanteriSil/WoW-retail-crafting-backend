@@ -1,4 +1,4 @@
-import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, ItemPriceUpdateBlacklistEntry, LogFileInfo, LogViewResponse, Page, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, ItemPriceUpdateBlacklistEntry, LogFileInfo, LogViewResponse, Page, PriceSubmissionFilterParams, PriceSubmissionRecord, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -159,6 +159,17 @@ export async function getCurrentLogs(params?: {
     if (params?.search) searchParams.set("search", params.search);
     const query = searchParams.toString();
     return request<LogViewResponse>(`/logs/current${query ? `?${query}` : ""}`, { method: "GET" });
+}
+
+export async function getPriceSubmissions(params: PriceSubmissionFilterParams): Promise<Page<PriceSubmissionRecord>> {
+    const query = new URLSearchParams();
+    if (params.page != null) query.set("page", String(params.page));
+    if (params.size != null) query.set("size", String(params.size));
+    if (params.itemId != null) query.set("itemId", String(params.itemId));
+    if (params.actorDiscordId != null) query.set("actorDiscordId", String(params.actorDiscordId));
+    if (params.source) query.set("source", params.source);
+
+    return request<Page<PriceSubmissionRecord>>(`/price-submissions${query.toString() ? `?${query.toString()}` : ""}`);
 }
 
 export async function fetchCraftingAH(): Promise<string | void> {

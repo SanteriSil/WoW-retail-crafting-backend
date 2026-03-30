@@ -74,6 +74,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,  "/recipes/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/recipes/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers("/recipe-lists/**").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers("/price-submissions/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers("/craftingAH/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers("/logs/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers("/scraper/**").hasAnyRole("ADMIN", "OWNER")
