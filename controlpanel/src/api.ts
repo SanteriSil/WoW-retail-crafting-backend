@@ -1,4 +1,4 @@
-import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, ItemPriceUpdateBlacklistEntry, LogFileInfo, LogViewResponse, Page, PriceSubmissionFilterParams, PriceSubmissionRecord, Profession, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
+import type { AccessRequest, AllowedUser, AuthResponse, Character, CreateCharacterRequest, DashboardResponse, Expansion, ImportResult, Item, ItemPriceUpdateBlacklistEntry, LogFileInfo, LogViewResponse, Page, PriceSubmissionFilterParams, PriceSubmissionRecord, Profession, RecipeCharacterStatOverride, RecipeDetail, RecipeFilterParams, RecipeImportCommand, RecipeItemIdsResponse, RecipeListDetail, RecipeListItemIds, RecipeListSummary, RecipePriceRefreshResponse, RecipeSummary, RecipeWritePayload, UpdateCharacterRequest } from "./types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
@@ -469,6 +469,28 @@ export async function getDashboardCrafts(params: {
         totalAdjustedProfit: typeof data?.totalAdjustedProfit === "number" ? data.totalAdjustedProfit : 0,
         totalCrafts: typeof data?.totalCrafts === "number" ? data.totalCrafts : 0,
     };
+}
+
+export async function getDashboardStatOverrides(): Promise<RecipeCharacterStatOverride[]> {
+    return request<RecipeCharacterStatOverride[]>("/dashboard/stat-overrides");
+}
+
+export async function upsertDashboardStatOverride(payload: {
+    recipeId: number;
+    characterId: number;
+    multicraftPercent: number;
+    resourcefulnessPercent: number;
+}): Promise<RecipeCharacterStatOverride> {
+    return request<RecipeCharacterStatOverride>("/dashboard/stat-overrides", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+    });
+}
+
+export async function deleteDashboardStatOverride(recipeId: number, characterId: number): Promise<void> {
+    await request<void>(`/dashboard/stat-overrides?recipeId=${encodeURIComponent(String(recipeId))}&characterId=${encodeURIComponent(String(characterId))}`, {
+        method: "DELETE",
+    });
 }
 
 export async function exportRecipesExcel(params: RecipeFilterParams): Promise<void> {

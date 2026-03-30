@@ -3,11 +3,13 @@ package com.crafting.service;
 import com.crafting.model.CharacterProfession;
 import com.crafting.model.CharacterRecipe;
 import com.crafting.model.Recipe;
+import com.crafting.model.RecipeCharacterStatOverride;
 import com.crafting.model.WowCharacter;
 import com.crafting.model.dto.DashboardResponse;
 import com.crafting.model.dto.DashboardResponse.DashboardCraft;
 import com.crafting.model.dto.ProfitEstimateDTO;
 import com.crafting.repository.CharacterRecipeRepository;
+import com.crafting.repository.RecipeCharacterStatOverrideRepository;
 import com.crafting.repository.RecipeRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -27,13 +29,16 @@ public class CraftDashboardService {
 
     private final CharacterRecipeRepository characterRecipeRepository;
     private final RecipeRepository recipeRepository;
+    private final RecipeCharacterStatOverrideRepository statOverrideRepository;
     private final ProfitCalculationService profitCalculationService;
 
     public CraftDashboardService(CharacterRecipeRepository characterRecipeRepository,
                                  RecipeRepository recipeRepository,
+                                 RecipeCharacterStatOverrideRepository statOverrideRepository,
                                  ProfitCalculationService profitCalculationService) {
         this.characterRecipeRepository = characterRecipeRepository;
         this.recipeRepository = recipeRepository;
+        this.statOverrideRepository = statOverrideRepository;
         this.profitCalculationService = profitCalculationService;
     }
 
@@ -68,6 +73,16 @@ public class CraftDashboardService {
         }
 
         List<DashboardCraft> crafts = new ArrayList<>();
+        Set<Long> characterIds = assignments.stream().map(cr -> cr.getCharacter().getId()).collect(Collectors.toSet());
+        List<RecipeCharacterStatOverride> overrides = recipeIds.isEmpty() || characterIds.isEmpty()
+            ? List.of()
+            : statOverrideRepository.findByRecipe_IdInAndCharacter_IdIn(recipeIds, characterIds);
+        var overrideByPair = overrides.stream()
+            .collect(Collectors.toMap(
+                o -> overrideKey(o.getRecipe().getId(), o.getCharacter().getId()),
+                o -> o,
+                (left, right) -> right
+            ));
 
         for (CharacterRecipe cr : assignments) {
             WowCharacter character = cr.getCharacter();
@@ -100,17 +115,22 @@ public class CraftDashboardService {
             }
 
             // Find character's stats for this recipe's profession
-            float multicraftPct = 0f;
-            float resourcefulnessPct = 0f;
+            float baseMulticraftPct = 0f;
+            float baseResourcefulnessPct = 0f;
             if (recipe.getProfession() != null) {
                 for (CharacterProfession cp : character.getProfessions()) {
                     if (cp.getProfession().getId().equals(recipe.getProfession().getId())) {
-                        multicraftPct = cp.getMulticraftPercent() != null ? cp.getMulticraftPercent() : 0f;
-                        resourcefulnessPct = cp.getResourcefulnessPercent() != null ? cp.getResourcefulnessPercent() : 0f;
+                        baseMulticraftPct = cp.getMulticraftPercent() != null ? cp.getMulticraftPercent() : 0f;
+                        baseResourcefulnessPct = cp.getResourcefulnessPercent() != null ? cp.getResourcefulnessPercent() : 0f;
                         break;
                     }
                 }
             }
+
+            RecipeCharacterStatOverride statOverride = overrideByPair.get(overrideKey(recipe.getId(), character.getId()));
+            boolean statOverrideActive = statOverride != null;
+            float multicraftPct = statOverrideActive ? statOverride.getMulticraftPercent() : baseMulticraftPct;
+            float resourcefulnessPct = statOverrideActive ? statOverride.getResourcefulnessPercent() : baseResourcefulnessPct;
 
             ProfitEstimateDTO baseProfit = profitCalculationService.calculate(recipe);
             ProfitEstimateDTO adjustedProfit = profitCalculationService.calculate(recipe, multicraftPct, resourcefulnessPct);
@@ -150,8 +170,11 @@ public class CraftDashboardService {
                     recipe.isMulticraftable(),
                     recipe.getMulticraftMultiplier(),
                     recipe.getResourcefulnessFactor(),
+                    baseMulticraftPct,
+                    baseResourcefulnessPct,
                     multicraftPct,
                     resourcefulnessPct,
+                    statOverrideActive,
                     adjustedProfit.missingPrices(),
                     recipe.getNotes() != null && !recipe.getNotes().isBlank(),
                     recipe.getNotes()
@@ -194,4 +217,8 @@ public class CraftDashboardService {
             String sort,
             String direction
     ) {}
+
+    private String overrideKey(Long recipeId, Long characterId) {
+        return recipeId + ":" + characterId;
+    }
 }
