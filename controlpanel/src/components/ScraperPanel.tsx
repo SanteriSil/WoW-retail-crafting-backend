@@ -117,7 +117,7 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
 
             const scraped: ScrapedRecipe[] = parsed.map((r) => ({
                 ...r,
-                selected: !existingIds.has(r.spellId), // auto-select new ones
+                selected: false,
                 status: existingIds.has(r.spellId) ? "exists" : "new",
             }));
 
@@ -167,7 +167,7 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
         <div className="scraper-panel">
             {/* ── Collapsible header ── */}
             <button type="button" className="scraper-collapse-header" onClick={toggleCollapsed}>
-                <span className="scraper-panel-title">🔧 Scraper</span>
+                <span className="scraper-panel-title">Template</span>
                 <span className={`chev${collapsed ? "" : " rotated"}`}>▶</span>
             </button>
 
@@ -207,7 +207,7 @@ export default function ScraperPanel({ professions, expansions, onScrapeComplete
                         onClick={() => void handleFetch()}
                         disabled={fetching || !listingUrl}
                     >
-                        {fetching ? "Fetching…" : "🌐 Fetch from Wowhead"}
+                        {fetching ? "Fetching…" : "Fetch from Wowhead"}
                     </button>
                 </div>
 
