@@ -210,9 +210,11 @@ function AuthenticatedApp({ user, onLogout }: { user: { discordUsername: string;
         }
     };
 
+    const canUseAddonDataSubmit = isAdmin;
+
     return (
         <div className={`app${activeTab === "dashboard" ? " app-dashboard" : ""}`}>
-            <SheetBuilder items={items} />
+            {canUseAddonDataSubmit && <SheetBuilder />}
             <div className="header">
                 <div>
                     <h1>Crafting Control Panel</h1>
