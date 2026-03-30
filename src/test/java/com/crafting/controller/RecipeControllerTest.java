@@ -5,6 +5,7 @@ import com.crafting.model.Item;
 import com.crafting.model.Profession;
 import com.crafting.model.Recipe;
 import com.crafting.model.RecipeIngredient;
+import com.crafting.repository.AuditEventRepository;
 import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
@@ -39,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RecipeControllerTest {
 
     @Autowired private MockMvc mockMvc;
+    @Autowired private AuditEventRepository auditEventRepository;
     @Autowired private RecipeRepository recipeRepository;
     @Autowired private RecipeListRepository recipeListRepository;
     @Autowired private CharacterRecipeRepository characterRecipeRepository;
@@ -51,6 +53,7 @@ class RecipeControllerTest {
 
     @BeforeEach
     void setUp() {
+        auditEventRepository.deleteAll();
         recipeListRepository.deleteAll();
         characterRecipeRepository.deleteAll();
         recipeRepository.deleteAll();
@@ -144,6 +147,12 @@ class RecipeControllerTest {
 
             assertThat(recipeRepository.count()).isEqualTo(1);
             assertThat(recipeRepository.findAll().getFirst().getCreatedBy()).isEqualTo(4242L);
+            assertThat(auditEventRepository.count()).isEqualTo(1);
+            var event = auditEventRepository.findAll().getFirst();
+            assertThat(event.getActorDiscordId()).isEqualTo(4242L);
+            assertThat(event.getAction()).isEqualTo("CREATE");
+            assertThat(event.getEntity()).isEqualTo("RECIPE");
+            assertThat(event.getResult()).isEqualTo("SUCCESS");
         }
 
                 @Test
