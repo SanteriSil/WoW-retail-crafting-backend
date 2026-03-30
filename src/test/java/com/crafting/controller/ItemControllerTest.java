@@ -2,9 +2,11 @@ package com.crafting.controller;
 
 import com.crafting.cache.CachedResult;
 import com.crafting.model.Item;
+import com.crafting.repository.AuditEventRepository;
 import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.CharacterRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.PriceSubmissionRepository;
 import com.crafting.repository.RecipeListRepository;
 import com.crafting.repository.RecipeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,20 +37,24 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 class ItemControllerTest {
 
     @Autowired private MockMvc mockMvc;
+    @Autowired private AuditEventRepository auditEventRepository;
     @Autowired private ItemRepository itemRepository;
     @Autowired private RecipeRepository recipeRepository;
     @Autowired private CharacterRecipeRepository characterRecipeRepository;
     @Autowired private CharacterRepository characterRepository;
     @Autowired private RecipeListRepository recipeListRepository;
+    @Autowired private PriceSubmissionRepository priceSubmissionRepository;
     @Autowired private CachedResult<List<Item>> itemCache;
     @Autowired private CachedResult<List<Long>> itemIdCache;
 
     @BeforeEach
     void setUp() {
+        auditEventRepository.deleteAll();
         recipeListRepository.deleteAll();
         characterRecipeRepository.deleteAll();
         characterRepository.deleteAll();
         recipeRepository.deleteAll();
+        priceSubmissionRepository.deleteAll();
         itemRepository.deleteAll();
         itemCache.invalidate();
         itemIdCache.invalidate();
@@ -145,7 +151,7 @@ class ItemControllerTest {
             String json = "{\"id\":12345,\"name\":\"Enchanted Dust\",\"finishingIngredient\":false}";
 
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("ADMIN"))
+                        .with(user("4242").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated())
@@ -153,6 +159,11 @@ class ItemControllerTest {
                     .andExpect(jsonPath("$.name", is("Enchanted Dust")));
 
             assertThat(itemRepository.existsById(12345L)).isTrue();
+                assertThat(auditEventRepository.count()).isEqualTo(1);
+                var event = auditEventRepository.findAll().getFirst();
+                assertThat(event.getActorDiscordId()).isEqualTo(4242L);
+                assertThat(event.getAction()).isEqualTo("CREATE");
+                assertThat(event.getEntity()).isEqualTo("ITEM");
         }
 
         @Test
@@ -162,7 +173,7 @@ class ItemControllerTest {
 
             String json = "{\"id\":100,\"name\":\"Duplicate\",\"finishingIngredient\":false}";
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("ADMIN"))
+                        .with(user("4242").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isConflict());
@@ -174,7 +185,7 @@ class ItemControllerTest {
             String json = "{\"id\": 999}";
 
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("ADMIN"))
+                        .with(user("4242").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
@@ -190,7 +201,7 @@ class ItemControllerTest {
             // Create an item
             String json = "{\"id\":100,\"name\":\"New Item\",\"finishingIngredient\":false}";
             mockMvc.perform(post("/items")
-                            .with(user("testuser").roles("ADMIN"))
+                        .with(user("4242").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated());
@@ -216,7 +227,7 @@ class ItemControllerTest {
 
             String json = "{\"id\":100,\"name\":\"New Name\",\"finishingIngredient\":false}";
             mockMvc.perform(put("/items/100")
-                            .with(user("testuser").roles("ADMIN"))
+                        .with(user("4242").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isOk())
@@ -224,6 +235,11 @@ class ItemControllerTest {
 
             Item fromDb = itemRepository.findById(100L).orElseThrow();
             assertThat(fromDb.getName()).isEqualTo("New Name");
+                assertThat(auditEventRepository.count()).isEqualTo(1);
+                var event = auditEventRepository.findAll().getFirst();
+                assertThat(event.getActorDiscordId()).isEqualTo(4242L);
+                assertThat(event.getAction()).isEqualTo("UPDATE");
+                assertThat(event.getEntity()).isEqualTo("ITEM");
         }
 
         @Test
@@ -231,7 +247,7 @@ class ItemControllerTest {
         void notFound() throws Exception {
             String json = "{\"id\":99999,\"name\":\"Ghost\",\"finishingIngredient\":false}";
             mockMvc.perform(put("/items/99999")
-                            .with(user("testuser").roles("ADMIN"))
+                        .with(user("4242").roles("ADMIN"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isNotFound());
@@ -250,17 +266,22 @@ class ItemControllerTest {
             itemRepository.save(testItem(100L, "Doomed"));
 
             mockMvc.perform(delete("/items/100")
-                            .with(user("testuser").roles("ADMIN")))
+                        .with(user("4242").roles("ADMIN")))
                     .andExpect(status().isNoContent());
 
             assertThat(itemRepository.existsById(100L)).isFalse();
+                assertThat(auditEventRepository.count()).isEqualTo(1);
+                var event = auditEventRepository.findAll().getFirst();
+                assertThat(event.getActorDiscordId()).isEqualTo(4242L);
+                assertThat(event.getAction()).isEqualTo("DELETE");
+                assertThat(event.getEntity()).isEqualTo("ITEM");
         }
 
         @Test
         @DisplayName("non-existent ID → 404")
         void notFound() throws Exception {
             mockMvc.perform(delete("/items/99999")
-                            .with(user("testuser").roles("ADMIN")))
+                        .with(user("4242").roles("ADMIN")))
                     .andExpect(status().isNotFound());
         }
 
@@ -276,7 +297,7 @@ class ItemControllerTest {
 
             // Delete
             mockMvc.perform(delete("/items/100")
-                            .with(user("testuser").roles("ADMIN")))
+                        .with(user("4242").roles("ADMIN")))
                     .andExpect(status().isNoContent());
 
             // Cache should be invalidated → GET returns empty

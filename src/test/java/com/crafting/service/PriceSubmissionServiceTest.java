@@ -29,8 +29,11 @@ class PriceSubmissionServiceTest {
     @BeforeEach
     void setUp() {
         priceSubmissionRepository.deleteAll();
-        itemRepository.deleteAll();
-        itemRepository.save(Item.builder().id(100L).name("Test Item").finishingIngredient(false).build());
+        Item item = itemRepository.findById(100L)
+                .orElseGet(() -> Item.builder().id(100L).build());
+        item.setName("Test Item");
+        item.setFinishingIngredient(false);
+        itemRepository.save(item);
     }
 
     @Test

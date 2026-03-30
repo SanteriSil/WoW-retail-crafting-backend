@@ -1,5 +1,6 @@
 package com.crafting.controller;
 
+import com.crafting.auth.ActorContextService;
 import com.crafting.service.RecipeService;
 import java.io.IOException;
 import java.net.URI;
@@ -11,6 +12,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,10 +28,12 @@ public class ScraperController {
     private static final String USER_AGENT = "WoWCraftingBot/1.0";
 
     private final RecipeService recipeService;
+    private final ActorContextService actorContextService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    public ScraperController(RecipeService recipeService) {
+    public ScraperController(RecipeService recipeService, ActorContextService actorContextService) {
         this.recipeService = recipeService;
+        this.actorContextService = actorContextService;
     }
 
     @GetMapping(value = "/proxy", produces = MediaType.TEXT_HTML_VALUE)
@@ -67,9 +71,15 @@ public class ScraperController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<?> importRecipes(@RequestBody List<RecipeImportCommand> commands) {
+    public ResponseEntity<?> importRecipes(@RequestBody List<RecipeImportCommand> commands,
+                                           Authentication authentication) {
         try {
-            RecipeService.ImportResult result = recipeService.importRecipes(commands);
+            var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+            if (actorSnapshot.discordId() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authenticated actor is required"));
+            }
+            RecipeService.ImportResult result = recipeService.importRecipes(commands, actorSnapshot);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

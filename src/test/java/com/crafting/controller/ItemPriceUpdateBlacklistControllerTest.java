@@ -4,6 +4,7 @@ import com.crafting.model.Item;
 import com.crafting.model.RecipeList;
 import com.crafting.repository.ItemPriceUpdateBlacklistRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.PriceSubmissionRepository;
 import com.crafting.repository.RecipeListRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,9 @@ class ItemPriceUpdateBlacklistControllerTest {
     private ItemPriceUpdateBlacklistRepository blacklistRepository;
 
         @Autowired
+        private PriceSubmissionRepository priceSubmissionRepository;
+
+        @Autowired
         private RecipeListRepository recipeListRepository;
 
         private Long listId;
@@ -46,6 +50,7 @@ class ItemPriceUpdateBlacklistControllerTest {
     void setUp() {
         blacklistRepository.deleteAll();
                 recipeListRepository.deleteAll();
+        priceSubmissionRepository.deleteAll();
         itemRepository.deleteAll();
                 RecipeList list = recipeListRepository.save(RecipeList.builder().name("Test List").build());
                 listId = list.getId();

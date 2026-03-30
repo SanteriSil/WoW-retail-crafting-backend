@@ -14,6 +14,7 @@ import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.CharacterRepository;
 import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.PriceSubmissionRepository;
 import com.crafting.repository.ProfessionRepository;
 import com.crafting.repository.RecipeCharacterStatOverrideRepository;
 import com.crafting.repository.RecipeListRepository;
@@ -49,6 +50,7 @@ class DashboardControllerTest {
     @Autowired private RecipeRepository recipeRepository;
     @Autowired private RecipeListRepository recipeListRepository;
     @Autowired private ItemRepository itemRepository;
+        @Autowired private PriceSubmissionRepository priceSubmissionRepository;
     @Autowired private ProfessionRepository professionRepository;
     @Autowired private ExpansionRepository expansionRepository;
         @Autowired private RecipeCharacterStatOverrideRepository statOverrideRepository;
@@ -64,6 +66,7 @@ class DashboardControllerTest {
         characterRecipeRepository.deleteAll();
         characterRepository.deleteAll();
         recipeRepository.deleteAll();
+        priceSubmissionRepository.deleteAll();
         itemRepository.deleteAll();
 
         List<Profession> professions = professionRepository.findAll();

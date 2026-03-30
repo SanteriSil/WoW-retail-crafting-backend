@@ -11,6 +11,7 @@ import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
 import com.crafting.repository.ItemPriceUpdateBlacklistRepository;
 import com.crafting.repository.ProfessionRepository;
+import com.crafting.repository.PriceSubmissionRepository;
 import com.crafting.repository.RecipeListRepository;
 import com.crafting.repository.RecipeRepository;
 import java.util.List;
@@ -45,6 +46,7 @@ class RecipeListControllerTest {
     @Autowired private RecipeListRepository recipeListRepository;
     @Autowired private RecipeRepository recipeRepository;
     @Autowired private ItemRepository itemRepository;
+    @Autowired private PriceSubmissionRepository priceSubmissionRepository;
     @Autowired private ItemPriceUpdateBlacklistRepository itemPriceUpdateBlacklistRepository;
     @Autowired private ProfessionRepository professionRepository;
     @Autowired private ExpansionRepository expansionRepository;
@@ -57,6 +59,7 @@ class RecipeListControllerTest {
         itemPriceUpdateBlacklistRepository.deleteAll();
         recipeListRepository.deleteAll();
         recipeRepository.deleteAll();
+        priceSubmissionRepository.deleteAll();
         itemRepository.deleteAll();
 
         profession = professionRepository.findAll().stream()
