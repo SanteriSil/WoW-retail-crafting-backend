@@ -12,6 +12,7 @@ import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.CharacterRepository;
 import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.PriceSubmissionRepository;
 import com.crafting.repository.ProfessionRepository;
 import com.crafting.repository.RecipeCharacterStatOverrideRepository;
 import com.crafting.repository.RecipeRepository;
@@ -45,6 +46,9 @@ class RecipeCharacterStatOverrideServiceTest {
     @Autowired
     private ItemRepository itemRepository;
 
+        @Autowired
+        private PriceSubmissionRepository priceSubmissionRepository;
+
     @Autowired
     private ProfessionRepository professionRepository;
 
@@ -60,6 +64,7 @@ class RecipeCharacterStatOverrideServiceTest {
         characterRecipeRepository.deleteAll();
         characterRepository.deleteAll();
         recipeRepository.deleteAll();
+        priceSubmissionRepository.deleteAll();
         itemRepository.deleteAll();
 
         List<Profession> professions = professionRepository.findAll();

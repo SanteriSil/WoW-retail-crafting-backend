@@ -1,5 +1,6 @@
 package com.crafting.service;
 
+import com.crafting.auth.ActorContextService;
 import com.crafting.controller.ScraperController;
 import com.crafting.model.Expansion;
 import com.crafting.model.Item;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +64,8 @@ public class RecipeService {
     }
 
     @Transactional
-    public RecipeDTO createRecipe(CreateOrUpdateRecipeCommand command, Long createdByDiscordId) {
+    public RecipeDTO createRecipe(CreateOrUpdateRecipeCommand command, ActorContextService.ActorSnapshot actorSnapshot) {
+        Long createdByDiscordId = requireActorDiscordId(actorSnapshot);
         ValidationContext validation = validateCommand(command, null);
 
         Recipe recipe = new Recipe();
@@ -77,13 +80,16 @@ public class RecipeService {
                 "RECIPE",
                 String.valueOf(saved.getId()),
                 "SUCCESS",
-                null
+            actorMetadata(actorSnapshot)
         ));
         return toRecipeDTO(saved);
     }
 
     @Transactional
-    public RecipeDTO updateRecipe(Long recipeId, CreateOrUpdateRecipeCommand command, Long actorDiscordId) {
+        public RecipeDTO updateRecipe(Long recipeId,
+                      CreateOrUpdateRecipeCommand command,
+                      ActorContextService.ActorSnapshot actorSnapshot) {
+        Long actorDiscordId = requireActorDiscordId(actorSnapshot);
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
 
@@ -102,13 +108,14 @@ public class RecipeService {
             "RECIPE",
             String.valueOf(saved.getId()),
             "SUCCESS",
-            null
+            actorMetadata(actorSnapshot)
         ));
         return toRecipeDTO(saved);
     }
 
     @Transactional
-    public RecipeDTO duplicateRecipe(Long recipeId, Long createdByDiscordId) {
+    public RecipeDTO duplicateRecipe(Long recipeId, ActorContextService.ActorSnapshot actorSnapshot) {
+        Long createdByDiscordId = requireActorDiscordId(actorSnapshot);
         Recipe source = recipeRepository.findByIdAndDeletedFalse(recipeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
 
@@ -158,13 +165,14 @@ public class RecipeService {
             "RECIPE",
             String.valueOf(saved.getId()),
             "SUCCESS",
-            "sourceRecipeId=" + recipeId
+            "sourceRecipeId=" + recipeId + "," + actorMetadata(actorSnapshot)
         ));
         return toRecipeDTO(saved);
     }
 
     @Transactional
-    public void softDeleteRecipe(Long recipeId, Long actorDiscordId) {
+    public void softDeleteRecipe(Long recipeId, ActorContextService.ActorSnapshot actorSnapshot) {
+        Long actorDiscordId = requireActorDiscordId(actorSnapshot);
         Recipe recipe = recipeRepository.findByIdAndDeletedFalse(recipeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipe not found: " + recipeId));
         recipe.setDeleted(true);
@@ -175,7 +183,7 @@ public class RecipeService {
             "RECIPE",
             String.valueOf(saved.getId()),
             "SUCCESS",
-            "softDelete=true"
+            "softDelete=true," + actorMetadata(actorSnapshot)
         ));
     }
 
@@ -277,11 +285,14 @@ public class RecipeService {
     }
 
     @Transactional
-    public ImportResult importRecipes(List<ScraperController.RecipeImportCommand> commands) {
+    public ImportResult importRecipes(List<ScraperController.RecipeImportCommand> commands,
+                                      ActorContextService.ActorSnapshot actorSnapshot) {
+        Long actorDiscordId = requireActorDiscordId(actorSnapshot);
         int added = 0;
         int updated = 0;
         int skipped = 0;
         List<String> errors = new ArrayList<>();
+        List<Long> affectedSpellIds = new ArrayList<>();
 
         for (ScraperController.RecipeImportCommand cmd : commands) {
             try {
@@ -289,6 +300,7 @@ public class RecipeService {
                     errors.add("Missing wowheadSpellId for recipe: " + cmd.recipeName());
                     continue;
                 }
+                affectedSpellIds.add(cmd.wowheadSpellId());
 
                 Profession profession = professionRepository.findById(cmd.professionId())
                         .orElseThrow(() -> new IllegalArgumentException("Profession not found: " + cmd.professionId()));
@@ -349,6 +361,21 @@ public class RecipeService {
             }
         }
 
+        String batchId = UUID.randomUUID().toString();
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+            actorDiscordId,
+            "IMPORT",
+            "RECIPE_BATCH",
+            batchId,
+            "SUCCESS",
+            "added=" + added
+                + ",updated=" + updated
+                + ",skipped=" + skipped
+                + ",errors=" + errors.size()
+                + ",affectedSpellIds=" + affectedSpellIds
+                + "," + actorMetadata(actorSnapshot)
+        ));
+
         return new ImportResult(added, updated, skipped, errors);
     }
 
@@ -368,6 +395,17 @@ public class RecipeService {
     public record ImportResult(int added, int updated, int skipped, List<String> errors) {}
 
     public record RecipeItemIdsView(Set<Long> ingredientItemIds, Set<Long> outputItemIds, Set<Long> allItemIds) {}
+
+    private Long requireActorDiscordId(ActorContextService.ActorSnapshot actorSnapshot) {
+        if (actorSnapshot == null || actorSnapshot.discordId() == null) {
+            throw new IllegalArgumentException("Authenticated actor is required");
+        }
+        return actorSnapshot.discordId();
+    }
+
+    private String actorMetadata(ActorContextService.ActorSnapshot actorSnapshot) {
+        return "actorDiscordUsername=" + (actorSnapshot != null ? actorSnapshot.discordUsername() : null);
+    }
 
     private ValidationContext validateCommand(CreateOrUpdateRecipeCommand command, Long updatingRecipeId) {
         if (command.name() == null || command.name().isBlank()) {

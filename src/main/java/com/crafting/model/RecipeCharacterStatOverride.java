@@ -18,6 +18,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
@@ -40,10 +42,12 @@ public class RecipeCharacterStatOverride {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "recipe_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Recipe recipe;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "character_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private WowCharacter character;
 
     @Column(name = "multicraft_percent", nullable = false)

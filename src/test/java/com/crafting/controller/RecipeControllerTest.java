@@ -9,6 +9,7 @@ import com.crafting.repository.AuditEventRepository;
 import com.crafting.repository.CharacterRecipeRepository;
 import com.crafting.repository.ExpansionRepository;
 import com.crafting.repository.ItemRepository;
+import com.crafting.repository.PriceSubmissionRepository;
 import com.crafting.repository.ProfessionRepository;
 import com.crafting.repository.RecipeListRepository;
 import com.crafting.repository.RecipeRepository;
@@ -45,6 +46,7 @@ class RecipeControllerTest {
     @Autowired private RecipeListRepository recipeListRepository;
     @Autowired private CharacterRecipeRepository characterRecipeRepository;
     @Autowired private ItemRepository itemRepository;
+    @Autowired private PriceSubmissionRepository priceSubmissionRepository;
     @Autowired private ProfessionRepository professionRepository;
     @Autowired private ExpansionRepository expansionRepository;
 
@@ -57,6 +59,7 @@ class RecipeControllerTest {
         recipeListRepository.deleteAll();
         characterRecipeRepository.deleteAll();
         recipeRepository.deleteAll();
+        priceSubmissionRepository.deleteAll();
         itemRepository.deleteAll();
 
         profession = professionRepository.findAll().stream()

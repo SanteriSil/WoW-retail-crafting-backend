@@ -1,7 +1,9 @@
 package com.crafting.controller;
 
+import com.crafting.auth.ActorContextService;
 import com.crafting.model.Item;
 import com.crafting.repository.ItemRepository;
+import com.crafting.service.AuditWriter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,13 +41,19 @@ public class ItemController {
     private final ItemRepository itemRepository;
     private final CachedResult<List<Item>> itemCache;
     private final CachedResult<List<Long>> itemIdCache;
+    private final ActorContextService actorContextService;
+    private final AuditWriter auditWriter;
 
     public ItemController(ItemRepository itemRepository,
                           CachedResult<List<Item>> itemCache,
-                          CachedResult<List<Long>> itemIdCache) {
+                          CachedResult<List<Long>> itemIdCache,
+                          ActorContextService actorContextService,
+                          AuditWriter auditWriter) {
         this.itemRepository = itemRepository;
         this.itemCache = itemCache;
         this.itemIdCache = itemIdCache;
+        this.actorContextService = actorContextService;
+        this.auditWriter = auditWriter;
     }
 
     /**
@@ -103,18 +111,32 @@ public class ItemController {
      * Creates a new item in the database. The ID should be one used by Blizzard
      */
     @PostMapping
-    public ResponseEntity<Item> createItem(@Valid @RequestBody Item item) {
+    public ResponseEntity<?> createItem(@Valid @RequestBody Item item, Authentication authentication) {
+        var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+        if (actorSnapshot.discordId() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authenticated actor is required"));
+        }
+
         String user = currentUser();
         logger.info("[{}] Creating item: {}", user, item);
         if (item.getId() == null) {
             logger.warn("[{}] Attempted to create item without ID", user);
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("error", "Item ID is required"));
         }
         if (itemRepository.existsById(item.getId())) {
             logger.warn("[{}] Attempted to create item with existing ID: {}", user, item.getId());
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Item already exists"));
         }
         Item savedItem = itemRepository.save(item);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+                actorSnapshot.discordId(),
+                "CREATE",
+                "ITEM",
+                String.valueOf(savedItem.getId()),
+                "SUCCESS",
+                "itemName=" + savedItem.getName() + ",actorDiscordUsername=" + actorSnapshot.discordUsername()
+        ));
         itemCache.invalidate();
         itemIdCache.invalidate();
         logger.info("[{}] Item created with ID: {}", user, savedItem.getId());
@@ -126,7 +148,13 @@ public class ItemController {
      * @param id ID of the item to delete
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
+    public ResponseEntity<?> deleteItem(@PathVariable Long id, Authentication authentication) {
+        var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+        if (actorSnapshot.discordId() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authenticated actor is required"));
+        }
+
         String user = currentUser();
         logger.info("[{}] Deleting item ID: {}", user, id);
         if (!itemRepository.existsById(id)) {
@@ -134,6 +162,14 @@ public class ItemController {
             return ResponseEntity.notFound().build();
         }
         itemRepository.deleteById(id);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+                actorSnapshot.discordId(),
+                "DELETE",
+                "ITEM",
+                String.valueOf(id),
+                "SUCCESS",
+                "actorDiscordUsername=" + actorSnapshot.discordUsername()
+        ));
         itemCache.invalidate();
         itemIdCache.invalidate();
         logger.info("[{}] Item with ID: {} deleted", user, id);
@@ -147,10 +183,17 @@ public class ItemController {
      * @return Updated item
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Item> updateItem(
+    public ResponseEntity<?> updateItem(
         @PathVariable Long id,
-        @Valid @RequestBody Item item
+        @Valid @RequestBody Item item,
+        Authentication authentication
     ) {
+        var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+        if (actorSnapshot.discordId() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Authenticated actor is required"));
+        }
+
         String user = currentUser();
         logger.info("[{}] Updating item ID: {} with: {}", user, id, item);
         if (!itemRepository.existsById(id)) {
@@ -159,6 +202,14 @@ public class ItemController {
         }
         item.setId(id);
         Item updatedItem = itemRepository.save(item);
+        auditWriter.write(new AuditWriter.AuditWriteRequest(
+                actorSnapshot.discordId(),
+                "UPDATE",
+                "ITEM",
+                String.valueOf(updatedItem.getId()),
+                "SUCCESS",
+                "itemName=" + updatedItem.getName() + ",actorDiscordUsername=" + actorSnapshot.discordUsername()
+        ));
         itemCache.invalidate();
         itemIdCache.invalidate();
         logger.info("[{}] Item with ID: {} updated", user, id);

@@ -98,8 +98,11 @@ public class RecipeController {
     @PostMapping
     public ResponseEntity<?> createRecipe(@RequestBody RecipeWriteRequest request, Authentication authentication) {
         try {
-            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
-            RecipeDTO created = recipeService.createRecipe(toCommand(request), callerDiscordId);
+            var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+            if (actorSnapshot.discordId() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authenticated actor is required"));
+            }
+            RecipeDTO created = recipeService.createRecipe(toCommand(request), actorSnapshot);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (ConflictException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
@@ -113,8 +116,11 @@ public class RecipeController {
                                           @RequestBody RecipeWriteRequest request,
                                           Authentication authentication) {
         try {
-            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
-            RecipeDTO updated = recipeService.updateRecipe(id, toCommand(request), callerDiscordId);
+            var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+            if (actorSnapshot.discordId() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authenticated actor is required"));
+            }
+            RecipeDTO updated = recipeService.updateRecipe(id, toCommand(request), actorSnapshot);
             return ResponseEntity.ok(updated);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -128,8 +134,11 @@ public class RecipeController {
     @PostMapping("/{id}/duplicate")
     public ResponseEntity<?> duplicateRecipe(@PathVariable Long id, Authentication authentication) {
         try {
-            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
-            RecipeDTO duplicated = recipeService.duplicateRecipe(id, callerDiscordId);
+            var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+            if (actorSnapshot.discordId() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authenticated actor is required"));
+            }
+            RecipeDTO duplicated = recipeService.duplicateRecipe(id, actorSnapshot);
             return ResponseEntity.status(HttpStatus.CREATED).body(duplicated);
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
@@ -139,8 +148,11 @@ public class RecipeController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteRecipe(@PathVariable Long id, Authentication authentication) {
         try {
-            Long callerDiscordId = actorContextService.extractDiscordId(authentication);
-            recipeService.softDeleteRecipe(id, callerDiscordId);
+            var actorSnapshot = actorContextService.extractActorSnapshot(authentication);
+            if (actorSnapshot.discordId() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authenticated actor is required"));
+            }
+            recipeService.softDeleteRecipe(id, actorSnapshot);
             return ResponseEntity.noContent().build();
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
